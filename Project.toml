@@ -1,0 +1,4 @@
+name = "ClimaOceanCalibration"
+uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
+authors = ["Gregory Wagner <wagner.greg@gmail.com>"]
+version = "0.1.0"
