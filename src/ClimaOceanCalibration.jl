@@ -3,7 +3,7 @@ module ClimaOceanCalibration
 using ClimaOcean
 using ClimaOcean.ECCO: ECCO4Monthly
 using OrthogonalSphericalShellGrids
-using Oceananigans
+using Oceananigans:
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity
 using Oceananigans.Units
 using CFTime
@@ -25,6 +25,8 @@ end
 
 function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
                                     size = (120, 60, 30),
+                                    latitude = (0, 360),
+                                    longitude = (-80, 80),
                                     progress_interval = 1,
                                     κ_skew = 1000,
                                     κ_symmetric = 1000)
@@ -32,10 +34,14 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     Nx, Ny, Nz = size
     z = exponential_z_faces(; Nz, depth=6000)
 
+    #=
     grid = TripolarGrid(arch, FT; z,
                         size = (Nx, Ny, Nz),
                         north_poles_latitude=55,
                         first_pole_longitude=70)
+    =#
+
+    grid = LatitudeLongitudeGrid(arch, FT; size, latitude, longitude, z)
 
     bottom_height = regrid_bathymetry(grid;
                                       minimum_depth = 10,
