@@ -80,4 +80,11 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     return simulation
 end
 
+function reschedule!(simulation, name, new_schedule)
+    cb = simulation.callbacks[name]
+    new_cb = Callback(cb.func, new_schedule; parameters=cb.parameters, callsite=cb.callsite)
+    simulation.callbacks[name] = new_cb
+    return nothing
+end
+
 end # module ClimaOceanCalibration
