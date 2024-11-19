@@ -1,9 +1,9 @@
 module ClimaOceanCalibration
 
+using Oceananigans
 using ClimaOcean
 using ClimaOcean.ECCO: ECCO4Monthly
 using OrthogonalSphericalShellGrids
-using Oceananigans:
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity
 using Oceananigans.Units
 using CFTime
@@ -24,9 +24,9 @@ end
 @inline sponge_layer(λ, φ, z, t, c, ω) = - restoring_mask(λ, φ, z, t) * ω * c
 
 function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
-                                    size = (120, 60, 30),
-                                    latitude = (0, 360),
-                                    longitude = (-80, 80),
+                                    size = (120, 60, 10),
+                                    longitude = (0, 360),
+                                    latitude = (-80, 80),
                                     progress_interval = 1,
                                     κ_skew = 1000,
                                     κ_symmetric = 1000)
@@ -94,3 +94,4 @@ function reschedule!(simulation, name, new_schedule)
 end
 
 end # module ClimaOceanCalibration
+
