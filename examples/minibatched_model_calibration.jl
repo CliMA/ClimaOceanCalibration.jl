@@ -27,7 +27,7 @@ EKP = EnsembleKalmanProcesses
 # Three degree by default, reaches ~2 SYPD on a laptop
 FT = Float64
 
-function forward_map(parameters, simulation=nothing)
+function forward_map(parameters, simulation, index)
     @show Cˢ = parameters[1]
     @show CˡᵒD = parameters[2]
 
@@ -39,22 +39,15 @@ function forward_map(parameters, simulation=nothing)
     # closure = (gm, catke)
     
     closure = catke
-
-    if isnothing(simulation)
-        simulation = diffusive_ocean_simulation(CPU(), FT;
-                                                size = (90, 25, 20),
-                                                latitude = (-80, -20),
-                                                closure,
-                                                progress_interval=10)
-    else
-        simulation.model.ocean.model.closure = closure
-        reset_coupled_simulation!(simulation)
-    end
+    simulation.model.ocean.model.closure = closure
+    reset_coupled_simulation!(simulation)
 
     @show simulation.model.ocean.model.closure
 
     simulation.Δt = 5minutes
-    simulation.stop_time = 1day
+    #simulation.stop_time = 1day
+    simulation.stop_iteration = 10
+    simulation.stop_time = Inf
     run!(simulation)
 
     grid = simulation.model.ocean.model.grid
@@ -66,9 +59,14 @@ function forward_map(parameters, simulation=nothing)
     # Noise the data cause we hack
     data .+= 1e-12 .* randn(length(data))
 
+    if index == 2
+        data = data[1:2:end]
+    end
+
     return simulation, data 
 end
 
+#=
 res = 4 # degree
 Nx = 360 ÷ res
 Ny = 60 ÷ res
@@ -84,51 +82,54 @@ simulation = diffusive_ocean_simulation(CPU(), FT;
                                         progress_interval=10)
 
 sim1, data1 = forward_map([1.1, 0.6], simulation)
+=#
 
 # ocean = simulation.model.ocean
 # grid = ocean.model.grid
 # heatmap(interior(T, :, :, size(grid, 3)))
 
 using EnsembleKalmanProcesses.ParameterDistributions
+
 prior1 = constrained_gaussian("C1", 1.0, 0.2, 0, 2)
 prior2 = constrained_gaussian("C2", 0.5, 0.2, 0, 2)
+
 prior = combine_distributions([prior1, prior2])
 
 # using EnsembleKalmanProcesses.ParameterDistributions
-metadata = Dict("samples" => data,
-                "covariances" => 1e-6 * EKP.I,
-                "names" => "surface temperature" )
+y1 = Observation(Dict("samples" => data, "covariances" => 1e-6 * EKP.I, "names" => "surface temperature"))
+y2 = Observation(Dict("samples" => data[1:2:end], "covariances" => 1e-6 * EKP.I, "names" => "surface temperature"))
+y3 = Observation(Dict("samples" => data, "covariances" => 1e-6 * EKP.I, "names" => "surface temperature"))
+y4 = Observation(Dict("samples" => data, "covariances" => 1e-6 * EKP.I, "names" => "surface temperature"))
+y5 = Observation(Dict("samples" => data, "covariances" => 1e-6 * EKP.I, "names" => "surface temperature"))
 
-y = Observation(metadata)
+sim1 = simulation
+sim2 = simulation
+sim3 = simulation
+sim4 = simulation
+sim5 = simulation
+
+minibatcher = RandomFixedSizeMinibatcher(2)
+y_series = ObservationSeries(Dict("observations" => [y1, y2, y3, y4, y5], "minibatcher" => minibatcher))
+simulations = [sim1, sim2, sim3, sim4, sim5]
+
 Ne = 10 # ensemble members
 initial_ensemble = EKP.construct_initial_ensemble(prior, Ne)
-ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, TransformInversion())
+ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y_series, TransformInversion())
 
-G_ens = zeros(length(data1), Ne)
-iteration_data = OrderedDict()
-Ni = 2 # number of iterations
+B = get_current_minibatch(ensemble_kalman_process)
+iteration_data = [OrderedDict() for b in B]
 
-for n in 1:Ni
-    global G_ens, fig
-    ℂ = get_ϕ_final(prior, ensemble_kalman_process)
+ℂ = get_ϕ_final(prior, ensemble_kalman_process)
+B = get_current_minibatch(ensemble_kalman_process)
 
-    # Can also try: asyncmap(1:Ne, ntasks=10) do e to compute forward simulations in parallel  
-    for e = 1:Ne
-        sim_e, data_e = forward_map(ℂ[:, e], simulation)
-        iteration_data[e] = data_e
+# Can also try: asyncmap(1:Ne, ntasks=10) do e to compute forward simulations in parallel  
+for e = 1:Ne
+    for (n, b) in enumerate(B)
+        sim_e, data_e = forward_map(ℂ[:, e], simulations[b], b)
+        iteration_data[b][e] = data_e
     end
-
-    fig = Figure()
-    ax = Axis(fig[1, 1])
-
-    for data_e in values(iteration_data)
-        lines!(ax, data_e .- data1)
-    end
-
-    display(fig) 
-    sleep(0.1)
-
-    G_ens .= hcat(values(iteration_data)...)
-    EKP.update_ensemble!(ensemble_kalman_process, G_ens)
 end
 
+# G_ens .= hcat(values(iteration_data[1])...)
+# EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+#
