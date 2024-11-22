@@ -2,7 +2,7 @@
 
 julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "6e35f62364d92b9a64f996e085e6fa550e16d189"
+project_hash = "ddcf1cb8f62f2e9d35a292fe3e57dab9a8592988"
 
 [[deps.AMD]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse_jll"]
@@ -243,9 +243,7 @@ weakdeps = ["SparseArrays"]
 
 [[deps.ClimaOcean]]
 deps = ["Adapt", "CFTime", "CUDA", "ClimaSeaIce", "CubicSplines", "DataDeps", "Dates", "Downloads", "ImageMorphology", "JLD2", "KernelAbstractions", "MPI", "NCDatasets", "Oceananigans", "OffsetArrays", "OrthogonalSphericalShellGrids", "Printf", "Scratch", "SeawaterPolynomials", "StaticArrays", "Statistics", "SurfaceFluxes", "Thermodynamics"]
-git-tree-sha1 = "e645d38ff1c826383ddc881f18c505da0ee1326f"
-repo-rev = "ss/one-degree-simulation"
-repo-url = "https://github.com/CliMA/ClimaOcean.jl.git"
+path = "/Users/gregorywagner/Projects/ClimaOcean.jl"
 uuid = "0376089a-ecfe-4b0e-a64f-9c555d74d754"
 version = "0.2.3"
 
@@ -507,8 +505,8 @@ uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
 
 [[deps.EnsembleKalmanProcesses]]
-deps = ["Convex", "Distributions", "DocStringExtensions", "GaussianRandomFields", "Interpolations", "LinearAlgebra", "MathOptInterface", "Optim", "QuadGK", "Random", "RecipesBase", "SCS", "SparseArrays", "Statistics", "StatsBase", "TOML"]
-git-tree-sha1 = "00bb94ff704d7aeed9c72d4a2a05d6abf6cb7946"
+deps = ["Convex", "Distributions", "DocStringExtensions", "GaussianRandomFields", "Interpolations", "LinearAlgebra", "MathOptInterface", "Optim", "Plots", "QuadGK", "Random", "RecipesBase", "SCS", "SparseArrays", "Statistics", "StatsBase", "TOML"]
+path = "/Users/gregorywagner/Projects/EnsembleKalmanProcesses.jl"
 uuid = "aa8a2aa5-91d8-4396-bcef-d4f2ec43552d"
 version = "2.0.1"
 
