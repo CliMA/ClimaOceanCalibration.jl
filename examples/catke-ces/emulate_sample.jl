@@ -4,6 +4,7 @@ using LinearAlgebra
 using Random
 using JLD2
 using StatsBase
+using Plots
 
 # CES 
 using CalibrateEmulateSample.Emulators
@@ -15,9 +16,7 @@ using CalibrateEmulateSample.EnsembleKalmanProcesses.Localizers
 using CalibrateEmulateSample.Utilities
 
 
-function main()
-
-    data_file = joinpath(@__DIR__, "catke_parameters.jld2")
+data_file = joinpath(@__DIR__, "catke_parameters.jld2")
 
     # contains:
     loaded_data = load(data_file)
@@ -80,7 +79,7 @@ function main()
     outputs = reduce(vcat, objectives[iter_train,:])[:,:] 
     @info "training data input: $(size(inputs)) output: $(size(outputs))"
     input_output_pairs = PairedDataContainer(inputs, outputs, data_are_columns=false)
-
+    @info size(get_inputs(input_output_pairs))
    # estimate the noise in the objective using trailing samples
     estimation_iter = 50
     Γ = zeros(1,1)
@@ -109,7 +108,7 @@ function main()
     elseif mlt_method == "Scalar-RF"
         overrides = Dict(
             "verbose" => true,
-            "n_features_opt" => 20,
+            "n_features_opt" => 50,
             "train_fraction" => 0.95,
             "n_iteration" => 20,
             "cov_sample_multiplier" => 1.0,
@@ -117,8 +116,8 @@ function main()
             "n_cross_val_sets" => 3,
         )
 
-        rank = 5
-        nugget=1e-6
+        rank = 3
+        nugget=1e-8
         kernel_structure = SeparableKernel(LowRankFactor(rank, nugget), OneDimFactor())
         
         n_features = 500
@@ -145,7 +144,16 @@ function main()
 
     @info "Finished Emulation stage"
 
+
     # test the emulator against some other trajectory data
+    pred_mean_train = zeros(1,size(get_inputs(input_output_pairs),2))    
+    for i in 1:size(get_inputs(input_output_pairs),2)
+        pred_mean_train[:,i] = Emulators.predict(emulator, get_inputs(input_output_pairs)[:,i:i], transform_to_real = true)[1]
+    end
+    train_error = norm(pred_mean_train - get_outputs(input_output_pairs))/size(get_inputs(input_output_pairs),2)
+    @info "average L^2 train_error $(train_error)"
+    
+
     min_iter_test = maximum(iter_train) + 1
     iter_test = min_iter_test:min_iter_test + 10
     
@@ -159,16 +167,10 @@ function main()
     end
     test_error = norm(pred_mean_test - test_outputs)/size(test_inputs,1)
     @info "average L^2 test_error $(test_error)"
-
-    pred_mean_train = zeros(io_pair_iter*n_ens,1)    
-    for i in 1:size(get_inputs(input_output_data),2)
-        pred_mean_test[i,:] = Emulators.predict(emulator, get_inputs(input_output_pairs)[:,i:i], transform_to_real = true)[1]
-    end
-    train_error = norm(pred_mean_train - get_outputs(input_output_pairs))/size(inputs,1)
-    @info "average L^2 train_error $(train_error)"
+    
     
     # determine a good step size
-    u0 = vec(mean(get_inputs(input_output_pairs)[end,:], dims = 2))
+    u0 = vec(mean(parameters[end,:,:], dims = 1))
     println("initial parameters: ", u0)
     yt_sample = truth
     mcmc = MCMCWrapper(RWMHSampling(), yt_sample, prior, emulator, init_params=u0)
@@ -197,7 +199,9 @@ function main()
     println("cov of posterior samples (taken in phys space)")
     println(cov(transformed_posterior_samples, dims = 2))
 
-    
-end
 
-main()
+# plot some useful 
+p = plot(prior)
+plot!(p, posterior)
+vline!(p, mean(phys_parameters[end,:,:],dims=1))
+
