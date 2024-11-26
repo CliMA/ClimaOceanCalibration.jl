@@ -231,7 +231,7 @@ emulator_untuned = Emulator(
 # plot some useful marginals
 p = plot(prior)
 plot!(p, posterior)
-vline!(p, mean(phys_parameters[end,:,:],dims=1))
+vline!(p, mean(phys_parameters[end,:,:],dims=1), linewidth=5)
 # vline!(p, mean(phys_parameters[end,:,:],dims=1)) # where training data ended up.
 
 savefig(p, joinpath(@__DIR__, "catke_posterior.png"))
