@@ -66,14 +66,15 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
     # we map in the computational space
     parameters = zeros(size(phys_parameters))
     for i =1:size(phys_parameters,1)
-        parameters[i,:,:] = transform_constrained_to_unconstrained(prior,phys_parameters[1,:,:]')'
+        parameters[i,:,:] = transform_constrained_to_unconstrained(prior, phys_parameters[i,:,:]')'
     end
     
     
     ## CES on compressed data
 
-    io_pair_iter = 10
-    iter_train = 1:10:1+io_pair_iter*10
+    io_pair_iter = 20
+    burnin = 50
+    iter_train = burnin+1:io_pair_iter:burnin+1+io_pair_iter*10
     @info "train on iterations: $(iter_train)"
     inputs = reduce(vcat, [parameters[i,:,:] for i in iter_train])
     outputs = reduce(vcat, objectives[iter_train,:])[:,:] 
@@ -100,33 +101,47 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
     
     if mlt_method == "GP"
         mlt = GaussianProcess(
-        gppackage;
-        kernel = nothing, # use default squared exponential kernel
-        prediction_type = pred_type,
-        noise_learn = false,
-    )
+            gppackage;
+            kernel = nothing, # use default squared exponential kernel
+            prediction_type = pred_type,
+            noise_learn = false,
+        )
+        mlt_untuned = ScalarRandomFeatureInterface(
+            1000,
+            n_param,
+            kernel_structure = SeparableKernel(LowRankFactor(), OneDimFactor()),
+            optimizer_options = Dict( "n_features_opt" => 100, "n_iteration" => 0, "n_cross_val_sets" => 1, "cov_sample_multiplier" => 0.01), 
+        )
+
     elseif mlt_method == "Scalar-RF"
         overrides = Dict(
             "verbose" => true,
-            "n_features_opt" => 50,
-            "train_fraction" => 0.95,
-            "n_iteration" => 20,
-            "cov_sample_multiplier" => 1.0,
-            "n_ensemble" => 200, #40*n_dimensions,
-            "n_cross_val_sets" => 3,
+            "n_features_opt" => 100,
+            "train_fraction" => 0.9,
+            "n_iteration" => 10,
+            "cov_sample_multiplier" => 0.2,
+            "n_ensemble" => 50, #40*n_dimensions,
+            "n_cross_val_sets" => 2,
         )
 
-        rank = 3
-        nugget=1e-8
+        rank = 5
+        nugget=1e-4
         kernel_structure = SeparableKernel(LowRankFactor(rank, nugget), OneDimFactor())
         
-        n_features = 500
+        n_features = 1000
 
         mlt = ScalarRandomFeatureInterface(
             n_features,
             n_param,
             kernel_structure = kernel_structure,
             optimizer_options = deepcopy(overrides),
+        )
+
+        mlt_untuned = ScalarRandomFeatureInterface(
+            n_features,
+            n_param,
+            kernel_structure = kernel_structure,
+            optimizer_options = Dict( "n_features_opt" => 100,  "n_iteration" => 0, "n_cross_val_sets" => 1, "cov_sample_multiplier" => 0.01), #this is too hacky 
         )
 
     end
@@ -138,20 +153,30 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
         input_output_pairs;
         obs_noise_cov = Γ
     )
-
     # Optimize the GP hyperparameters for better fit
     optimize_hyperparameters!(emulator)
+
+    # For comparison, an untuned emulator
+emulator_untuned = Emulator(
+    mlt_untuned,
+    input_output_pairs;
+    obs_noise_cov = Γ
+)
+    
 
     @info "Finished Emulation stage"
 
 
     # test the emulator against some other trajectory data
     pred_mean_train = zeros(1,size(get_inputs(input_output_pairs),2))    
+    pred_mean_train_untuned = copy(pred_mean_train)
     for i in 1:size(get_inputs(input_output_pairs),2)
         pred_mean_train[:,i] = Emulators.predict(emulator, get_inputs(input_output_pairs)[:,i:i], transform_to_real = true)[1]
+        pred_mean_train_untuned[:,i] = Emulators.predict(emulator_untuned, get_inputs(input_output_pairs)[:,i:i], transform_to_real = true)[1]
     end
     train_error = norm(pred_mean_train - get_outputs(input_output_pairs))/size(get_inputs(input_output_pairs),2)
-    @info "average L^2 train_error $(train_error)"
+    train_error_untuned = norm(pred_mean_train_untuned - get_outputs(input_output_pairs))/size(get_inputs(input_output_pairs),2)
+    @info "average L^2 train_error untuned: $(train_error_untuned) and tuned: $(train_error)"
     
 
     min_iter_test = maximum(iter_train) + 1
@@ -162,20 +187,23 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
     test_outputs = reduce(vcat, objectives[iter_test,:])[:,:] 
     @info "testing data input: $(size(test_inputs)) output: $(size(test_outputs))"
     pred_mean_test = zeros(length(iter_test)*n_ens,1)    
+    pred_mean_test_untuned = copy(pred_mean_test)
     for i in 1:size(test_inputs,1)
-        pred_mean_test[i,:] = Emulators.predict(emulator, test_inputs[i:i,:]', transform_to_real = true)[1] 
+        pred_mean_test[i,:] = Emulators.predict(emulator, test_inputs[i:i,:]', transform_to_real = true)[1]
+        pred_mean_test_untuned[i,:] = Emulators.predict(emulator_untuned, test_inputs[i:i,:]', transform_to_real = true)[1]
     end
     test_error = norm(pred_mean_test - test_outputs)/size(test_inputs,1)
-    @info "average L^2 test_error $(test_error)"
+    test_error_untuned = norm(pred_mean_test_untuned - test_outputs)/size(test_inputs,1)
+    @info "average L^2 test_error untuned: $(test_error_untuned) and tuned: $(test_error)"
     
     
     # determine a good step size
     u0 = vec(mean(parameters[end,:,:], dims = 1))
     println("initial parameters: ", u0)
     yt_sample = truth
-    mcmc = MCMCWrapper(RWMHSampling(), yt_sample, prior, emulator, init_params=u0)
+    mcmc = MCMCWrapper(pCNMHSampling(), yt_sample, prior, emulator, init_params=u0)
     
-    new_step = optimize_stepsize(mcmc; init_stepsize = 1.0, N = 5000, discard_initial = 0)
+    new_step = optimize_stepsize(mcmc; init_stepsize = 0.1, N = 5000, discard_initial = 0)
     chain = MarkovChainMonteCarlo.sample(mcmc, 300_000; stepsize = new_step, discard_initial = 2_000)
     posterior = MarkovChainMonteCarlo.get_posterior(mcmc, chain)
     
@@ -200,8 +228,13 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
     println(cov(transformed_posterior_samples, dims = 2))
 
 
-# plot some useful 
+# plot some useful marginals
 p = plot(prior)
 plot!(p, posterior)
 vline!(p, mean(phys_parameters[end,:,:],dims=1))
+# vline!(p, mean(phys_parameters[end,:,:],dims=1)) # where training data ended up.
+
+savefig(p, joinpath(@__DIR__, "catke_posterior.png"))
+savefig(p, joinpath(@__DIR__, "catke_posterior.pdf"))
+
 
