@@ -116,12 +116,12 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
     elseif mlt_method == "Scalar-RF"
         overrides = Dict(
             "verbose" => true,
-            "n_features_opt" => 100,
-            "train_fraction" => 0.8,
+            "n_features_opt" => 200,
+            "train_fraction" => 0.9,
             "n_iteration" => 10,
             "cov_sample_multiplier" => 0.4,
             "n_ensemble" => 50, #40*n_dimensions,
-            "n_cross_val_sets" => 4,
+            "n_cross_val_sets" => 3,
         )
 
         rank = 10
