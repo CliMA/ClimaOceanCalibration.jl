@@ -117,14 +117,14 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
         overrides = Dict(
             "verbose" => true,
             "n_features_opt" => 100,
-            "train_fraction" => 0.9,
+            "train_fraction" => 0.8,
             "n_iteration" => 10,
-            "cov_sample_multiplier" => 0.2,
+            "cov_sample_multiplier" => 0.4,
             "n_ensemble" => 50, #40*n_dimensions,
-            "n_cross_val_sets" => 2,
+            "n_cross_val_sets" => 4,
         )
 
-        rank = 5
+        rank = 10
         nugget=1e-4
         kernel_structure = SeparableKernel(LowRankFactor(rank, nugget), OneDimFactor())
         
@@ -203,7 +203,7 @@ emulator_untuned = Emulator(
     yt_sample = truth
     mcmc = MCMCWrapper(pCNMHSampling(), yt_sample, prior, emulator, init_params=u0)
     
-    new_step = optimize_stepsize(mcmc; init_stepsize = 0.1, N = 5000, discard_initial = 0)
+    new_step = optimize_stepsize(mcmc; init_stepsize = 1e-3, N = 5000, discard_initial = 0)
     chain = MarkovChainMonteCarlo.sample(mcmc, 300_000; stepsize = new_step, discard_initial = 2_000)
     posterior = MarkovChainMonteCarlo.get_posterior(mcmc, chain)
     
