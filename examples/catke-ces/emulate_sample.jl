@@ -199,7 +199,7 @@ emulator_untuned = Emulator(
     
     # determine a good step size
     u0 = vec(mean(parameters[end,:,:], dims = 1))
-    println("initial parameters: ", u0)
+    @info "initial parameters: $(u0)"
     yt_sample = truth
     mcmc = MCMCWrapper(pCNMHSampling(), yt_sample, prior, emulator, init_params=u0)
     
@@ -207,7 +207,7 @@ emulator_untuned = Emulator(
     chain = MarkovChainMonteCarlo.sample(mcmc, 300_000; stepsize = new_step, discard_initial = 2_000)
     posterior = MarkovChainMonteCarlo.get_posterior(mcmc, chain)
     
-    println("Finished Sampling stage")
+    @info "Finished Sampling stage: tuned"
     # extract some statistics
     post_mean = mean(posterior)
     post_cov = cov(posterior)
@@ -229,12 +229,34 @@ emulator_untuned = Emulator(
 
 
 # plot some useful marginals
-p = plot(prior)
-plot!(p, posterior)
+p = plot(posterior)
 vline!(p, mean(phys_parameters[end,:,:],dims=1), linewidth=5)
 # vline!(p, mean(phys_parameters[end,:,:],dims=1)) # where training data ended up.
 
 savefig(p, joinpath(@__DIR__, "catke_posterior.png"))
 savefig(p, joinpath(@__DIR__, "catke_posterior.pdf"))
 
+plot!(prior, color=:grey)
 
+savefig(p, joinpath(@__DIR__, "catke_prior_posterior.png"))
+savefig(p, joinpath(@__DIR__, "catke_prior_posterior.pdf"))
+
+
+
+## Untuned:
+
+
+mcmc_untuned = MCMCWrapper(pCNMHSampling(), yt_sample, prior, emulator, init_params=u0)
+    
+new_step_untuned = optimize_stepsize(mcmc_untuned; init_stepsize = 1e-3, N = 5000, discard_initial = 0)
+chain_untuned = MarkovChainMonteCarlo.sample(mcmc_untuned, 300_000; stepsize = new_step_untuned, discard_initial = 2_000)
+posterior_untuned = MarkovChainMonteCarlo.get_posterior(mcmc_untuned, chain_untuned)
+    
+@info "Finished Sampling stage: untuned"
+
+p2 = plot(posterior)
+plot!(p2, posterior_untuned, color=:grey, alpha=0.3)
+vline!(p2, mean(phys_parameters[end,:,:],dims=1), linewidth=5)
+
+savefig(p2, joinpath(@__DIR__, "catke_tuned-untuned_posterior.png"))
+savefig(p2, joinpath(@__DIR__, "catke_tuned-untuned_posterior.pdf"))
