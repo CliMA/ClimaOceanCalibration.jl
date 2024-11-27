@@ -6,7 +6,7 @@ include("simple_networks.jl")
 include("hmc_interface.jl")
 include("optimization_utils.jl")
 
-data_directory = "/Users/andresouza/Desktop/Repositories/GenericAnalysis.jl/"
+data_directory = ""
 data_file = "catke_parameters.jld2"
 
 jlfile = jldopen(data_directory * data_file, "r")
