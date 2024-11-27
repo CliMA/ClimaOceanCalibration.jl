@@ -73,8 +73,9 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
     ## CES on compressed data
 
     io_pair_iter = 20
+    n_samples = 10
     burnin = 50
-    iter_train = burnin+1:io_pair_iter:burnin+1+io_pair_iter*10
+    iter_train = burnin+1:io_pair_iter:burnin+1+io_pair_iter*n_samples
     @info "train on iterations: $(iter_train)"
     inputs = reduce(vcat, [parameters[i,:,:] for i in iter_train])
     outputs = reduce(vcat, objectives[iter_train,:])[:,:] 
@@ -124,7 +125,7 @@ data_file = joinpath(@__DIR__, "catke_parameters.jld2")
             "n_cross_val_sets" => 3,
         )
 
-        rank = 10
+        rank = 7
         nugget=1e-4
         kernel_structure = SeparableKernel(LowRankFactor(rank, nugget), OneDimFactor())
         
@@ -180,7 +181,7 @@ emulator_untuned = Emulator(
     
 
     min_iter_test = maximum(iter_train) + 1
-    iter_test = min_iter_test:min_iter_test + 10
+    iter_test = min_iter_test:min_iter_test + 20
     
     @info "test on iterations: $(iter_test)"
     test_inputs = reduce(vcat, [parameters[i,:,:] for i in iter_test])
@@ -230,13 +231,17 @@ emulator_untuned = Emulator(
 
 # plot some useful marginals
 p = plot(posterior)
-vline!(p, mean(phys_parameters[end,:,:],dims=1), linewidth=5)
+vline!(p, mean(phys_parameters[end,:,:],dims=1), linewidth=5, color=:red)
 # vline!(p, mean(phys_parameters[end,:,:],dims=1)) # where training data ended up.
 
 savefig(p, joinpath(@__DIR__, "catke_posterior.png"))
 savefig(p, joinpath(@__DIR__, "catke_posterior.pdf"))
 
-plot!(prior, color=:grey)
+plot!(p, prior, color=:grey)
+minval=minimum(minimum(phys_parameters[iter_train,:,:],dims=1),dims=2)[:]
+maxval=maximum(maximum(phys_parameters[iter_train,:,:],dims=1),dims=2)[:]
+vline!(p, reshape(minval,1,:), linewidth=5, color=:grey)
+vline!(p, reshape(maxval,1,:), linewidth=5, color=:grey)
 
 savefig(p, joinpath(@__DIR__, "catke_prior_posterior.png"))
 savefig(p, joinpath(@__DIR__, "catke_prior_posterior.pdf"))
@@ -256,7 +261,8 @@ posterior_untuned = MarkovChainMonteCarlo.get_posterior(mcmc_untuned, chain_untu
 
 p2 = plot(posterior)
 plot!(p2, posterior_untuned, color=:grey, alpha=0.3)
-vline!(p2, mean(phys_parameters[end,:,:],dims=1), linewidth=5)
+vline!(p2, mean(phys_parameters[end,:,:],dims=1), linewidth=5, color=:red)
+
 
 savefig(p2, joinpath(@__DIR__, "catke_tuned-untuned_posterior.png"))
 savefig(p2, joinpath(@__DIR__, "catke_tuned-untuned_posterior.pdf"))
