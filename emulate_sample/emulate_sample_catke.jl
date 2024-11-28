@@ -52,13 +52,26 @@ end
 
 ## Sample
 # HMC 
-scale = 1e3
-U = LogDensity(network, scale)
+scale = 1.0e2
+
+function regularize(x)
+    if any(x .≤ 0.0)
+        return -Inf
+    elseif any(x .> 8.0)
+        return -Inf
+    else
+        return 0.0
+    end
+    return 
+end
+regularization_scale = 1.0
+
+U = LogDensity(network, regularize, scale, regularization_scale)
 ∇U = GradientLogDensity(U)
 
 D = size(θr, 2)
 initial_θ = copy(θr[end, :])
-n_samples = 10000
+n_samples = 1000
 n_adapts = 1000
 
 metric = DiagEuclideanMetric(D)
