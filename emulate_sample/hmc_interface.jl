@@ -36,3 +36,7 @@ function (∇logp::GradientLogDensity)(θ)
     autodiff(Enzyme.Reverse, Const(∇logp.logp), Active, DuplicatedNoNeed(θ, ∇logp.dθ))
     return (∇logp.logp(θ),  copy(∇logp.dθ))
 end
+
+struct Regularizer{F}
+    parameters::F
+end

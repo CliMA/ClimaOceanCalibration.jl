@@ -7,7 +7,7 @@ function loss(network::SimpleNetwork, x, y)
 end
 
 function chunk_list(list, n)
-    return [list[i:i+n-1] for i in 1:n:length(list)]
+    return [list[i:min(i+n-1, length(list))] for i in 1:n:length(list)]
 end
 
 struct Adam{S, T, I}
@@ -39,12 +39,13 @@ function set_parameters!(network::SimpleNetwork, parameters_list)
     start = 1
     for (i, names) in enumerate(propertynames(network))
         getproperty(network, names)[:] .= parameters_list[start:start+param_lengths[i]-1]
+        start = start + param_lengths[i]
     end
     return nothing
 end
 
-function Adam(network::SimpleNetwork)
-    parameters_list = (; α = 0.001, β₁ = 0.9, β₂ = 0.999, ϵ = 1e-8)
+function Adam(network::SimpleNetwork; α=0.001, β₁=0.9, β₂=0.999, ϵ=1e-8)
+    parameters_list = (; α, β₁, β₂, ϵ)
     network_parameters = parameters(network)
     t = [1.0]
     θ  = deepcopy(network_parameters) .* 0.0
@@ -59,6 +60,7 @@ function Adam(network::SimpleNetwork)
     return Adam(struct_copies, parameters_list,  t)
 end
 
+
 function update!(adam::Adam, network::SimpleNetwork, dnetwork::SimpleNetwork)
     # unpack
     (; α, β₁, β₂, ϵ) = adam.parameters
@@ -69,13 +71,11 @@ function update!(adam::Adam, network::SimpleNetwork, dnetwork::SimpleNetwork)
     θ .= parameters(network)
     gₜ .= parameters(dnetwork)
     # update
-    @. m₀ = β₁ * m₀
-    @. mₜ = m₀ + (1 - β₁) * gₜ
-    @. v₀ = β₂ * v₀
-    @. vₜ = v₀ + (1 - β₂) * (gₜ .^2)
-    @. v̂ₜ = vₜ / (1 - β₂^t)
+    @. mₜ = β₁ * m₀ + (1 - β₁) * gₜ
+    @. vₜ = β₂ * v₀ + (1 - β₂) * (gₜ .^2)
     @. m̂ₜ = mₜ / (1 - β₁^t)
-    @. θ  = θ - α * m̂ₜ / (sqrt(v̂ₜ) + ϵ)
+    @. v̂ₜ = vₜ / (1 - β₂^t)
+    @. θ = θ - α * m̂ₜ / (sqrt(v̂ₜ) + ϵ)
     # update parameters
     m₀ .= mₜ
     v₀ .= vₜ
