@@ -27,7 +27,7 @@ Mᴾ = size(θr)[2]
 
 # Define Network
 Nθ = size(θr, 2)
-Nθᴴ = Nθ ÷ 20
+Nθᴴ = Nθ ÷ 2
 W1 = randn(Nθᴴ, Nθ)
 b1 = randn(Nθᴴ)
 W2 = randn(1, Nθᴴ)
@@ -44,7 +44,7 @@ adam = Adam(network)
 batchsize = 100
 loss_list = Float64[]
 test_loss_list = Float64[]
-epochs = 20
+epochs = 100
 network_parameters = copy(parameters(network))
 for i in ProgressBar(1:epochs)
     shuffled_list = chunk_list(shuffle(1:2:M), batchsize)
@@ -97,13 +97,13 @@ function (regularizer::Regularizer)(x)
     elseif any(x .> regularizer.parameters[2])
         return -Inf
     else
-        return -sum(abs.(x - regularizer.parameters[3]))
+        return -sum(abs.(x - regularizer.parameters[3]) ./ (regularizer.parameters[2] - regularizer.parameters[1]))
     end
     return 0.0
 end
 
 scale = 10 * Δy # minimum(yr)
-regularization_scale = 0.001 * scale
+regularization_scale = 0.001/2 * scale
 
 U = LogDensity(network, reg, scale, regularization_scale)
 ∇U = GradientLogDensity(U)
@@ -144,5 +144,6 @@ display(fig)
 imin = argmax([stat.log_density for stat in stats])
 imax = argmin([stat.log_density for stat in stats])
 network(samples[imin])
-mean(samples) - initial_θ
-samples[imin] - initial_θ
+θ₀ = (initial_θ .* 2θ̃) .+ θ̄
+((mean(samples) .* 2θ̃) .+ θ̄) - θ₀
+((samples[imin] .* 2θ̃) .+ θ̄) - θ₀
