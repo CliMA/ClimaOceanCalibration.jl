@@ -15,9 +15,9 @@ include("progress.jl")
 
 # Polar restoring with limits hard coded for now.
 @inline function restoring_mask(λ, φ, z, t=0)
-    ϵN = (φ - 75) / 5
+    ϵN = (φ - 65) / 10
     ϵN = clamp(ϵN, zero(ϵN), one(ϵN))
-    ϵS = - (φ + 75) / 5
+    ϵS = - (φ + 5) / 10
     ϵS = clamp(ϵS, zero(ϵS), one(ϵS))
     return ϵN + ϵS
 end
@@ -42,19 +42,12 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     Nx, Ny, Nz = size
     z = exponential_z_faces(; Nz, depth=6000)
 
-    #=
-    grid = TripolarGrid(arch, FT; z,
-                        size = (Nx, Ny, Nz),
-                        north_poles_latitude=55,
-                        first_pole_longitude=70)
-    =#
-
     grid = LatitudeLongitudeGrid(arch, FT; size, latitude, longitude, z)
 
     bottom_height = regrid_bathymetry(grid;
                                       minimum_depth = 10,
-                                      interpolation_passes = 5,
-                                      major_basins = 3)
+                                      interpolation_passes = 1,
+                                      major_basins = 1)
 
     grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height))
 
@@ -70,8 +63,8 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     temperature = ECCOMetadata(:temperature, dates, ECCO4Monthly())
     salinity = ECCOMetadata(:salinity, dates, ECCO4Monthly())
 
-    FT = ECCORestoring(arch, temperature; grid, mask=restoring_mask_field, rate=restoring_rate)
-    FS = ECCORestoring(arch, salinity;    grid, mask=restoring_mask_field, rate=restoring_rate)
+    FT = ECCORestoring(temperature, grid; mask=restoring_mask_field, rate=restoring_rate)
+    FS = ECCORestoring(salinity, grid;    mask=restoring_mask_field, rate=restoring_rate)
     forcing = (T=FT, S=FS, u=Fu, v=Fv)
 
     ocean = ocean_simulation(grid; closure, forcing,
@@ -84,7 +77,6 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     coupled_model = OceanSeaIceModel(ocean; atmosphere, radiation)
     simulation = Simulation(coupled_model; Δt=10minutes, verbose=false)
     add_callback!(simulation, Progress(), IterationInterval(progress_interval))
-
     reset_coupled_simulation!(simulation)
 
     return simulation

@@ -27,11 +27,11 @@ EKP = EnsembleKalmanProcesses
 # Three degree by default, reaches ~2 SYPD on a laptop
 FT = Float64
 
-function forward_map(parameters, simulation, index)
+function forward_run!(simulation, parameters, ensemble_index, iteration=0)
     @show Cˢ = parameters[1]
     @show CˡᵒD = parameters[2]
 
-    mixing_length = CATKEMixingLength(; Cˢ, Cᵇ=0.01)
+    mixing_length = CATKEMixingLength(; Cˢ, Cᵇ=0.4)
     turbulent_kinetic_energy_equation = CATKEEquation(; CˡᵒD)
     catke = CATKEVerticalDiffusivity(FT; mixing_length, turbulent_kinetic_energy_equation)
 
@@ -42,14 +42,25 @@ function forward_map(parameters, simulation, index)
     simulation.model.ocean.model.closure = closure
     reset_coupled_simulation!(simulation)
 
-    @show simulation.model.ocean.model.closure
+    simulation.Δt = 10minutes
+    simulation.stop_time = 2days
 
-    simulation.Δt = 5minutes
-    #simulation.stop_time = 1day
-    simulation.stop_iteration = 10
-    simulation.stop_time = Inf
+    ocean_model = simulation.model.ocean.model
+    T = ocean_model.tracers.T
+    S = ocean_model.tracers.S
+    outputs = (; T, S)
+    filename = "north_atlantic_calibration_i$(iteration)_e$(ensemble_index).jld2"
+
+    ow = JLD2OutputWriter(ocean_model, outputs; filename,
+                          schedule = AveragedTimeInterval(1day),
+                          overwrite_existing = true)
+
     run!(simulation)
 
+    return nothing
+end
+
+function forward_map(parameters, simulation, ensemble_index, batch_index)
     grid = simulation.model.ocean.model.grid
     T = simulation.model.ocean.model.tracers.T
     mask_immersed_field!(T, NaN)
@@ -66,24 +77,34 @@ function forward_map(parameters, simulation, index)
     return simulation, data 
 end
 
-#=
-res = 4 # degree
-Nx = 360 ÷ res
-Ny = 60 ÷ res
+longitude = (260, 360)
+latitude = (-15, 75)
+res = 1 # degree
+Nx = 100 ÷ res
+Ny = 90 ÷ res
 Nz = 30
 
 mixing_length = CATKEMixingLength(Cˢ=1.1, Cᵇ=0.01)
 turbulent_kinetic_energy_equation = CATKEEquation(CˡᵒD=0.6)
 catke = CATKEVerticalDiffusivity(FT; mixing_length, turbulent_kinetic_energy_equation)
-simulation = diffusive_ocean_simulation(CPU(), FT;
+simulation = diffusive_ocean_simulation(CPU(), FT; longitude, latitude,
                                         size = (Nx, Ny, Nz),
-                                        latitude = (-80, -20),
                                         closure = catke,
                                         progress_interval=10)
 
-sim1, data1 = forward_map([1.1, 0.6], simulation)
-=#
+forward_run!(simulation, [1.1, 0.6], 0, 0)
 
+filename = "north_atlantic_calibration_i0_e0.jld2"
+
+#sim1, data1 = forward_map([1.1, 0.6], simulation, 1)
+
+fig = Figure()
+ax = Axis(fig[1, 1])
+T = simulation.model.ocean.model.tracers.T
+Nz = size(T, 3)
+heatmap!(ax, view(T, :, :, Nz))
+
+#=
 # ocean = simulation.model.ocean
 # grid = ocean.model.grid
 # heatmap(interior(T, :, :, size(grid, 3)))
@@ -133,3 +154,4 @@ end
 # G_ens .= hcat(values(iteration_data[1])...)
 # EKP.update_ensemble!(ensemble_kalman_process, G_ens)
 #
+=#
