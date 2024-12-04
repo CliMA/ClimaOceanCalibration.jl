@@ -1,4 +1,4 @@
-using ClimaOceanCalibration: diffusive_ocean_simulation, reschedule!, reset_coupled_simulation!
+using ClimaOceanCalibration: diffusive_ocean_simulation, reschedule!, reset_coupled_simulation!, NorthSouthMask
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
@@ -65,25 +65,15 @@ res = 2 # degree
 Nx = 80 ÷ res
 Ny = 90 ÷ res
 Nz = 30
+restoring_mask = NorthSouthMask(-10, 5, 60, 5, float_type=FT)
 
 mixing_length = CATKEMixingLength(Cˢ=1.1, Cᵇ=0.01)
 turbulent_kinetic_energy_equation = CATKEEquation(CˡᵒD=0.6)
 catke = CATKEVerticalDiffusivity(FT; mixing_length, turbulent_kinetic_energy_equation)
-simulation = diffusive_ocean_simulation(CPU(), FT; longitude, latitude,
+simulation = diffusive_ocean_simulation(CPU(), FT; longitude, latitude, restoring_mask,
                                         size = (Nx, Ny, Nz),
                                         closure = catke,
                                         progress_interval=10)
 
 forward_run!(simulation, [1.1, 0.6], 0, 0)
-
-filename = "north_atlantic_calibration_i0_e0.jld2"
-
-Tt = FieldTimeSeries(filename, "T")
-St = FieldTimeSeries(filename, "S")
-
-fig = Figure()
-ax = Axis(fig[1, 1])
-T = simulation.model.ocean.model.tracers.T
-Nz = size(T, 3)
-heatmap!(ax, view(T, :, :, Nz))
 
