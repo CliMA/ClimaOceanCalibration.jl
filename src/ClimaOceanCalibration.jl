@@ -13,16 +13,38 @@ using Printf
 
 include("progress.jl")
 
+struct NorthSouthMask{FT} <: Function
+    southern_limit :: FT
+    southern_width :: FT
+    northern_limit :: FT
+    northern_width :: FT
+end
+
+function NorthSouthMask(φS, δS, φN, δN; float_type=Float64)
+    FT = float_type
+    return NorthSouthMask(convert(FT, φS),
+                          convert(FT, δS),
+                          convert(FT, φN),
+                          convert(FT, δN))
+end
+
 # Polar restoring with limits hard coded for now.
-@inline function restoring_mask(λ, φ, z, t=0)
-    ϵN = (φ - 75) / 5
+@inline function (m::NorthSouthMask)(λ, φ, z, t=0)
+    φS = m.southern_limit
+    δS = m.southern_width
+    φN = m.northern_limit
+    δN = m.northern_width
+
+    ϵN = (φ - φN) / δN
     ϵN = clamp(ϵN, zero(ϵN), one(ϵN))
-    ϵS = - (φ + 75) / 5
+    ϵS = - (φ - φS) / δS
     ϵS = clamp(ϵS, zero(ϵS), one(ϵS))
+
     return ϵN + ϵS
 end
 
-@inline sponge_layer(λ, φ, z, t, c, ω) = - restoring_mask(λ, φ, z, t) * ω * c
+@inline u_sponge(i, j, k, grid, clock, fields, p) = @inbounds - p.μ[i, j, k] * p.ω * fields.u[i, j, k]
+@inline v_sponge(i, j, k, grid, clock, fields, p) = @inbounds - p.μ[i, j, k] * p.ω * fields.v[i, j, k]
 
 function default_closure(FT)
     κ_skew = 1000
@@ -37,24 +59,18 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
                                     longitude = (0, 360),
                                     latitude = (-80, 80),
                                     closure = default_closure(FT),
+                                    restoring_mask = NorthSouthMask(-75, 5, +75, 5, float_type=FT),
                                     progress_interval = 1)
 
     Nx, Ny, Nz = size
     z = exponential_z_faces(; Nz, depth=6000)
 
-    #=
-    grid = TripolarGrid(arch, FT; z,
-                        size = (Nx, Ny, Nz),
-                        north_poles_latitude=55,
-                        first_pole_longitude=70)
-    =#
-
     grid = LatitudeLongitudeGrid(arch, FT; size, latitude, longitude, z)
 
     bottom_height = regrid_bathymetry(grid;
                                       minimum_depth = 10,
-                                      interpolation_passes = 5,
-                                      major_basins = 3)
+                                      interpolation_passes = 1,
+                                      major_basins = 1)
 
     grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height))
 
@@ -63,15 +79,15 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     restoring_mask_field = CenterField(grid)
     set!(restoring_mask_field, restoring_mask)
 
-    Fu = Forcing(sponge_layer, field_dependencies=:u, parameters=restoring_rate)
-    Fv = Forcing(sponge_layer, field_dependencies=:v, parameters=restoring_rate)
+    Fu = Forcing(u_sponge, discrete_form=true, parameters=(ω=restoring_rate, μ=restoring_mask_field))
+    Fv = Forcing(v_sponge, discrete_form=true, parameters=(ω=restoring_rate, μ=restoring_mask_field))
 
     dates = DateTimeProlepticGregorian(1993, 1, 1) : Month(1) : DateTimeProlepticGregorian(1994, 1, 1)
     temperature = ECCOMetadata(:temperature, dates, ECCO4Monthly())
     salinity = ECCOMetadata(:salinity, dates, ECCO4Monthly())
 
-    FT = ECCORestoring(arch, temperature; grid, mask=restoring_mask_field, rate=restoring_rate)
-    FS = ECCORestoring(arch, salinity;    grid, mask=restoring_mask_field, rate=restoring_rate)
+    FT = ECCORestoring(temperature, grid; mask=restoring_mask_field, rate=restoring_rate)
+    FS = ECCORestoring(salinity, grid;    mask=restoring_mask_field, rate=restoring_rate)
     forcing = (T=FT, S=FS, u=Fu, v=Fv)
 
     ocean = ocean_simulation(grid; closure, forcing,
@@ -84,7 +100,6 @@ function diffusive_ocean_simulation(arch=CPU(), FT=Float64;
     coupled_model = OceanSeaIceModel(ocean; atmosphere, radiation)
     simulation = Simulation(coupled_model; Δt=10minutes, verbose=false)
     add_callback!(simulation, Progress(), IterationInterval(progress_interval))
-
     reset_coupled_simulation!(simulation)
 
     return simulation
