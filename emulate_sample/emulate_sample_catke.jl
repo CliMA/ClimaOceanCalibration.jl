@@ -102,7 +102,7 @@ function (regularizer::Regularizer)(x)
     return 0.0
 end
 
-scale = 10 * Δy # minimum(yr)
+scale = 10 * Δy # 1/minimum(yr)
 regularization_scale = 0.001/2 * scale
 
 U = LogDensity(network, reg, scale, regularization_scale)
@@ -128,12 +128,13 @@ toc = time()
 println("Elapsed time: $((toc - tic)/60) minutes")
 
 # Plot
+namelist = ["CᵂwΔ", "Cᵂu★", "Cʰⁱc", "Cʰⁱu", "Cʰⁱe", "CʰⁱD", "Cˢ", "Cˡᵒc", "Cˡᵒu", "Cˡᵒe", "CˡᵒD", "CRi⁰", "CRiᵟ", "Cᵘⁿc", "Cᵘⁿu", "Cᵘⁿe", "CᵘⁿD", "Cᶜc", "Cᶜu", "Cᶜe", "CᶜD", "Cᵉc", "Cˢᵖ"]
 fig = Figure() 
 Mp = 5
 for i in 1:23
     ii = (i-1)÷Mp + 1
     jj = (i-1)%Mp + 1
-    ax = Axis(fig[ii, jj]; title = "Parameter $i")
+    ax = Axis(fig[ii, jj]; title = namelist[i])
     v1 = ([sample[i] for sample in samples] .* 2θ̃) .+ θ̄
     hist!(ax, v1; bins = 50, strokewidth = 0, color = :blue, normalization = :pdf)
     xlims!(ax, -0.1, (reg.parameters[2][i]* 2θ̃ + θ̄) * 1.1)
