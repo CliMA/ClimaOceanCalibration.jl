@@ -2,7 +2,7 @@
 
 julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "09fe539bb9e600ac9ff6884d349be32ce0f041e5"
+project_hash = "e6ed65cc4cdee6c5da95f935654ebb2a0b22503a"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "27cecae79e5cc9935255f90c53bb831cc3c870d7"
@@ -322,7 +322,9 @@ version = "0.11.1"
 
 [[deps.ClimaSeaIce]]
 deps = ["Adapt", "KernelAbstractions", "Oceananigans", "RootSolvers", "Roots", "SeawaterPolynomials"]
-git-tree-sha1 = "0068e6e2544f0f38ec70b23b477d631377cf239e"
+git-tree-sha1 = "f5b45114d7c47faa799ac72cc0a07c1e86ac0e29"
+repo-rev = "f5b45114d7c47faa799ac72cc0a07c1e86ac0e29"
+repo-url = "https://github.com/CliMA/ClimaSeaIce.jl.git"
 uuid = "6ba0ff68-24e6-4315-936c-2e99227c95a4"
 version = "0.3.5"
 
@@ -1496,12 +1498,6 @@ version = "1.5.2+0"
 git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.1"
-
-[[deps.OrthogonalSphericalShellGrids]]
-deps = ["Adapt", "Distances", "KernelAbstractions", "MPI", "Oceananigans", "OffsetArrays", "Statistics"]
-git-tree-sha1 = "eadf4cc0db734a18b611afdaaf91d607dbdee2d8"
-uuid = "c2be9673-fb75-4747-82dc-aa2bb9f4aed0"
-version = "0.2.2"
 
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
