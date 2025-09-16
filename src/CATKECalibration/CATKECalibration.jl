@@ -4,7 +4,7 @@ using Oceananigans
 using Oceananigans.Simulations: reset!
 using ClimaOcean
 using ClimaOcean.ECCO: ECCO4Monthly
-using OrthogonalSphericalShellGrids
+using Oceananigans.OrthogonalSphericalShellGrids
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity
 using Oceananigans.Units
 using CFTime
