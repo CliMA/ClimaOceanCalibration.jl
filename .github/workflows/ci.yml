@@ -26,7 +26,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        julia --project=. -e 'using Pkg; Pkg.instantiate()'
+        julia --project=. -e 'using Pkg; Pkg.add("Statistics"); Pkg.add("Printf"); Pkg.add("Dates"); Pkg.instantiate()'
     
     - name: Run tests
       run: |
