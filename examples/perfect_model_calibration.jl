@@ -1,4 +1,4 @@
-using ClimaOceanCalibration: diffusive_ocean_simulation, reschedule!, reset_coupled_simulation!
+using ClimaOceanCalibration.DiffusiveOceanCalibration: diffusive_ocean_simulation, reschedule!, reset_coupled_simulation!
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
