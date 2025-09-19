@@ -26,7 +26,19 @@ jobs:
     
     - name: Install dependencies
       run: |
-        julia --project=. -e 'using Pkg; Pkg.add("Statistics"); Pkg.add("Printf"); Pkg.add("Dates"); Pkg.instantiate()'
+        julia --project=. -e '
+          using Pkg
+          # Add standard library dependencies
+          Pkg.add(["Statistics", "Printf", "Dates"])
+          
+          # Add the CliMA registry if needed
+          Pkg.Registry.add(RegistrySpec(url="https://github.com/CliMA/ClimaRegistry"))
+          
+          # Update registries to get latest package info
+          Pkg.Registry.update()
+          
+          # Instantiate using the Manifest.toml
+          Pkg.instantiate()'
     
     - name: Run tests
       run: |
