@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        julia-version: ['1.11']
+        julia-version: ['1.10', '1.11']
     
     steps:
     - uses: actions/checkout@v4
@@ -28,17 +28,25 @@ jobs:
       run: |
         julia --project=. -e '
           using Pkg
+          
+          # Add the CliMA registry first
+          Pkg.Registry.add(RegistrySpec(url="https://github.com/CliMA/ClimaRegistry"))
+          
+          # Update registries
+          Pkg.Registry.update()
+          
           # Add standard library dependencies
           Pkg.add(["Statistics", "Printf", "Dates"])
           
-          # Add the CliMA registry if needed
-          Pkg.Registry.add(RegistrySpec(url="https://github.com/CliMA/ClimaRegistry"))
+          # Add ClimaOcean directly from GitHub repository
+          Pkg.add(PackageSpec(url="https://github.com/CliMA/ClimaOcean.jl"))
           
-          # Update registries to get latest package info
-          Pkg.Registry.update()
+          # Now instantiate the rest of the dependencies
+          Pkg.instantiate()
           
-          # Instantiate using the Manifest.toml
-          Pkg.instantiate()'
+          # Show status for debugging
+          @info "Package status:"
+          Pkg.status()'
     
     - name: Run tests
       run: |
