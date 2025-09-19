@@ -101,7 +101,6 @@ function reset_coupled_simulation!(simulation)
     ocean = simulation.model.ocean
     reset!(simulation)
     reset!(ocean)
-    
     @show simulation
     @show ocean
 
