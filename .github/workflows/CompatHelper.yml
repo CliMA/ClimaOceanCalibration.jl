@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: 0 0 * * *  # Daily at midnight
   workflow_dispatch:
+
+# Add explicit permissions for the GITHUB_TOKEN
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   CompatHelper:
     runs-on: ubuntu-latest
