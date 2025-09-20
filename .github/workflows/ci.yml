@@ -35,4 +35,5 @@ jobs:
       run: |
         julia --project=. -e '
           using Pkg
+          Pkg.add("Test")
           Pkg.test()'
