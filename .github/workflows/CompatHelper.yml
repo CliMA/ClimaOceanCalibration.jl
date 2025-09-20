@@ -1,0 +1,16 @@
+# .github/workflows/CompatHelper.yml
+name: CompatHelper
+on:
+  schedule:
+    - cron: 0 0 * * *  # Daily at midnight
+  workflow_dispatch:
+jobs:
+  CompatHelper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for compat updates
+        uses: julia-actions/CompatHelper@v1
+        with:
+          pr_title_prefix: "CompatHelper:"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
