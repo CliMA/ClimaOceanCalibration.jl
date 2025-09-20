@@ -2,7 +2,7 @@
 
 julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "9b552b7bf2eca28a31578e67390f9bef5a816553"
+project_hash = "69220934d0c4a806712e6247435604c4ab2360f9"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "27cecae79e5cc9935255f90c53bb831cc3c870d7"
@@ -1471,12 +1471,6 @@ version = "1.5.2+0"
 git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.1"
-
-[[deps.OrthogonalSphericalShellGrids]]
-deps = ["Adapt", "Distances", "KernelAbstractions", "MPI", "Oceananigans", "OffsetArrays", "Statistics"]
-git-tree-sha1 = "eadf4cc0db734a18b611afdaaf91d607dbdee2d8"
-uuid = "c2be9673-fb75-4747-82dc-aa2bb9f4aed0"
-version = "0.2.2"
 
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
