@@ -24,6 +24,13 @@ jobs:
     - name: Cache Julia packages
       uses: julia-actions/cache@v2
     
+    - name: (Temporary) Add specific ClimaOcean branch (ss/omip-prototype)
+      run: |
+        julia --project=. -e '
+          using Pkg
+          Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
+        '
+
     - name: Run tests
       run: |
         julia --project=. -e '
