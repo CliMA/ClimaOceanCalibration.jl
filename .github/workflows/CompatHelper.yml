@@ -2,7 +2,7 @@
 name: CompatHelper
 on:
   schedule:
-    - cron: 0 0 * * *  # Daily at midnight
+    - cron: '0 0 * * *'  # Daily at midnight
   workflow_dispatch:
 
 # Add explicit permissions for the GITHUB_TOKEN
@@ -14,9 +14,9 @@ jobs:
   CompatHelper:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for compat updates
-        uses: julia-actions/CompatHelper@v1
-        with:
-          pr_title_prefix: "CompatHelper:"
+      - name: Pkg.add("CompatHelper")
+        run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
+      - name: CompatHelper.main()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia -e 'using CompatHelper; CompatHelper.main()'
