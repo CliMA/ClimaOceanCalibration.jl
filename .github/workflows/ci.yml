@@ -24,13 +24,11 @@ jobs:
     - name: Cache Julia packages
       uses: julia-actions/cache@v2
     
-    - name: Install dependencies
+    - name: Run tests
       run: |
         julia --project=. -e '
           using Pkg
+          Pkg.add(["Statistics", "Printf", "Dates"])
           Pkg.instantiate()
-          Pkg.status()'
-    
-    - name: Run tests
-      run: |
-        julia --project=. -e 'using Pkg; Pkg.test()'
+          Pkg.status()
+          Pkg.test()'
