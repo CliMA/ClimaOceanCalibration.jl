@@ -28,24 +28,7 @@ jobs:
       run: |
         julia --project=. -e '
           using Pkg
-          
-          # Add the CliMA registry first
-          Pkg.Registry.add(RegistrySpec(url="https://github.com/CliMA/ClimaRegistry"))
-          
-          # Update registries
-          Pkg.Registry.update()
-          
-          # Add standard library dependencies
-          Pkg.add(["Statistics", "Printf", "Dates"])
-          
-          # Add ClimaOcean directly from GitHub repository
-          Pkg.add(PackageSpec(url="https://github.com/CliMA/ClimaOcean.jl"))
-          
-          # Now instantiate the rest of the dependencies
           Pkg.instantiate()
-          
-          # Show status for debugging
-          @info "Package status:"
           Pkg.status()'
     
     - name: Run tests
