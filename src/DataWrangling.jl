@@ -1,0 +1,129 @@
+module DataWrangling
+
+using Oceananigans
+using Oceananigans.Fields: location
+using ClimaOcean
+using ClimaOcean.DataWrangling: DatasetFieldTimeSeries
+using Dates
+
+"""
+    AveragedFieldTimeSeries{D, T, S}
+
+A container for field data that has been averaged in time and/or space.
+
+# Fields
+- `data`: The averaged field time series data
+- `time_averaging`: Information about the time averaging operation applied
+- `space_averaging`: Information about the space averaging operation applied
+
+This struct provides a way to track both the averaged data and the operations used to produce it.
+"""
+struct AveragedFieldTimeSeries{D, T, S}
+    data            :: D
+    time_averaging  :: T
+    space_averaging :: S
+end
+
+"""
+    TimeAverageOperator{N, ST, TT, SDT, TDT}
+
+An operator that performs time averaging on field time series data.
+
+# Fields
+- `nsteps`: Number of time steps to combine in each averaging window
+- `source_times`: Original times from the source data
+- `target_times`: Times for the averaged data (subset of source times)
+- `source_Δt`: Time intervals in the source data
+- `target_Δt`: Time intervals in the averaged data
+
+This operator is used to reduce temporal resolution by averaging multiple time steps together.
+"""
+struct TimeAverageOperator{N, ST, TT, SDT, TDT}
+    nsteps       :: N
+    source_times :: ST
+    target_times :: TT
+    source_Δt    :: SDT
+    target_Δt    :: TDT
+end
+
+"""
+    TimeAverageOperator(fts::DatasetFieldTimeSeries, nsteps)
+
+Create a time averaging operator that averages every `nsteps` time steps in the field time series.
+Note that the assumption is that fts[i] is the average field value over the interval [times[i], times[i+1]].
+For the last timestep, we assume it is averaged over the interval [times[end], times[end] + Δt], where Δt is the date step (which depends on the actual dates given by the metadata).
+
+# Arguments
+- `fts`: A `DatasetFieldTimeSeries` containing the time data to be averaged
+- `nsteps`: Number of consecutive time steps to average together
+
+# Returns
+- `TimeAverageOperator` that can be applied to a compatible field time series
+
+# Notes
+- If `nsteps` is 1, no averaging will be performed
+- The operator computes target times and appropriate time intervals for weighted averaging
+- For dataset time series with dates, proper date-based time intervals are calculated
+"""
+function TimeAverageOperator(fts::DatasetFieldTimeSeries, nsteps)
+    fts.times isa Number && return TimeAverageOperator(1, nothing)
+
+    source_dates = fts.backend.metadata.dates
+    source_datestep = source_dates |> step
+    source_enddate = last(source_dates) + source_datestep
+    
+    fts_times = Array(fts.times)
+    last_timestep = Dates.value(source_enddate - first(source_dates)) / 1000
+
+    times_inclusive = vcat(fts_times, last_timestep)
+    source_Δt = diff(times_inclusive)
+
+    target_times = fts_times[1:nsteps:end-1]
+    target_Δt = diff(times_inclusive[1:nsteps:end])
+
+    return TimeAverageOperator(nsteps, fts_times, target_times, source_Δt, target_Δt)
+end
+
+"""
+    (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
+
+Apply time averaging to a field time series using the specified operator.
+
+# Arguments
+- `𝒯`: The time averaging operator
+- `fts`: The field time series to which the operator is applied
+
+# Returns
+A new field time series with reduced temporal resolution, where each time step is an average of `nsteps` original time steps.
+
+# Example
+
+```julia
+# Create a time averaging operator for 3 time steps
+operator = TimeAverageOperator(fts, 3)
+
+# Apply the operator to a field time series
+averaged_fts = operator(fts)
+```
+
+"""
+function (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
+    nsteps = 𝒯.nsteps
+    nsteps == 1 && return fts
+
+    LX, LY, LZ = location(fts)
+    grid = fts.grid
+    boundary_conditions = fts.boundary_conditions
+    target_fts = FieldTimeSeries{LX, LY, LZ}(grid, 𝒯.target_times; boundary_conditions)
+
+    for i in eachindex(𝒯.target_times)
+        target_field = target_fts[i]
+        for j in 1:nsteps
+            target_field .+= fts[nsteps * (i-1) + j] * 𝒯.source_Δt[nsteps * (i-1) + j]
+        end
+        target_field ./= 𝒯.target_Δt[i]
+    end
+    return target_fts
+end
+
+end
