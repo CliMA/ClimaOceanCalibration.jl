@@ -11,6 +11,7 @@ using ClimaOceanCalibration.DiffusiveOceanCalibration
     end
 
     # Preparing dataset for testing
-    include("download_glorys_monthly_ci.jl")
+    # include("download_glorys_monthly_ci.jl")
+    include("download_glorys_monthly_figshare_api.jl")
     include("test_time_averaging.jl")
 end

@@ -35,5 +35,5 @@ jobs:
       run: |
         julia --project=. -e '
           using Pkg
-          Pkg.add(["Test", "Downloads"])
+          Pkg.add(["Test", "Downloads", JSON3, HTTP])
           Pkg.test()'
