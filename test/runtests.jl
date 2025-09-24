@@ -7,5 +7,10 @@ using ClimaOceanCalibration.DiffusiveOceanCalibration
     @testset "Package Loading" begin
         # Test that the package loads without errors
         @test isdefined(ClimaOceanCalibration, :DiffusiveOceanCalibration)
+        @test isdefined(ClimaOceanCalibration, :DataWrangling)
     end
+
+    # Preparing dataset for testing
+    include("download_glorys_monthly_ci.jl")
+    # include("test_time_averaging.jl")
 end
