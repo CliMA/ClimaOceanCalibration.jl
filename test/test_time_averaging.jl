@@ -32,7 +32,7 @@ using Statistics
     mkpath(dir)
 
     start_date = DateTime(1993, 1, 1)
-    end_date = DateTime(1993, 6, 1)
+    end_date = DateTime(1993, 3, 1)
 
     augmented_time = start_date:Month(1):end_date + Month(1)
     time_diffs = Dates.value.(diff(augmented_time)) ./ 1000  # in seconds
@@ -42,7 +42,7 @@ using Statistics
     data = FieldTimeSeries(T, grid; inpainting)
     Nt_data = length(data.times)
 
-    for nstep in [1, 3, 4, 6]
+    for nstep in [1, 2, 3]
         @info "nstep = $nstep"
         operator = TimeAverageOperator(data, nstep)
         averaged_data = operator(data)

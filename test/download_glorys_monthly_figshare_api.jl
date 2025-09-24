@@ -57,7 +57,7 @@ end
 Downloads files from a Figshare article using the official API method.
 Implements caching to avoid re-downloading files that already exist.
 """
-function download_from_figshare_api(article_id, download_dir::String=".")
+function download_from_figshare_api(article_id, download_dir::String=".", force_download::Bool=false)
     files_info = get_figshare_download_url(article_id)
     
     if files_info === nothing
@@ -65,7 +65,7 @@ function download_from_figshare_api(article_id, download_dir::String=".")
         return false
     end
     
-    # Create a cache key file to store metadata for GitHub Actions
+    # Create cache key file for GitHub Actions
     cache_key = generate_cache_key(files_info)
     println("Cache key: $cache_key")
     
@@ -73,10 +73,16 @@ function download_from_figshare_api(article_id, download_dir::String=".")
         mkpath(download_dir)
     end
     
-    # Write cache key to a file for GitHub Actions to use
+    # Write cache key to a file
     cache_key_file = joinpath(download_dir, "cache_key.txt")
     open(cache_key_file, "w") do io
         println(io, cache_key)
+    end
+    
+    # Check if all files already exist
+    if !force_download && check_all_files_exist(files_info, download_dir)
+        println("✓ All files already exist with correct sizes. Skipping downloads.")
+        return true
     end
     
     success_count = 0
@@ -122,5 +128,24 @@ function download_from_figshare_api(article_id, download_dir::String=".")
     return success_count > 0
 end
 
-# Run the download with caching
-download_from_figshare_api(figshare_id, "./GLORYS_data")
+"""
+    check_all_files_exist(files_info, download_dir)
+
+Check if all files from files_info exist in download_dir with correct sizes.
+"""
+function check_all_files_exist(files_info, download_dir::String=".")
+    all_files_exist = true
+    for file in files_info
+        filepath = joinpath(download_dir, file.name)
+        if !check_file_integrity(filepath, file.size)
+            all_files_exist = false
+            break
+        end
+    end
+    return all_files_exist
+end
+
+# Only run if executed directly, not when included
+if abspath(PROGRAM_FILE) == @__FILE__
+    download_from_figshare_api(figshare_id, "./GLORYS_data")
+end

@@ -29,20 +29,20 @@ jobs:
       run: |
         julia --project=. -e '
           using Pkg
-          using Dates
-          Pkg.add(["JSON3", "HTTP"])
+          Pkg.add(["JSON3", "HTTP", "SHA"])
           
           include("test/download_glorys_monthly_figshare_api.jl")
           
           files_info = get_figshare_download_url(figshare_id)
           if files_info !== nothing
             cache_key = generate_cache_key(files_info)
-            println("::set-output name=glorys_cache_key::$cache_key")
-          else
-            println("::set-output name=glorys_cache_key::fallback-$(Dates.format(Dates.today(), "yyyymmdd"))")
+            open("glorys_cache_key.txt", "w") do io
+              write(io, cache_key)
+            end
           end
         '
-        
+        echo "glorys_cache_key=$(cat glorys_cache_key.txt)" >> $GITHUB_OUTPUT
+
     - name: Cache GLORYS data
       id: cache-glorys
       uses: actions/cache@v3
@@ -64,6 +64,7 @@ jobs:
           using Pkg
           Pkg.add(["Downloads", "JSON3", "HTTP", "SHA"])
           include("test/download_glorys_monthly_figshare_api.jl")
+          download_from_figshare_api(figshare_id, "./GLORYS_data")
         '
 
     - name: Run tests
