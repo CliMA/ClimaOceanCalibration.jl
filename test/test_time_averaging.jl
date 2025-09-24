@@ -20,7 +20,7 @@ using Statistics
     arch = CPU()
     grid = TripolarGrid(arch;
                         size = (Nx, Ny, Nz),
-                            z = z_faces,
+                           z = z_faces,
                         halo = (7, 7, 7))
 
     bottom_height = regrid_bathymetry(grid; minimum_depth = 15, major_basins = 1, interpolation_passes = 75)
