@@ -46,6 +46,8 @@ struct TimeAverageOperator{N, ST, TT, SDT, TDT}
     target_Δt    :: TDT
 end
 
+floor_multiple(a, b) = a - rem(a, b)
+
 """
     TimeAverageOperator(fts::DatasetFieldTimeSeries, nsteps)
 
@@ -78,8 +80,9 @@ function TimeAverageOperator(fts::DatasetFieldTimeSeries, nsteps)
     times_inclusive = vcat(fts_times, last_timestep)
     source_Δt = diff(times_inclusive)
 
-    target_times = fts_times[1:nsteps:end-1]
-    target_Δt = diff(times_inclusive[1:nsteps:end])
+    truncated_length = floor_multiple(length(fts_times), nsteps)
+    target_times = fts_times[1:truncated_length][1:nsteps:end]
+    target_Δt = diff(times_inclusive[1:truncated_length+1][1:nsteps:end])
 
     return TimeAverageOperator(nsteps, fts_times, target_times, source_Δt, target_Δt)
 end
