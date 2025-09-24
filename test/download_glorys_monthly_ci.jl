@@ -1,5 +1,3 @@
-using 
-
 dir = "./GLORYS_data"
 mkpath(dir)
 zipped_filepath = joinpath(dir, "glorys_data.zip")
