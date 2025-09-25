@@ -1,4 +1,3 @@
-module DataWrangling
 
 using Oceananigans
 using Oceananigans.Fields: location
@@ -127,6 +126,4 @@ function (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
         target_field ./= 𝒯.target_Δt[i]
     end
     return target_fts
-end
-
 end
