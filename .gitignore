@@ -28,3 +28,7 @@ docs/site/
 
 # log files
 logs/
+batch_scripts/
+
+# Python package files
+.CondaPkg/
