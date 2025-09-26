@@ -24,31 +24,31 @@ jobs:
     - name: Cache Julia packages
       uses: julia-actions/cache@v2
       
-    - name: Generate cache key for GLORYS data
-      id: cache-key
-      run: |
-        julia --project=. -e '
-          using Pkg
-          Pkg.add(["JSON3", "HTTP", "SHA"])
+    # - name: Generate cache key for GLORYS data
+    #   id: cache-key
+    #   run: |
+    #     julia --project=. -e '
+    #       using Pkg
+    #       Pkg.add(["JSON3", "HTTP", "SHA"])
           
-          include("test/download_glorys_monthly_figshare_api.jl")
+    #       include("test/download_glorys_monthly_figshare_api.jl")
           
-          files_info = get_figshare_download_url(figshare_id)
-          if files_info !== nothing
-            cache_key = generate_cache_key(files_info)
-            open("glorys_cache_key.txt", "w") do io
-              write(io, cache_key)
-            end
-          end
-        '
-        echo "glorys_cache_key=$(cat glorys_cache_key.txt)" >> $GITHUB_OUTPUT
+    #       files_info = get_figshare_download_url(figshare_id)
+    #       if files_info !== nothing
+    #         cache_key = generate_cache_key(files_info)
+    #         open("glorys_cache_key.txt", "w") do io
+    #           write(io, cache_key)
+    #         end
+    #       end
+    #     '
+    #     echo "glorys_cache_key=$(cat glorys_cache_key.txt)" >> $GITHUB_OUTPUT
 
-    - name: Cache GLORYS data
-      id: cache-glorys
-      uses: actions/cache@v3
-      with:
-        path: ./GLORYS_data
-        key: glorys-data-${{ steps.cache-key.outputs.glorys_cache_key }}
+    # - name: Cache GLORYS data
+    #   id: cache-glorys
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ./GLORYS_data
+    #     key: glorys-data-${{ steps.cache-key.outputs.glorys_cache_key }}
     
     - name: (Temporary) Add specific ClimaOcean branch (ss/omip-prototype)
       run: |
@@ -57,14 +57,14 @@ jobs:
           Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
         '
 
-    - name: Download GLORYS data (if not cached)
-      if: steps.cache-glorys.outputs.cache-hit != 'true'
-      run: |
-        julia --project=. -e '
-          using Pkg
-          Pkg.add(["Downloads", "JSON3", "HTTP", "SHA"])
-          include("test/download_glorys_monthly_figshare_api.jl")
-          download_from_figshare_api(figshare_id, "./GLORYS_data")
+    # - name: Download GLORYS data (if not cached)
+    #   if: steps.cache-glorys.outputs.cache-hit != 'true'
+    #   run: |
+    #     julia --project=. -e '
+    #       using Pkg
+    #       Pkg.add(["Downloads", "JSON3", "HTTP", "SHA"])
+    #       include("test/download_glorys_monthly_figshare_api.jl")
+    #       download_from_figshare_api(figshare_id, "./GLORYS_data")
         '
 
     - name: Run tests
