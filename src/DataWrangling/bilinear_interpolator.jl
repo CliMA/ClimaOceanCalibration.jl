@@ -2,7 +2,7 @@ using CondaPkg
 using Oceananigans.Grids: AbstractGrid, φnodes, λnodes
 using Oceananigans.Fields: AbstractField
 using Oceananigans.Utils: launch!
-using Oceananigans.Architectures: on_architecture
+using Oceananigans.Architectures: on_architecture, architecture
 using KernelAbstractions: @kernel, @index
 using Oceananigans
 using SparseArrays
@@ -43,9 +43,10 @@ src_grid = RectilinearGrid(size=(50, 50), x=(0, 1), y=(0, 1))
 interpolator = BilinearInterpolator(dst_grid, src_grid)
 ````
 """
-function BilinearInterpolator(destination::AbstractGrid, source::AbstractGrid) 
+function BilinearInterpolator(destination::AbstractGrid, source::AbstractGrid)
+    arch = architecture(destination)
     weights = regridder_weights(destination, source; method="bilinear")
-    return BilinearInterpolator(weights)
+    return BilinearInterpolator(on_architecture(arch, weights))
 end
 
 """
