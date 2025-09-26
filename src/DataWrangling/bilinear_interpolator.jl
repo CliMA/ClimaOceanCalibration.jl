@@ -14,12 +14,12 @@ using PythonCall
 A structure that holds sparse weight matrices for bilinear interpolation between two grids.
 
 # Fields
-- `set1::W1`: Sparse weight matrix for interpolation from grid1 to grid2
-- `set2::W2`: Sparse weight matrix for interpolation from grid2 to grid1
+- `grid1_to_grid2::W1`: Sparse weight matrix for interpolation from grid1 to grid2
+- `grid2_to_grid1::W2`: Sparse weight matrix for interpolation from grid2 to grid1
 """
 struct BilinearInterpolator{W1, W2}
-    set1 :: W1
-    set2 :: W2
+    grid1_to_grid2 :: W1
+    grid2_to_grid1 :: W2
 end
 
 """
