@@ -1,5 +1,9 @@
 using CondaPkg
 using Oceananigans.Grids: AbstractGrid, φnodes, λnodes
+using Oceananigans.Fields: AbstractField
+using Oceananigans.Utils: launch!
+using Oceananigans.Architectures: on_architecture
+using KernelAbstractions: @kernel, @index
 using Oceananigans
 using SparseArrays
 using LinearAlgebra
@@ -56,6 +60,22 @@ This operation performs: vec(dst) = weights * vec(src)
 - `src`: Source data to be interpolated
 """
 regrid!(dst, weights, src) = LinearAlgebra.mul!(vec(dst), weights, vec(src))
+regrid!(dst, src, interpolator::BilinearInterpolator) = regrid!(dst, interpolator.weights, src)
+
+@kernel function regrid_in_xy!(dst, weights, src)
+    k = @index(Global)
+    @inbounds dst_slice = interior(dst, :, :, k)
+    @inbounds src_slice = interior(src, :, :, k)
+    regrid!(dst_slice, weights, src_slice)
+end
+
+function regrid!(dst::AbstractField, src::AbstractField, interpolator)
+    arch = architecture(dst)
+    grid = dst.grid
+    weights = on_architecture(arch, interpolator.weights)
+
+    launch!(arch, grid, :z, regrid_in_xy!, dst, weights, src)
+end
 
 (interpolator::BilinearInterpolator)(destination, source) = regrid!(destination, interpolator.weights, source)
 
