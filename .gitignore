@@ -26,9 +26,11 @@ docs/site/
 *.nc
 *.h5
 
-# log files
+# log files, data and output directories
 logs/
 batch_scripts/
+output/
+data/
 
 # Python package files
 .CondaPkg/
