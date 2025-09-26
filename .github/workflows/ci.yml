@@ -65,7 +65,7 @@ jobs:
     #       Pkg.add(["Downloads", "JSON3", "HTTP", "SHA"])
     #       include("test/download_glorys_monthly_figshare_api.jl")
     #       download_from_figshare_api(figshare_id, "./GLORYS_data")
-        '
+    #     '
 
     - name: Run tests
       run: |
