@@ -1,6 +1,6 @@
-
 using Oceananigans
 using Oceananigans.Fields: location
+using Oceananigans.OutputReaders: FieldTimeSeries
 using ClimaOcean
 using ClimaOcean.DataWrangling: DatasetFieldTimeSeries
 using Dates
@@ -75,6 +75,51 @@ function TimeAverageOperator(fts::DatasetFieldTimeSeries, nsteps)
     
     fts_times = Array(fts.times)
     last_timestep = Dates.value(source_enddate - first(source_dates)) / 1000
+
+    times_inclusive = vcat(fts_times, last_timestep)
+    source_Δt = diff(times_inclusive)
+
+    truncated_length = floor_multiple(length(fts_times), nsteps)
+    target_times = fts_times[1:truncated_length][1:nsteps:end]
+    target_Δt = diff(times_inclusive[1:truncated_length+1][1:nsteps:end])
+
+    return TimeAverageOperator(nsteps, fts_times, target_times, source_Δt, target_Δt)
+end
+
+"""
+    TimeAverageOperator(fts::FieldTimeSeries, nsteps)
+
+Create a time averaging operator that averages every `nsteps` time steps in a regular field time series.
+The assumption is that fts[i] is the average field value over the interval [times[i], times[i+1]].
+For the last timestep, we assume it extends one timestep beyond the final recorded time.
+
+# Arguments
+- `fts`: A `FieldTimeSeries` containing the time data to be averaged
+- `nsteps`: Number of consecutive time steps to average together
+
+# Returns
+- `TimeAverageOperator` that can be applied to a compatible field time series
+
+# Notes
+- If `nsteps` is 1, no averaging will be performed
+- The operator requires uniform time spacing in the input field time series
+- The operator truncates the data to ensure complete averaging windows
+- The returned operator contains both source and target times and time intervals needed for weighted averaging
+
+# Throws
+- Assertion error if non-uniform time steps are detected in the input field time series
+"""
+function TimeAverageOperator(fts::FieldTimeSeries, nsteps)
+    fts.times isa Number && return TimeAverageOperator(1, nothing)
+
+    fts_times = Array(fts.times)
+    timestep = fts_times[2] - fts_times[1] # assume uniform spacing!!
+    if length(fts_times) > 2
+        all_timesteps = diff(fts_times)
+        @assert all(isapprox.(all_timesteps, timestep)) "Non-uniform time steps detected in FieldTimeSeries. This implementation requires uniform time spacing."
+    end
+
+    last_timestep = fts_times[end] + timestep
 
     times_inclusive = vcat(fts_times, last_timestep)
     source_Δt = diff(times_inclusive)
