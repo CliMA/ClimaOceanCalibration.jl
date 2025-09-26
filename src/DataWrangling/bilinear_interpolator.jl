@@ -1,5 +1,3 @@
-# Final Working BilinearInterpolator with Full ESMF/xesmf Compatibility
-
 using CondaPkg
 using Oceananigans.Grids: AbstractGrid, φnodes, λnodes
 using Oceananigans
@@ -10,25 +8,100 @@ CondaPkg.add(["pandas", "numpy", "scipy", "xarray", "esmpy", "xesmf"], channel="
 CondaPkg.resolve()
 using PythonCall
 
+"""
+    BilinearInterpolator{W1, W2}
+
+A structure that holds sparse weight matrices for bilinear interpolation between two grids.
+
+# Fields
+- `set1::W1`: Sparse weight matrix for interpolation from grid1 to grid2
+- `set2::W2`: Sparse weight matrix for interpolation from grid2 to grid1
+"""
 struct BilinearInterpolator{W1, W2}
     set1 :: W1
     set2 :: W2
 end
 
+"""
+    BilinearInterpolator(grid1::AbstractGrid, grid2::AbstractGrid)
+
+Construct a BilinearInterpolator that can perform bilinear interpolation between `grid1` and `grid2`.
+
+# Arguments
+- `grid1::AbstractGrid`: First grid for interpolation
+- `grid2::AbstractGrid`: Second grid for interpolation
+
+# Returns
+- `BilinearInterpolator` with weight matrices for interpolating between the grids
+"""
 function BilinearInterpolator(grid1::AbstractGrid, grid2::AbstractGrid) 
     W1 = regridder_weights(grid1, grid2; method="bilinear")
     W2 = regridder_weights(grid2, grid1; method="bilinear")
     return BilinearInterpolator(W1, W2)
 end
 
-regrid!(dst, weights, scr) = LinearAlgebra.mul!(vec(dst), weights, vec(scr))
+"""
+    regrid!(dst, weights, src)
 
+Apply interpolation weights to source data and store the result in the destination array.
+This operation performs: vec(dst) = weights * vec(src)
+
+# Arguments
+- `dst`: Destination array where results will be stored
+- `weights`: Sparse weight matrix for interpolation
+- `src`: Source data to be interpolated
+"""
+regrid!(dst, weights, src) = LinearAlgebra.mul!(vec(dst), weights, vec(src))
+
+
+"""
+    get_numpy()
+
+Import and return the Python numpy module using PythonCall.
+"""
 get_numpy()  = pyimport("numpy")
+
+"""
+    get_xarray()
+
+Import and return the Python xarray module using PythonCall.
+"""
 get_xarray() = pyimport("xarray")
+
+"""
+    get_xesmf()
+
+Import and return the Python xesmf module using PythonCall.
+"""
 get_xesmf() = pyimport("xesmf")
 
+"""
+    two_dimensionalize(lat::Matrix, lon::Matrix)
+
+Return the input matrices unchanged since they're already two-dimensional.
+
+# Arguments
+- `lat::Matrix`: Latitude values as a matrix
+- `lon::Matrix`: Longitude values as a matrix
+
+# Returns
+- The original latitude and longitude matrices
+"""
 two_dimensionalize(lat::Matrix, lon::Matrix) = lat, lon
 
+"""
+    two_dimensionalize(lat::AbstractVector, lon::AbstractVector)
+
+Convert one-dimensional latitude and longitude vectors into two-dimensional matrices
+suitable for use with xesmf regridding.
+
+# Arguments
+- `lat::AbstractVector`: Vector of latitude values
+- `lon::AbstractVector`: Vector of longitude values
+
+# Returns
+- Tuple of two matrices: (2D latitude matrix, 2D longitude matrix)
+"""
 function two_dimensionalize(lat::AbstractVector, lon::AbstractVector) 
     Nx = length(lon)
     Ny = length(lat)
@@ -37,6 +110,18 @@ function two_dimensionalize(lat::AbstractVector, lon::AbstractVector)
     return lat, lon
 end
 
+"""
+    coordinate_dataset(grid::AbstractGrid)
+
+Extract coordinate information from an Oceananigans grid and convert it to a format
+compatible with xesmf regridding.
+
+# Arguments
+- `grid::AbstractGrid`: An Oceananigans grid
+
+# Returns
+- Python xarray.Dataset containing grid coordinate information
+"""
 function coordinate_dataset(grid::AbstractGrid)
     lat = Array(φnodes(grid, Center(), Center(), Center()))
     lon = Array(λnodes(grid, Center(), Center(), Center()))
@@ -50,6 +135,20 @@ function coordinate_dataset(grid::AbstractGrid)
     return structured_coordinate_dataset(lat, lon, lat_b, lon_b)
 end
 
+"""
+    structured_coordinate_dataset(lat, lon, lat_b, lon_b)
+
+Create a Python xarray Dataset from latitude and longitude arrays suitable for xesmf regridding.
+
+# Arguments
+- `lat`: 2D array of cell-centered latitudes
+- `lon`: 2D array of cell-centered longitudes
+- `lat_b`: 2D array of cell-boundary latitudes
+- `lon_b`: 2D array of cell-boundary longitudes
+
+# Returns
+- Python xarray.Dataset containing the structured coordinate information
+"""
 function structured_coordinate_dataset(lat, lon, lat_b, lon_b)
     numpy  = get_numpy()
     xarray = get_xarray()
@@ -130,6 +229,19 @@ function structured_coordinate_dataset(lat, lon, lat_b, lon_b)
     return xarray.Dataset(dataset_dict)
 end
 
+"""
+    regridder_weights(dst::AbstractGrid, src::AbstractGrid; method::String="bilinear")
+
+Compute sparse weight matrices for interpolating data between source and destination grids.
+
+# Arguments
+- `dst::AbstractGrid`: Destination grid for interpolation
+- `src::AbstractGrid`: Source grid for interpolation
+- `method::String="bilinear"`: Interpolation method (default: "bilinear")
+
+# Returns
+- Sparse matrix of interpolation weights
+"""
 function regridder_weights(dst::AbstractGrid, src::AbstractGrid; method::String="bilinear")
     # Test imports with automatic fixes
     
