@@ -9,35 +9,39 @@ CondaPkg.resolve()
 using PythonCall
 
 """
-    BilinearInterpolator{W1, W2}
+    BilinearInterpolator{M}
 
-A structure that holds sparse weight matrices for bilinear interpolation between two grids.
+A struct for bilinear interpolation between Oceananigans grids using precomputed weights.
 
 # Fields
-- `grid1_to_grid2::W1`: Sparse weight matrix for interpolation from grid1 to grid2
-- `grid2_to_grid1::W2`: Sparse weight matrix for interpolation from grid2 to grid1
+- `weights :: M`: Sparse weight matrix for interpolation between source and destination grids
 """
-struct BilinearInterpolator{W1, W2}
-    grid1_to_grid2 :: W1
-    grid2_to_grid1 :: W2
+struct BilinearInterpolator{M}
+    weights :: M
 end
 
 """
-    BilinearInterpolator(grid1::AbstractGrid, grid2::AbstractGrid)
+    BilinearInterpolator(destination::AbstractGrid, source::AbstractGrid)
 
-Construct a BilinearInterpolator that can perform bilinear interpolation between `grid1` and `grid2`.
+Create a bilinear interpolator that computes and stores weights for interpolation from a source grid to a destination grid.
 
 # Arguments
-- `grid1::AbstractGrid`: First grid for interpolation
-- `grid2::AbstractGrid`: Second grid for interpolation
+- `destination::AbstractGrid`: The destination grid to interpolate to
+- `source::AbstractGrid`: The source grid to interpolate from
 
 # Returns
-- `BilinearInterpolator` with weight matrices for interpolating between the grids
+- `BilinearInterpolator`: An interpolator object with precomputed weights
+
+# Example
+```julia
+dst_grid = RectilinearGrid(size=(100, 100), x=(0, 1), y=(0, 1))
+src_grid = RectilinearGrid(size=(50, 50), x=(0, 1), y=(0, 1))
+interpolator = BilinearInterpolator(dst_grid, src_grid)
+````
 """
-function BilinearInterpolator(grid1::AbstractGrid, grid2::AbstractGrid) 
-    W1 = regridder_weights(grid1, grid2; method="bilinear")
-    W2 = regridder_weights(grid2, grid1; method="bilinear")
-    return BilinearInterpolator(W1, W2)
+function BilinearInterpolator(destination::AbstractGrid, source::AbstractGrid) 
+    weights = regridder_weights(destination, source; method="bilinear")
+    return BilinearInterpolator(weights)
 end
 
 """
@@ -53,6 +57,7 @@ This operation performs: vec(dst) = weights * vec(src)
 """
 regrid!(dst, weights, src) = LinearAlgebra.mul!(vec(dst), weights, vec(src))
 
+(interpolator::BilinearInterpolator)(destination, source) = regrid!(destination, interpolator.weights, source)
 
 """
     get_numpy()
