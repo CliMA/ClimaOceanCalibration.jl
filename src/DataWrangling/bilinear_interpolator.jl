@@ -7,6 +7,7 @@ using KernelAbstractions: @kernel, @index
 using Oceananigans
 using SparseArrays
 using LinearAlgebra
+using CUDA
 
 CondaPkg.add(["pandas", "numpy", "scipy", "xarray", "esmpy", "xesmf"], channel="conda-forge")
 CondaPkg.resolve()
@@ -61,21 +62,32 @@ This operation performs: vec(dst) = weights * vec(src)
 - `src`: Source data to be interpolated
 """
 regrid!(dst, weights, src) = LinearAlgebra.mul!(vec(dst), weights, vec(src))
-regrid!(dst, src, interpolator::BilinearInterpolator) = regrid!(dst, interpolator.weights, src)
 
-@kernel function regrid_in_xy!(dst, weights, src)
-    k = @index(Global)
-    @inbounds dst_slice = interior(dst, :, :, k)
-    @inbounds src_slice = interior(src, :, :, k)
-    regrid!(dst_slice, weights, src_slice)
+function regrid!(dst, src, interpolator::BilinearInterpolator)
+    weights = interpolator.weights
+    regrid!(dst, weights, src)
 end
 
-function regrid!(dst::AbstractField, src::AbstractField, interpolator)
-    arch = architecture(dst)
-    grid = dst.grid
-    weights = on_architecture(arch, interpolator.weights)
+function regrid!(dst, weights::CuSparseMatrixCSC, src)
+    vec(dst) .= weights * CuArray(vec(src))
+end
 
-    launch!(arch, grid, :z, regrid_in_xy!, dst, weights, src)
+function regrid!(dst::AbstractField, src::AbstractField, interpolator::BilinearInterpolator)
+    weights = interpolator.weights
+    
+    # Get the interior data
+    dst_data = interior(dst)
+    src_data = interior(src)
+    
+    Nz = size(src_data, 3)
+    
+    for k in 1:Nz
+        src_slice = view(src_data, :, :, k)
+        dst_slice = view(dst_data, :, :, k)
+        regrid!(dst_slice, weights, src_slice)
+    end
+    
+    return dst
 end
 
 (interpolator::BilinearInterpolator)(destination, source) = regrid!(destination, interpolator.weights, source)
