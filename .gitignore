@@ -34,3 +34,7 @@ data/
 
 # Python package files
 .CondaPkg/
+
+# prototyping use
+prototyping/
+scratch/
