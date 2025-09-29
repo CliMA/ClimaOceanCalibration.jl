@@ -1,6 +1,9 @@
 name = "ClimaOceanCalibration"
 uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
-authors = ["Gregory Wagner <wagner.greg@gmail.com>"]
+authors = [
+    "Gregory Wagner <wagner.greg@gmail.com>",
+    "Xin Kai Lee <xinkai@mit.edu>"
+]
 version = "0.1.0"
 
 [deps]
@@ -10,6 +13,7 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 EnsembleKalmanProcesses = "aa8a2aa5-91d8-4396-bcef-d4f2ec43552d"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+PkgDev = "149e707d-584d-56d3-88ec-740c18e106ff"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
@@ -19,4 +23,5 @@ ClimaOcean = "0.8.4"
 EnsembleKalmanProcesses = "2.5.0"
 Oceananigans = "0.99"
 OrderedCollections = "1"
+PkgDev = "1.7.2"
 Statistics = "1"
