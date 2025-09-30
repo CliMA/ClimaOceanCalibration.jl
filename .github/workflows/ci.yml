@@ -50,13 +50,13 @@ jobs:
     #     path: ./GLORYS_data
     #     key: glorys-data-${{ steps.cache-key.outputs.glorys_cache_key }}
     
-    - name: (Temporary) Add specific ClimaOcean branch (ss/omip-prototype)
-      run: |
-        julia --project=. -e '
-          using Pkg
-          Pkg.add(url="https://github.com/CliMA/ClimaSeaIce.jl.git")
-          Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
-        '
+    # - name: (Temporary) Add specific ClimaOcean branch (ss/omip-prototype)
+    #   run: |
+    #     julia --project=. -e '
+    #       using Pkg
+    #       # Pkg.add(url="https://github.com/CliMA/ClimaSeaIce.jl.git")
+    #       # Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
+    #     '
 
     # - name: Download GLORYS data (if not cached)
     #   if: steps.cache-glorys.outputs.cache-hit != 'true'
@@ -73,6 +73,6 @@ jobs:
         julia --project=. -e '
           using Pkg
           Pkg.add(["Test", "Downloads", "JSON3", "HTTP", "PythonCall"])
-          Pkg.add(url="https://github.com/CliMA/ClimaSeaIce.jl.git")
-          Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
+          # Pkg.add(url="https://github.com/CliMA/ClimaSeaIce.jl.git")
+          # Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
           Pkg.test()'
