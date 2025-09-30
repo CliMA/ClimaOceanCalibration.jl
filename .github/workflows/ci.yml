@@ -30,9 +30,9 @@ jobs:
     #     julia --project=. -e '
     #       using Pkg
     #       Pkg.add(["JSON3", "HTTP", "SHA"])
-          
+    #       
     #       include("test/download_glorys_monthly_figshare_api.jl")
-          
+    #       
     #       files_info = get_figshare_download_url(figshare_id)
     #       if files_info !== nothing
     #         cache_key = generate_cache_key(files_info)
@@ -50,13 +50,17 @@ jobs:
     #     path: ./GLORYS_data
     #     key: glorys-data-${{ steps.cache-key.outputs.glorys_cache_key }}
     
-    # - name: (Temporary) Add specific ClimaOcean branch (ss/omip-prototype)
-    #   run: |
-    #     julia --project=. -e '
-    #       using Pkg
-    #       # Pkg.add(url="https://github.com/CliMA/ClimaSeaIce.jl.git")
-    #       # Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
-    #     '
+    - name: Install ClimaSeaIce and ClimaOcean with dev mode
+      run: |
+        julia --project=. -e '
+          using Pkg
+          # Clone both repositories to the dev directory first
+          Pkg.develop(PackageSpec(url="https://github.com/CliMA/ClimaSeaIce.jl.git"))
+          Pkg.develop(PackageSpec(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype"))
+          
+          # Instantiate to resolve dependencies
+          Pkg.instantiate()
+        '
 
     # - name: Download GLORYS data (if not cached)
     #   if: steps.cache-glorys.outputs.cache-hit != 'true'
@@ -73,4 +77,5 @@ jobs:
         julia --project=. -e '
           using Pkg
           Pkg.add(["Test", "Downloads", "JSON3", "HTTP", "PythonCall"])
+          # No need to add ClimaSeaIce and ClimaOcean again here
           Pkg.test()'
