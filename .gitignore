@@ -38,3 +38,6 @@ data/
 # prototyping use
 prototyping/
 scratch/
+
+# Manifest files
+Manifest.toml
