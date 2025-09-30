@@ -56,7 +56,7 @@ jobs:
           using Pkg
           # Clone both repositories to the dev directory first
           # Pkg.develop(PackageSpec(url="https://github.com/CliMA/ClimaSeaIce.jl.git"))
-          # Pkg.develop(PackageSpec(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype"))
+          Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
           
           # Instantiate to resolve dependencies
           Pkg.instantiate()
