@@ -73,6 +73,4 @@ jobs:
         julia --project=. -e '
           using Pkg
           Pkg.add(["Test", "Downloads", "JSON3", "HTTP", "PythonCall"])
-          # Pkg.add(url="https://github.com/CliMA/ClimaSeaIce.jl.git")
-          # Pkg.add(url="https://github.com/CliMA/ClimaOcean.jl.git", rev="ss/omip-prototype")
           Pkg.test()'
