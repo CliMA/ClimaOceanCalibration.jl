@@ -25,6 +25,7 @@ docs/site/
 *.jld2
 *.nc
 *.h5
+*.zip
 
 # log files, data and output directories
 logs/
@@ -41,3 +42,7 @@ scratch/
 
 # Manifest files
 Manifest.toml
+
+# HPC log files
+*.out
+*.err
