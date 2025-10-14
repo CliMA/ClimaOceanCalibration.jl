@@ -25,6 +25,24 @@ docs/site/
 *.jld2
 *.nc
 *.h5
+*.zip
 
-# log files
+# log files, data and output directories
 logs/
+batch_scripts/
+output/
+data/
+
+# Python package files
+.CondaPkg/
+
+# prototyping use
+prototyping/
+scratch/
+
+# Manifest files
+Manifest.toml
+
+# HPC log files
+*.out
+*.err

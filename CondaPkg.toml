@@ -1,0 +1,18 @@
+
+[deps.xesmf]
+channel = "conda-forge"
+
+[deps.pandas]
+channel = "conda-forge"
+
+[deps.xarray]
+channel = "conda-forge"
+
+[deps.esmpy]
+channel = "conda-forge"
+
+[deps.numpy]
+channel = "conda-forge"
+
+[deps.scipy]
+channel = "conda-forge"

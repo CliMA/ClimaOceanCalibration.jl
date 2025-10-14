@@ -1,28 +1,38 @@
+authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 name = "ClimaOceanCalibration"
 uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
-authors = [
-    "Gregory Wagner <wagner.greg@gmail.com>",
-    "Xin Kai Lee <xinkai@mit.edu>"
-]
 version = "0.1.0"
 
 [deps]
 CFTime = "179af706-886a-5703-950a-314cd64e0468"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ClimaCalibrate = "4347a170-ebd6-470c-89d3-5c705c0cacc2"
 ClimaOcean = "0376089a-ecfe-4b0e-a64f-9c555d74d754"
+ClimaSeaIce = "6ba0ff68-24e6-4315-936c-2e99227c95a4"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 EnsembleKalmanProcesses = "aa8a2aa5-91d8-4396-bcef-d4f2ec43552d"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 PkgDev = "149e707d-584d-56d3-88ec-740c18e106ff"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 
 [compat]
 CFTime = "0.2"
-ClimaOcean = "0.8.4"
-EnsembleKalmanProcesses = "2.5.0"
-Oceananigans = "0.99"
+CUDA = "5.8.5, 5.9"
+ClimaOcean = "0.8.5"
+EnsembleKalmanProcesses = "2.6.0"
+KernelAbstractions = "0.9.38"
+Oceananigans = "0.100.3"
 OrderedCollections = "1"
 PkgDev = "1.7.2"
 Statistics = "1"
+XESMF = "0.1.5"
 julia = "1.10"
+
+[extras]
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
+MPIPreferences = "3da0fdf6-3ccc-4f1b-acd9-58baa6c99267"
