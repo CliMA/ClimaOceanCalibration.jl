@@ -176,7 +176,7 @@ function (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
     return target_fts
 end
 
-function save_averaged_fieldtimeseries(afts::AveragedFieldTimeSeries, metadata, filename::String="averaged_fieldtimeseries", overwrite_existing::Bool=false)
+function save_averaged_fieldtimeseries(afts::AveragedFieldTimeSeries, metadata; filename::String="averaged_fieldtimeseries", overwrite_existing::Bool=false)
     # add .jld2 to filename if not present
     if !endswith(filename, ".jld2")
         filename *= ".jld2"
