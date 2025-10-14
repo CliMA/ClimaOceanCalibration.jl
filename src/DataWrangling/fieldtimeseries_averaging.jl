@@ -189,4 +189,5 @@ function save_averaged_fieldtimeseries(afts::AveragedFieldTimeSeries, metadata; 
             file["metadata"] = metadata
         end
     end
+    return nothing
 end
