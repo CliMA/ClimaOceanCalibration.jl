@@ -1,5 +1,5 @@
 module DataWrangling
 
-include("time_averaging.jl")
+include("fieldtimeseries_averaging.jl")
 
 end

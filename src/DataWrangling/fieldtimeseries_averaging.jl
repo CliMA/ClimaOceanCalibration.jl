@@ -4,6 +4,7 @@ using Oceananigans.OutputReaders: FieldTimeSeries
 using ClimaOcean
 using ClimaOcean.DataWrangling: DatasetFieldTimeSeries
 using Dates
+using JLD2
 
 """
     AveragedFieldTimeSeries{D, T, S}
@@ -173,4 +174,19 @@ function (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
         target_field ./= 𝒯.target_Δt[i]
     end
     return target_fts
+end
+
+function save_averaged_fieldtimeseries(afts::AveragedFieldTimeSeries, metadata, filename::String="averaged_fieldtimeseries", overwrite_existing::Bool=false)
+    # add .jld2 to filename if not present
+    if !endswith(filename, ".jld2")
+        filename *= ".jld2"
+    end
+
+    # only save if file doesn't exist or if overwrite_existing is true
+    if overwrite_existing || !isfile(filename)
+        jldopen(filename, "w+") do file
+            file["averaged_fieldtimeseries"] = afts
+            file["metadata"] = metadata
+        end
+    end
 end
