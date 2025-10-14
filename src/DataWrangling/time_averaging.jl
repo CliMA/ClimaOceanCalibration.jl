@@ -131,6 +131,8 @@ function TimeAverageOperator(fts::FieldTimeSeries, nsteps)
     return TimeAverageOperator(nsteps, fts_times, target_times, source_Δt, target_Δt)
 end
 
+TimeAverageOperator(fts) = TimeAverageOperator(fts, length(fts))
+
 """
     (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
 
