@@ -1,6 +1,6 @@
-authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 name = "ClimaOceanCalibration"
 uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
+authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 version = "0.1.0"
 
 [deps]
@@ -24,6 +24,7 @@ XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 CFTime = "0.2"
 CUDA = "5.8.5, 5.9"
 ClimaOcean = "0.8.5"
+ClimaSeaIce = "0.3"
 EnsembleKalmanProcesses = "2.6.0"
 KernelAbstractions = "0.9.38"
 Oceananigans = "0.100.3"
