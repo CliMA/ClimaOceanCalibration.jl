@@ -23,9 +23,6 @@ dir = joinpath(homedir(), "ECCO_data")
 mkpath(dir)
 start_dates = [DateTime(1992, 1, 1), DateTime(2002, 1, 1)]
 
-SAVE_PATH = joinpath(pwd(), "calibration_data", "ECCO4Monthly")
-mkpath(SAVE_PATH)
-
 for start_date in start_dates
     start_date = DateTime(2002, 1, 1)
     end_date = start_date + Year(10) - Month(1)
@@ -45,11 +42,13 @@ for start_date in start_dates
     prefix = "10yearaverage_2degree"
     date_str = replace(string(start_date), ":" => "-")
 
-    T_filename = prefix * "_T_" * date_str
-    S_filename = prefix * "_S_" * date_str
+    dirname = prefix * date_str
 
-    T_filepath = joinpath(SAVE_PATH, T_filename)
-    S_filepath = joinpath(SAVE_PATH, S_filename)
+    SAVE_PATH = joinpath(pwd(), "calibration_data", "ECCO4Monthly", dirname)
+    mkpath(SAVE_PATH)
+
+    T_filepath = joinpath(SAVE_PATH, "T.jld2")
+    S_filepath = joinpath(SAVE_PATH, "S.jld2")
 
     save_averaged_fieldtimeseries(T_averaged_fts, T, filename=T_filepath, overwrite_existing=true)
     save_averaged_fieldtimeseries(S_averaged_fts, S, filename=S_filepath, overwrite_existing=true)
