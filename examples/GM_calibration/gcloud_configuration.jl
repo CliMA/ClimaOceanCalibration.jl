@@ -1,4 +1,6 @@
 using ClimaCalibrate
+using ClimaCalibrate: generate_sbatch_directives
+import ClimaCalibrate: generate_sbatch_script
 
 struct ClimaOceanSingleGPUGCPBackend <: ClimaCalibrate.SlurmBackend end
 
@@ -71,3 +73,29 @@ end
 end
 
 ClimaCalibrate.backend_worker_kwargs(::Type{ClimaOceanSingleGPUGCPBackend}) = (; partition = "a3mega")
+
+function generate_sbatch_script(iter::Int, member::Int, output_dir, experiment_dir, model_interface, module_load_str, hpc_kwargs, exeflags = "")
+    member_log = path_to_model_log(output_dir, iter, member)
+    slurm_directives = generate_sbatch_directives(hpc_kwargs)
+
+    sbatch_contents = """
+    #!/bin/bash
+    #SBATCH --job-name=run_$(iter)_$(member)
+    #SBATCH --output=$member_log
+    $slurm_directives
+
+    $module_load_str
+
+    julia $exeflags --project=$experiment_dir -e '
+
+        import ClimaCalibrate as CAL
+        iteration = $iter; member = $member
+        model_interface = "$model_interface"; include(model_interface)
+        experiment_dir = "$experiment_dir"
+        CAL.forward_model(iteration, member)
+        CAL.write_model_completed("$output_dir", iteration, member)
+    '
+    exit 0
+    """
+    return sbatch_contents
+end

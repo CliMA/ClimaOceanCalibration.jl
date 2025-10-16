@@ -7,8 +7,10 @@ using LinearAlgebra
 using JLD2
 using Glob
 using Statistics
+import ClimaCalibrate: generate_sbatch_script
 include("data_processing.jl")
 include("gcloud_configuration.jl")
+include("model_interface.jl")
 
 const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
 
