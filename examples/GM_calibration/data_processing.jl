@@ -7,6 +7,7 @@ using XESMF
 using JLD2
 
 function regrid_model_data(simdir)
+    @info "Regridding model data in $(simdir)..."
     filepath = joinpath(simdir, "ocean_complete_fields_10year_average_calibrationsample.jld2")
     T_data = FieldTimeSeries(filepath, "T", backend=OnDisk())
     S_data = FieldTimeSeries(filepath, "S", backend=OnDisk())
