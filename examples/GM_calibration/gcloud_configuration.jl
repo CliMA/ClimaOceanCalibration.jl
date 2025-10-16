@@ -70,4 +70,4 @@ end
 '"""
 end
 
-backend_worker_kwargs(::Type{ClimaOceanSingleGPUGCPBackend}) = (; partition = "a3mega")
+ClimaCalibrate.backend_worker_kwargs(::Type{ClimaOceanSingleGPUGCPBackend}) = (; partition = "a3mega")
