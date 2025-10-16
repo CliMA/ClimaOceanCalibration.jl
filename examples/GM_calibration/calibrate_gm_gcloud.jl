@@ -72,6 +72,6 @@ hpc_kwargs = hpc_kwargs = Dict(:ntasks => 1,
                                :gpus_per_task => 1,
                                :mem => "128G")
 
-model_interface = abspath("./model_interface.jl")
+model_interface = abspath("./examples/GM_calibration/model_interface.jl")
 
 ClimaCalibrate.calibrate(backend, utki, n_iterations, priors, output_dir; hpc_kwargs, verbose=true, model_interface)
