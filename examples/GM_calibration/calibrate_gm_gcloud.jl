@@ -278,5 +278,11 @@ function ClimaCalibrate.observation_map(iteration)
     return G_ensemble
 end
 
-backend = ClimaOceanSingleGPUGCPBackend()
-ClimaCalibrate.calibrate(backend, utki, ensemble_size, n_iterations, priors, output_dir)
+backend = ClimaOceanSingleGPUGCPBackend
+
+hpc_kwargs = hpc_kwargs = Dict(:ntasks => 1,
+                               :cpus_per_task => 4,
+                               :gpus_per_task => 1,
+                               :mem => "128G")
+
+ClimaCalibrate.calibrate(backend, utki, ensemble_size, n_iterations, priors, output_dir; hpc_kwargs, verbose=true)
