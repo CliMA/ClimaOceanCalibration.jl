@@ -60,11 +60,12 @@ function extract_field_section(fts::FieldTimeSeries, latitude_range; vertical_we
 
     times = fts.times
 
+    Nt = length(times)
     for t in 1:length(times)
         mask_immersed_field!(fts[t], NaN)
     end
 
-    field_section = reshape(z_weights, 1, 1, :, 1) .* interior(fts, :, lat_indices, :, :)
+    field_section = reshape(z_weights, 1, 1, :) .* interior(fts[Nt], :, lat_indices, :)
 
     return field_section
 end

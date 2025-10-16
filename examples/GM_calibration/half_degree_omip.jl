@@ -211,7 +211,7 @@ end
 
 function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     start_year = rand(1992:2011)
-    @info "Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year) for a length of $(simulation_length) years."
+    @info "Dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
 
     arch = GPU()
 
@@ -258,13 +258,13 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     mkpath(dir)
 
     start_date = DateTime(start_year, 1, 1)
-    end_date = start_date + Day(1)
+    end_date = start_date + Month(3)
     simulation_period = Dates.value(Second(end_date - start_date))
 
     @info "Settting up salinity restoring..."
     @inline mask(x, y, z, t) = z ≥ z_surf - 1
     Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
-    FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 10)
+    FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 2)
 
     ocean = ocean_simulation(grid; Δt=1minutes,
                             momentum_advection,
@@ -315,7 +315,7 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
 
     ocean.output_writers[:sample_decadal_average] = JLD2Writer(ocean.model, ocean_outputs;
-                                                               schedule = AveragedTimeInterval(simulation_period, window=1day),
+                                                               schedule = AveragedTimeInterval(simulation_period, window=30days),
                                                                filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
                                                                overwrite_existing = true)
 
@@ -347,7 +347,7 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
         return nothing
     end
 
-    add_callback!(omip, progress, IterationInterval(1))
+    add_callback!(omip, progress, IterationInterval(10))
 
     run!(omip)
     return nothing
