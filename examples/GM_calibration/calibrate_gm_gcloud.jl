@@ -70,7 +70,8 @@ backend = ClimaOceanSingleGPUGCPBackend
 hpc_kwargs = hpc_kwargs = Dict(:ntasks => 1,
                                :cpus_per_task => 4,
                                :gpus_per_task => 1,
-                               :mem => "128G")
+                               :mem => "128G",
+                               :time => 120)
 
 model_interface = abspath("./examples/GM_calibration/model_interface.jl")
 
