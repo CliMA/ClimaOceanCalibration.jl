@@ -209,7 +209,6 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
     return nothing
 end
 
-
 function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     start_year = rand(1992:2011)
     @info "Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year) for a length of $(simulation_length) years."
