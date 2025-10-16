@@ -34,6 +34,7 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
     start_year = 1992
     simulation_length = 20 # years
     @info "Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year) for a length of $(simulation_length) years."
+    @info "Saving output to $(config_dict["output_dir"])"
 
     arch = GPU()
 
