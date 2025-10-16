@@ -24,7 +24,6 @@ mkpath(dir)
 start_dates = [DateTime(1992, 1, 1), DateTime(2002, 1, 1)]
 
 for start_date in start_dates
-    start_date = DateTime(2002, 1, 1)
     end_date = start_date + Year(10) - Month(1)
 
     T = Metadata(:temperature; dataset, dir, start_date, end_date)
