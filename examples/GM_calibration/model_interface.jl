@@ -46,7 +46,7 @@ function ClimaCalibrate.forward_model(iteration, member)
         @error "GM calibration failed (κ_skew = $(κ_skew), κ_symmetric = $(κ_symmetric))" exception=(e, catch_backtrace())
     end
 
-    return simulation
+    return nothing
 end
 
 function ClimaCalibrate.observation_map(iteration)

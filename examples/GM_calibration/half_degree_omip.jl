@@ -213,6 +213,7 @@ end
 function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     start_year = rand(1992:2011)
     @info "Dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
+    @info "Saving output to $(config_dict["output_dir"])"
 
     arch = GPU()
 
@@ -243,17 +244,6 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     visc_closure  = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 
     closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
-
-    prefix = "halfdegree"
-    if obl_closure isa RiBasedVerticalDiffusivity
-        prefix *= "_RiBased"
-    else
-        prefix *= "_CATKE"
-    end
-
-    prefix *= "_$(κ_skew)_$(κ_symmetric)"
-    prefix *= "_$(start_year)"
-    prefix *= "_advectiveGM_multiyearjra55_dryrun"
 
     dir = joinpath(homedir(), "forcing_data_half_degree")
     mkpath(dir)
@@ -335,7 +325,7 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
 
         step_time = 1e-9 * (time_ns() - wall_time[])
 
-        msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), iteration(sim), prettytime(sim.Δt))
+        msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), Oceananigans.iteration(sim), prettytime(sim.Δt))
         msg2 = @sprintf("max(h): %.2e m, max(ℵ): %.2e ", hmax, ℵmax)
         msg4 = @sprintf("extrema(T): (%.2f, %.2f) ᵒC, ", Tmax, Tmin)
         msg5 = @sprintf("maximum(u): (%.2f, %.2f, %.2f) m/s, ", umax, vmax, wmax)
