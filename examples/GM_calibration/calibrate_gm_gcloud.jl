@@ -8,7 +8,7 @@ using JLD2
 using Glob
 using Statistics
 include("data_processing.jl")
-indlude("gcloud_configuration.jl")
+include("gcloud_configuration.jl")
 
 const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
 
