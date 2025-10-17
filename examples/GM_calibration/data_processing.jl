@@ -27,8 +27,8 @@ function regrid_model_data(simdir)
     bottom_height = regrid_bathymetry(target_grid; minimum_depth = 15, major_basins = 1, interpolation_passes = 55)
     target_grid = ImmersedBoundaryGrid(target_grid, GridFittedBottom(bottom_height); active_cells_map = true)
 
-    T_target = FieldTimeSeries{LX, LY, LZ}(grid, times; boundary_conditions)
-    S_target = FieldTimeSeries{LX, LY, LZ}(grid, times; boundary_conditions)
+    T_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
+    S_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
 
     src_field = T_data[1]
     dst_field = T_target[1]
