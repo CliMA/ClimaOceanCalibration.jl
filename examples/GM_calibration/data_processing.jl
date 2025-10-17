@@ -68,13 +68,34 @@ end
 
 extract_southern_ocean_section(fts, vertical_weighting=no_tapering) = extract_field_section(fts, (-80, -50); vertical_weighting)
 
+function process_observation(obs_path, vertical_weighting=no_tapering)
+    T_filepath = joinpath(obs_path, "T.jld2")
+    S_filepath = joinpath(obs_path, "S.jld2")
+    
+    T_afts = jldopen(T_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    S_afts = jldopen(S_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    T_data = T_afts.data
+    S_data = S_afts.data
+
+    T_section = extract_southern_ocean_section(T_data, vertical_weighting)
+    S_section = extract_southern_ocean_section(S_data, vertical_weighting)
+
+    return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
+end
+
 function process_member_data(simdir)
     T_target, S_target = regrid_model_data(simdir)
 
     T_section = extract_southern_ocean_section(T_target, taper_interior_ocean)
     S_section = extract_southern_ocean_section(S_target, taper_interior_ocean)
 
-    @info size(vec(T_section)), size(vec(S_section))
+    @info size(vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)]))
     
-    return vcat(vec(T_section), vec(S_section))
+    return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
 end

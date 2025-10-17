@@ -14,27 +14,6 @@ include("model_interface.jl")
 
 const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
 
-function process_observation(obs_path, vertical_weighting=no_tapering)
-    T_filepath = joinpath(obs_path, "T.jld2")
-    S_filepath = joinpath(obs_path, "S.jld2")
-    
-    T_afts = jldopen(T_filepath, "r") do file
-        return file["averaged_fieldtimeseries"]
-    end
-
-    S_afts = jldopen(S_filepath, "r") do file
-        return file["averaged_fieldtimeseries"]
-    end
-
-    T_data = T_afts.data
-    S_data = S_afts.data
-
-    T_section = extract_southern_ocean_section(T_data, vertical_weighting)
-    S_section = extract_southern_ocean_section(S_data, vertical_weighting)
-
-    return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
-end
-
 n_iterations = 3
 κ_skew_prior = constrained_gaussian("κ_skew", 5e2, 3e2, 0, Inf)
 κ_symmetric_prior = constrained_gaussian("κ_symmetric", 5e2, 3e2, 0, Inf)
