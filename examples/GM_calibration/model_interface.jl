@@ -59,7 +59,7 @@ function ClimaCalibrate.observation_map(iteration)
             @warn "Skipping member $m for iteration $iteration due to failed run."
             G_ensemble[:, m] .= NaN
         else
-            G_ensemble[:, m] .= process_member_data(member_path)
+            G_ensemble[:, m] .= process_member_data(member_path, taper_interior_ocean)
         end
     end
 

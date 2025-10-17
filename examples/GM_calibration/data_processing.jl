@@ -89,11 +89,11 @@ function process_observation(obs_path, vertical_weighting=no_tapering)
     return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
 end
 
-function process_member_data(simdir)
+function process_member_data(simdir, vertical_weighting=no_tapering)
     T_target, S_target = regrid_model_data(simdir)
 
-    T_section = extract_southern_ocean_section(T_target, taper_interior_ocean)
-    S_section = extract_southern_ocean_section(S_target, taper_interior_ocean)
+    T_section = extract_southern_ocean_section(T_target, vertical_weighting)
+    S_section = extract_southern_ocean_section(S_target, vertical_weighting)
 
     return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
 end
