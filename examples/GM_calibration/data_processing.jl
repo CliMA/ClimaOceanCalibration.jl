@@ -95,7 +95,5 @@ function process_member_data(simdir)
     T_section = extract_southern_ocean_section(T_target, taper_interior_ocean)
     S_section = extract_southern_ocean_section(S_target, taper_interior_ocean)
 
-    @info size(vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)]))
-    
     return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
 end
