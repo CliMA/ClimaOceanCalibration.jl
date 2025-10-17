@@ -20,20 +20,15 @@ function regrid_model_data(simdir)
     Nx, Ny, Nz = (180, 84, 100)
     z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
 
-    arch = CPU()
-    target_grid = LatitudeLongitudeGrid(arch; size=(Nx, Ny, Nz), z = z_faces,
-                                longitude=(0, 360), latitude=(-84, 84))
-
-    bottom_height = regrid_bathymetry(target_grid; minimum_depth = 15, major_basins = 1, interpolation_passes = 55)
-    target_grid = ImmersedBoundaryGrid(target_grid, GridFittedBottom(bottom_height); active_cells_map = true)
+    target_grid, regridder = jldopen("grids_and_regridder.jld2", "r") do file
+        return file["target_grid"], file["regridder"]
+    end
 
     T_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
     S_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
 
     src_field = T_data[1]
     dst_field = T_target[1]
-
-    regridder = XESMF.Regridder(dst_field, src_field, method="conservative")
 
     for t in 1:length(times)
         regrid!(T_target[t], regridder, T_data[t])
@@ -78,6 +73,8 @@ function process_member_data(simdir)
 
     T_section = extract_southern_ocean_section(T_target, taper_interior_ocean)
     S_section = extract_southern_ocean_section(S_target, taper_interior_ocean)
+
+    @info size(vec(T_section)), size(vec(S_section))
     
     return vcat(vec(T_section), vec(S_section))
 end
