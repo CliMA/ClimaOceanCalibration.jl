@@ -232,9 +232,8 @@ end
 
 TimeAverageBuoyancyOperator(fts) = TimeAverageBuoyancyOperator(fts, length(fts))
 
-@kernel function _compute_buoyancy!(b, buoyancy_model, C)
+@kernel function _compute_buoyancy!(b, grid, buoyancy_model, C)
     i, j, k = @index(Global, NTuple)
-    grid = b.grid
     @inbounds b[i, j, k] = buoyancy_perturbationᶜᶜᶜ(i, j, k, grid, buoyancy_model, C)
 end
 
@@ -261,7 +260,7 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_fts::FieldTimeSeries, S_fts::Fiel
             S_field = S_fts[nsteps * (i-1) + j]
 
             C = (T=T_field, S=S_field)
-            launch!(arch, grid, :xyz, compute_buoyancy!, b_field, buoyancy_model, C)
+            launch!(arch, grid, :xyz, compute_buoyancy!, b_field, grid, buoyancy_model, C)
 
             target_field .+= b_field * 𝒯.source_Δt[nsteps * (i-1) + j]
         end
@@ -299,7 +298,7 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::M
 
             C = (T=T_field, S=S_field)
 
-            launch!(arch, meta_grid, :xyz, _compute_buoyancy!, b_native_field, buoyancy_model, C)
+            launch!(arch, meta_grid, :xyz, _compute_buoyancy!, b_native_field, meta_grid, buoyancy_model, C)
             interpolate!(b_field, b_native_field)
 
             target_field .+= b_field * 𝒯.source_Δt[nsteps * (i-1) + j]
