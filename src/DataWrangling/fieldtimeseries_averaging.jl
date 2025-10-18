@@ -1,10 +1,14 @@
 using Oceananigans
 using Oceananigans.Fields: location
 using Oceananigans.OutputReaders: FieldTimeSeries
+using Oceananigans.BuoyancyFormulations: buoyancy_perturbationᶜᶜᶜ
+using Oceananigans.Architectures: architecture
+using Oceananigans.Utils: launch!
 using ClimaOcean
-using ClimaOcean.DataWrangling: DatasetFieldTimeSeries
+using ClimaOcean.DataWrangling: DatasetFieldTimeSeries, native_grid
 using Dates
 using JLD2
+using KernelAbstractions
 
 """
     AveragedFieldTimeSeries{D, T, S}
@@ -25,6 +29,17 @@ struct AveragedFieldTimeSeries{D, T, S}
 end
 
 """
+    AbstractTimeAverageOperator
+
+An abstract type representing time averaging operators for field time series.
+All concrete implementations should provide:
+
+- Storage for source and target times
+- An implementation of the call method that transforms a field time series
+"""
+abstract type AbstractTimeAverageOperator end
+
+"""
     TimeAverageOperator{N, ST, TT, SDT, TDT}
 
 An operator that performs time averaging on field time series data.
@@ -38,7 +53,7 @@ An operator that performs time averaging on field time series data.
 
 This operator is used to reduce temporal resolution by averaging multiple time steps together.
 """
-struct TimeAverageOperator{N, ST, TT, SDT, TDT}
+struct TimeAverageOperator{N, ST, TT, SDT, TDT} <: AbstractTimeAverageOperator
     nsteps       :: N
     source_times :: ST
     target_times :: TT
@@ -174,6 +189,124 @@ function (𝒯::TimeAverageOperator)(fts::FieldTimeSeries)
         target_field ./= 𝒯.target_Δt[i]
     end
     return target_fts
+end
+
+"""
+    TimeAverageBuoyancyOperator{N, ST, TT, SDT, TDT} <: AbstractTimeAverageOperator
+
+A concrete operator that performs time averaging specifically for buoyancy-related quantities.
+
+# Fields
+- `nsteps`: Number of time steps to combine in each averaging window
+- `source_times`: Original times from the source data
+- `target_times`: Times for the averaged data (subset of source times)
+- `source_Δt`: Time intervals in the source data
+- `target_Δt`: Time intervals in the averaged data
+"""
+struct TimeAverageBuoyancyOperator{N, ST, TT, SDT, TDT} <: AbstractTimeAverageOperator
+    nsteps       :: N
+    source_times :: ST
+    target_times :: TT
+    source_Δt    :: SDT
+    target_Δt    :: TDT
+end
+
+# Constructor for DatasetFieldTimeSeries
+function TimeAverageBuoyancyOperator(fts::DatasetFieldTimeSeries, nsteps)
+    # Reuse the TimeAverageOperator constructor logic
+    operator = TimeAverageOperator(fts, nsteps)
+    return TimeAverageBuoyancyOperator(operator.nsteps, operator.source_times, 
+                                       operator.target_times, operator.source_Δt, 
+                                       operator.target_Δt)
+end
+
+# Constructor for FieldTimeSeries
+function TimeAverageBuoyancyOperator(fts::FieldTimeSeries, nsteps)
+    # Reuse the TimeAverageOperator constructor logic
+    operator = TimeAverageOperator(fts, nsteps)
+    return TimeAverageBuoyancyOperator(operator.nsteps, operator.source_times, 
+                                       operator.target_times, operator.source_Δt, 
+                                       operator.target_Δt)
+end
+
+TimeAverageBuoyancyOperator(fts) = TimeAverageBuoyancyOperator(fts, length(fts))
+
+@kernel function compute_buoyancy!(b, buoyancy_model, C)
+    i, j, k = @index(Global, NTuple)
+    grid = b.grid
+    @inbounds b[i, j, k] = buoyancy_perturbationᶜᶜᶜ(i, j, k, grid, buoyancy_model, C)
+end
+
+"""
+    (𝒯::TimeAverageBuoyancyOperator)(fts::FieldTimeSeries)
+
+Apply time averaging specialized for buoyancy quantities.
+"""
+function (𝒯::TimeAverageBuoyancyOperator)(T_fts::FieldTimeSeries, S_fts::FieldTimeSeries, buoyancy_model::SeawaterBuoyancy)
+    nsteps = 𝒯.nsteps
+
+    LX, LY, LZ = location(T_fts)
+    grid = T_fts.grid
+    arch = architecture(grid)
+    
+    boundary_conditions = T_fts.boundary_conditions
+    b_field = CenterField(grid)
+    target_buoyancy_fts = FieldTimeSeries{LX, LY, LZ}(grid, 𝒯.target_times; boundary_conditions)
+
+    for i in eachindex(𝒯.target_times)
+        target_field = target_buoyancy_fts[i]
+        for j in 1:nsteps
+            T_field = T_fts[nsteps * (i-1) + j]
+            S_field = S_fts[nsteps * (i-1) + j]
+
+            C = (T=T_field, S=S_field)
+            launch!(arch, grid, :xyz, compute_buoyancy!, b_field, buoyancy_model, C)
+
+            target_field .+= b_field * 𝒯.source_Δt[nsteps * (i-1) + j]
+        end
+        target_field ./= 𝒯.target_Δt[i]
+    end
+    return target_buoyancy_fts
+end
+
+"""
+    (𝒯::TimeAverageBuoyancyOperator)(T_metadata, S_metadata, grid, buoyancy_model::SeawaterBuoyancy, meta_indices_in_memory=20)
+
+Apply time averaging specialized for buoyancy quantities using metadata to create field time series.
+Buoyancy is computed from temperature and salinity fields at the native grid of the dataset before being interpolated to the target grid.
+"""
+function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::Metadata, grid, buoyancy_model::SeawaterBuoyancy, meta_indices_in_memory=20)
+    nsteps = 𝒯.nsteps
+
+    LX, LY, LZ = location(T_fts)
+    arch = architecture(grid)
+
+    meta_grid = native_grid(T_metadata, arch)
+    b_native_field = CenterField(meta_grid)
+
+    T_fts = FieldTimeSeries(T_metadata, meta_grid, time_indices_in_memory=meta_indices_in_memory)
+    S_fts = FieldTimeSeries(S_metadata, meta_grid, time_indices_in_memory=meta_indices_in_memory)
+
+    boundary_conditions = T_fts.boundary_conditions
+    b_field = CenterField(grid)
+    target_buoyancy_fts = FieldTimeSeries{LX, LY, LZ}(grid, 𝒯.target_times; boundary_conditions)
+
+    for i in eachindex(𝒯.target_times)
+        target_field = target_buoyancy_fts[i]
+        for j in 1:nsteps
+            T_field = T_fts[nsteps * (i-1) + j]
+            S_field = S_fts[nsteps * (i-1) + j]
+
+            C = (T=T_field, S=S_field)
+
+            launch!(arch, grid, :xyz, compute_buoyancy!, b_native_field, buoyancy_model, C)
+            interpolate!(b_field, b_native_field)
+
+            target_field .+= b_field * 𝒯.source_Δt[nsteps * (i-1) + j]
+        end
+        target_field ./= 𝒯.target_Δt[i]
+    end
+    return target_buoyancy_fts
 end
 
 function save_averaged_fieldtimeseries(afts::AveragedFieldTimeSeries, metadata; filename::String="averaged_fieldtimeseries", overwrite_existing::Bool=false)
