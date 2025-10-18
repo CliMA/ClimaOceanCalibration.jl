@@ -1,22 +1,21 @@
 using ClimaOcean
 using Oceananigans
 using Oceananigans.Units
+using Oceananigans.Architectures: on_architecture
 using SeawaterPolynomials.TEOS10
 using ClimaOcean.DataWrangling
 using Printf
 using Dates
 using CUDA
-using ClimaOceanCalibration.DataWrangling: TimeAverageOperator, AveragedFieldTimeSeries, save_averaged_fieldtimeseries, TimeAverageBuoyancyOperator
-
-Nx, Ny, Nz = (180, 84, 100)
-z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
+using ClimaOceanCalibration.DataWrangling
+using JLD2
+using XESMF
 
 arch = GPU()
-grid = LatitudeLongitudeGrid(arch; size=(Nx, Ny, Nz), z = z_faces,
-                            longitude=(0, 360), latitude=(-84, 84))
 
-bottom_height = regrid_bathymetry(grid; minimum_depth = 15, major_basins = 1, interpolation_passes = 55)
-grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height); active_cells_map = true)
+grid = jldopen(joinpath(pwd(), "examples", "GM_calibration", "grids_and_regridder.jld2"), "r") do file
+    return on_architecture(arch, file["target_grid"])
+end
 
 dataset = ECCO4Monthly()
 
@@ -42,7 +41,7 @@ for start_date in start_dates
     S_averaged_fts = AveragedFieldTimeSeries(S_averaging(S_data), S_averaging, nothing)
 
     b_averaging = TimeAverageBuoyancyOperator(T_data)
-    b_averaged_fts = AveragedFieldTimeSeries(b_averaging(T, S, grid, buoyancy_model), b_averaging, nothing)
+    b_averaged_fts = AveragedFieldTimeSeries(b_averaging(T_data, S_data, buoyancy_model), b_averaging, nothing)
 
     prefix = "10yearaverage_2degree"
     date_str = replace(string(start_date), ":" => "-")
@@ -58,6 +57,6 @@ for start_date in start_dates
 
     save_averaged_fieldtimeseries(T_averaged_fts, T, filename=T_filepath, overwrite_existing=true)
     save_averaged_fieldtimeseries(S_averaged_fts, S, filename=S_filepath, overwrite_existing=true)
-    save_averaged_fieldtimeseries(b_averaged_fts, T, filename=b_filepath, overwrite_existing=true)
+    save_averaged_fieldtimeseries(b_averaged_fts, nothing, filename=b_filepath, overwrite_existing=true)
 end
 
