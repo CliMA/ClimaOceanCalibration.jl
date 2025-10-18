@@ -8,9 +8,9 @@ using JLD2
 using Glob
 using Statistics
 import ClimaCalibrate: generate_sbatch_script
-include("data_processing.jl")
-include("gcloud_configuration.jl")
-include("model_interface.jl")
+include(joinpath(pwd(), "examples", "GM_calibration", "data_processing.jl"))
+include(joinpath(pwd(), "examples", "GM_calibration", "gcloud_configuration.jl"))
+include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
 const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
 
@@ -23,9 +23,11 @@ priors = combine_distributions([κ_skew_prior, κ_symmetric_prior])
 obs_paths = abspath.(glob("10yearaverage_2degree*", joinpath("calibration_data", "ECCO4Monthly")))
 calibration_target_obs_path = obs_paths[findfirst(x -> occursin("2002", x), obs_paths)]
 
-Y = hcat(process_observation.(obs_paths)...)
+synthetic_obs_paths = abspath.(glob("*500.0_500.0*20year*", joinpath("calibration_data", "synthetic_observations")))
 
-n_trials = 2
+Y = hcat(process_observation.(obs_paths)..., process_member_data.(synthetic_obs_paths, no_tapering)...)
+
+n_trials = size(Y, 2)
 # the noise estimated from the samples (will have rank n_trials-1)
 internal_cov = tsvd_cov_from_samples(Y) # SVD object
 
