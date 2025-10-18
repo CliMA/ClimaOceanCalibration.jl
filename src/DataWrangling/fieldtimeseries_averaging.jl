@@ -278,9 +278,7 @@ Buoyancy is computed from temperature and salinity fields at the native grid of 
 function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::Metadata, grid, buoyancy_model::SeawaterBuoyancy, meta_indices_in_memory=20)
     nsteps = 𝒯.nsteps
 
-    LX, LY, LZ = location(T_fts)
     arch = architecture(grid)
-
     meta_grid = native_grid(T_metadata, arch)
     b_native_field = CenterField(meta_grid)
 
@@ -288,6 +286,7 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::M
     S_fts = FieldTimeSeries(S_metadata, meta_grid, time_indices_in_memory=meta_indices_in_memory)
 
     boundary_conditions = T_fts.boundary_conditions
+    LX, LY, LZ = location(T_fts)
     b_field = CenterField(grid)
     target_buoyancy_fts = FieldTimeSeries{LX, LY, LZ}(grid, 𝒯.target_times; boundary_conditions)
 
