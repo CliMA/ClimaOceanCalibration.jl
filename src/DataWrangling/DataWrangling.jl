@@ -1,5 +1,7 @@
 module DataWrangling
 
-include("time_averaging.jl")
+export TimeAverageOperator, TimeAverageBuoyancyOperator, AveragedFieldTimeSeries, spatial_averaging, save_averaged_fieldtimeseries
+
+include("fieldtimeseries_averaging.jl")
 
 end
