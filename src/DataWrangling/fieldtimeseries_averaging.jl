@@ -10,6 +10,7 @@ using ClimaOcean.DataWrangling: DatasetFieldTimeSeries, native_grid
 using Dates
 using JLD2
 using KernelAbstractions
+using XESMF
 
 """
     AveragedFieldTimeSeries{D, T, S}
@@ -260,7 +261,7 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_fts::FieldTimeSeries, S_fts::Fiel
             S_field = S_fts[nsteps * (i-1) + j]
 
             C = (T=T_field, S=S_field)
-            launch!(arch, grid, :xyz, compute_buoyancy!, b_field, grid, buoyancy_model, C)
+            launch!(arch, grid, :xyz, _compute_buoyancy!, b_field, grid, buoyancy_model, C)
 
             target_field .+= b_field * 𝒯.source_Δt[nsteps * (i-1) + j]
         end
@@ -299,6 +300,8 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::M
             C = (T=T_field, S=S_field)
 
             launch!(arch, meta_grid, :xyz, _compute_buoyancy!, b_native_field, meta_grid, buoyancy_model, C)
+            mask_immersed_field!(b_native_field, NaN)
+            
             interpolate!(b_field, b_native_field)
 
             target_field .+= b_field * 𝒯.source_Δt[nsteps * (i-1) + j]
@@ -306,6 +309,21 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::M
         target_field ./= 𝒯.target_Δt[i]
     end
     return target_buoyancy_fts
+end
+
+function spatial_averaging(fts::FieldTimeSeries, target_grid, spatial_average_operator::XESMF.Regridder)
+    times = fts.times
+    ntime = length(times)
+    LX, LY, LZ = location(fts)
+    boundary_conditions = fts.boundary_conditions
+
+    averaged_fts = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
+
+    for t in 1:ntime
+        regrid!(averaged_fts[t], spatial_average_operator, fts[t])
+    end
+
+    return averaged_fts
 end
 
 function save_averaged_fieldtimeseries(afts::AveragedFieldTimeSeries, metadata; filename::String="averaged_fieldtimeseries", overwrite_existing::Bool=false)

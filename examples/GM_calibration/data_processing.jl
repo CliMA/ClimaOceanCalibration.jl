@@ -20,21 +20,16 @@ function regrid_model_data(simdir)
     Nx, Ny, Nz = (180, 84, 100)
     z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
 
-    target_grid, regridder = jldopen("grids_and_regridder.jld2", "r") do file
+    target_grid, regridder = jldopen(joinpath(pwd(), "examples", "GM_calibration", "grids_and_regridder.jld2"), "r") do file
         return file["target_grid"], file["regridder"]
     end
 
     T_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
     S_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
 
-    src_field = T_data[1]
-    dst_field = T_target[1]
-
     for t in 1:length(times)
         regrid!(T_target[t], regridder, T_data[t])
         regrid!(S_target[t], regridder, S_data[t])
-        mask_immersed_field!(T_target[t], NaN)
-        mask_immersed_field!(S_target[t], NaN)
     end
     return T_target, S_target
 end
@@ -49,6 +44,7 @@ function extract_field_section(fts::FieldTimeSeries, latitude_range; vertical_we
 
     φᶜ = φnodes(grid, LX(), LY(), LZ())
     zᶜ = znodes(grid, LX(), LY(), LZ())
+
     φmin, φmax = latitude_range
 
     lat_indices = findfirst(x -> x >= φmin, φᶜ):findlast(x -> x <= φmax, φᶜ)
