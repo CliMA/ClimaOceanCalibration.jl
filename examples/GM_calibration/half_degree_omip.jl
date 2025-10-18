@@ -88,7 +88,8 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
     yearly_times = cumsum(vcat([0.], Dates.value.(Second.(diff(start_date:Year(1):end_date)))))
     decadal_times = cumsum(vcat([0.], Dates.value.(Second.(diff(start_date:Year(10):end_date)))))
     # sampling_endtimes = decadal_times[3:end]
-    sampling_window = Dates.value(Second(end_date - Year(10)))
+    sampling_start_date = end_date - Year(10)
+    sampling_window = Dates.value(Second(end_date - sampling_start_date))
 
     @info "Settting up salinity restoring..."
     @inline mask(x, y, z, t) = z ≥ z_surf - 1
@@ -249,7 +250,7 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     mkpath(dir)
 
     start_date = DateTime(start_year, 1, 1)
-    end_date = start_date + Month(3)
+    end_date = start_date + Month(2)
     simulation_period = Dates.value(Second(end_date - start_date))
 
     @info "Settting up salinity restoring..."
@@ -343,3 +344,14 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
     run!(omip)
     return nothing
 end
+
+# function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
+#     start_year = rand(1992:2011)
+#     @info "Dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
+#     @info "Saving output to $(config_dict["output_dir"])"
+#     FILE_DIR = config_dict["output_dir"]
+#     mkpath(FILE_DIR)
+
+#     cp(joinpath(homedir(), "ocean_complete_fields_10year_average_calibrationsample.jld2"), "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample.jld2")
+#     return nothing
+# end
