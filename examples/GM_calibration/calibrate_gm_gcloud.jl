@@ -12,7 +12,7 @@ include(joinpath(pwd(), "examples", "GM_calibration", "data_processing.jl"))
 include(joinpath(pwd(), "examples", "GM_calibration", "gcloud_configuration.jl"))
 include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
-const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
+const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco")
 
 n_iterations = 3
 κ_skew_prior = constrained_gaussian("κ_skew", 5e2, 3e2, 0, Inf)
@@ -25,7 +25,7 @@ calibration_target_obs_path = obs_paths[findfirst(x -> occursin("2002", x), obs_
 
 synthetic_obs_paths = abspath.(glob("*500.0_500.0*20year*", joinpath("calibration_data", "synthetic_observations")))
 
-Y = hcat(process_observation.(obs_paths)..., process_member_data.(synthetic_obs_paths, no_tapering)...)
+Y = hcat(process_observation.(obs_paths, no_tapering)..., process_member_data.(synthetic_obs_paths, no_tapering)...)
 
 n_trials = size(Y, 2)
 # the noise estimated from the samples (will have rank n_trials-1)

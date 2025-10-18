@@ -9,7 +9,7 @@ include("half_degree_omip.jl")
 include("data_processing.jl")
 include("data_plotting.jl")
 
-const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
+const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco")
 const ensemble_size = 5
 const output_dim = 278694
 
@@ -33,7 +33,8 @@ function ClimaCalibrate.forward_model(iteration, member)
     κ_symmetric = params["κ_symmetric"]
 
     try
-        run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
+        # run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
+        run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict)
     catch e
         # Create a failure indicator file with error information
         error_file = joinpath(member_path, "RUN_FAILED.err")
