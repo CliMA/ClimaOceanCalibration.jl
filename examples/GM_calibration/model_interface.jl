@@ -1,12 +1,17 @@
 using ClimaCalibrate
 using TOML
 using ClimaOceanCalibration.DataWrangling
+using EnsembleKalmanProcesses
+using Oceananigans
+using Oceananigans.Architectures: on_architecture
+using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 include("half_degree_omip.jl")
 include("data_processing.jl")
+include("data_plotting.jl")
 
 const output_dir = joinpath(pwd(), "calibration_runs", "test_run_gm")
 const ensemble_size = 5
-const output_dim = 314594
+const output_dim = 278694
 
 function ClimaCalibrate.forward_model(iteration, member)
     config_dict = Dict()
@@ -64,4 +69,90 @@ function ClimaCalibrate.observation_map(iteration)
     end
 
     return G_ensemble
+end
+
+function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, iteration)
+    @info "Mean constrained parameter(s): $(get_ϕ_mean_final(prior, ekp))"
+    @info "Covariance-weighted error: $(last(get_error(ekp)))"
+
+    ϕs = get_ϕ_final(prior, ekp)
+
+    compute_error!(ekp)
+    avg_rmse = get_error_metrics(ekp)["avg_rmse"]
+
+    fig = plot_parameter_distribution(ϕs, avg_rmse)
+    save(joinpath(output_dir, "iteration_$(iteration)_parameter_distribution.png"), fig)
+
+    obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "10yearaverage_2degree2002-01-01T00-00-00")
+
+    T_truth_filepath = joinpath(obs_path, "T.jld2")
+    S_truth_filepath = joinpath(obs_path, "S.jld2")
+    b_truth_filepath = joinpath(obs_path, "b.jld2")
+    
+    T_truth_afts = jldopen(T_truth_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    S_truth_afts = jldopen(S_truth_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    b_truth_afts = jldopen(b_truth_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    T_truth = on_architecture(CPU(), T_truth_afts.data)
+    S_truth = on_architecture(CPU(), S_truth_afts.data)
+    b_truth = on_architecture(CPU(), b_truth_afts.data)
+
+    Nt_truth = length(T_truth.times)
+
+    for i in 1:Nt_truth
+        mask_immersed_field!(T_truth[i], NaN)
+        mask_immersed_field!(S_truth[i], NaN)
+        mask_immersed_field!(b_truth[i], NaN)
+    end
+
+    target_grid, regridder = jldopen(joinpath(pwd(), "examples", "GM_calibration", "grids_and_regridder.jld2"), "r") do file
+        return file["target_grid"], file["regridder"]
+    end
+
+    for m in 1:ensemble_size
+        @info "Plotting zonal averages for member $m"
+
+        κ_skew, κ_symmetric = ϕs[:, m]
+        member_path = ClimaCalibrate.path_to_ensemble_member(output_dir, iteration, m)
+        model_filepath = joinpath(member_path, "ocean_complete_fields_10year_average_calibrationsample.jld2")
+
+        T_model = FieldTimeSeries(model_filepath, "T", backend=InMemory())
+        S_model = FieldTimeSeries(model_filepath, "S", backend=InMemory())
+        b_model = FieldTimeSeries(model_filepath, "b", backend=InMemory())
+
+        T_model_field = CenterField(target_grid)
+        S_model_field = CenterField(target_grid)
+        b_model_field = CenterField(target_grid)
+
+        Nt_model = length(T_model.times)
+
+        mask_immersed_field!(T_model[Nt_model], NaN)
+        mask_immersed_field!(S_model[Nt_model], NaN)
+        mask_immersed_field!(b_model[Nt_model], NaN)
+
+        regrid!(T_model_field, regridder, T_model[Nt_model])
+        regrid!(S_model_field, regridder, S_model[Nt_model])
+        regrid!(b_model_field, regridder, b_model[Nt_model])
+
+        mask_immersed_field!(T_model_field, NaN)
+        mask_immersed_field!(S_model_field, NaN)
+        mask_immersed_field!(b_model_field, NaN)
+
+        T_fig = plot_zonal_average(T_truth[Nt_truth], T_model_field, "T", κ_skew, κ_symmetric)
+        S_fig = plot_zonal_average(S_truth[Nt_truth], S_model_field, "S", κ_skew, κ_symmetric)
+        b_fig = plot_zonal_average(b_truth[Nt_truth], b_model_field, "b", κ_skew, κ_symmetric)
+
+        save(joinpath(member_path, "T_zonal_average.png"), T_fig)
+        save(joinpath(member_path, "S_zonal_average.png"), S_fig)
+        save(joinpath(member_path, "b_zonal_average.png"), b_fig)
+    end
+
 end
