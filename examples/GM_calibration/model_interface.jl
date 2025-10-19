@@ -10,7 +10,7 @@ include("half_degree_omip.jl")
 include("data_processing.jl")
 include("data_plotting.jl")
 
-function ClimaCalibrate.forward_model(iteration, member; simulation_length, sampling_length)
+function gm_forward_model(iteration, member; simulation_length, sampling_length)
     config_dict = Dict()
     
     # Set the output path for the current member

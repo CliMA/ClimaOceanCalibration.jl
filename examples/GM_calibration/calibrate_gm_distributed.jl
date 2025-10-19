@@ -27,7 +27,7 @@ addprocs(nprocs)
     include(joinpath(pwd(), "examples", "GM_calibration", "data_processing.jl"))
     include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco_distributed")
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco_distributed_obscov")
 end
 
 n_iterations = 5
@@ -74,6 +74,6 @@ backend = ClimaCalibrate.WorkerBackend
 
 simulation_length = 20
 sampling_length = 10
-ClimaCalibrate.forward_model(iteration, member) = ClimaCalibrate.forward_model(iteration, member; simulation_length, sampling_length)
+ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length)
 
 ClimaCalibrate.calibrate(ClimaCalibrate.WorkerBackend, utki, n_iterations, priors, output_dir)
