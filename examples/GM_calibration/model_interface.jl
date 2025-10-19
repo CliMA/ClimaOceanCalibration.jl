@@ -5,6 +5,7 @@ using EnsembleKalmanProcesses
 using Oceananigans
 using Oceananigans.Architectures: on_architecture
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
+using JLD2
 include("half_degree_omip.jl")
 include("data_processing.jl")
 include("data_plotting.jl")
@@ -28,13 +29,16 @@ function ClimaCalibrate.forward_model(iteration, member)
         config_dict["toml"] = [parameter_path]
     end
 
+    config_dict["iteration"] = iteration
+    config_dict["member"] = member
+
     params = TOML.parsefile(parameter_path)
     κ_skew = params["κ_skew"]
     κ_symmetric = params["κ_symmetric"]
 
     try
-        # run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
-        run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict)
+        run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
+        # run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict)
     catch e
         # Create a failure indicator file with error information
         error_file = joinpath(member_path, "RUN_FAILED.err")
@@ -79,10 +83,24 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     ϕs = get_ϕ_final(prior, ekp)
 
     compute_error!(ekp)
-    avg_rmse = get_error_metrics(ekp)["avg_rmse"]
+    avg_rmse = compute_average_rmse(ekp)
+    error_metrics = get_error_metrics(ekp)
+
+    jldopen(joinpath(output_dir, "iteration_$(iteration)_ekp_diagnostics.jld2"), "w") do file
+        file["ϕs"] = ϕs
+        file["avg_rmse"] = avg_rmse
+        file["error_metrics"] = error_metrics
+        file["g_ensemble"] = g_ensemble
+        file["prior"] = prior
+        file["ekp"] = ekp
+        file["ϕ_mean"] = get_ϕ_mean_final(prior, ekp)
+    end
+
+    plots_filepath = abspath(joinpath(output_dir, "diagnostics_output"))
+    mkpath(plots_filepath)
 
     fig = plot_parameter_distribution(ϕs, avg_rmse)
-    save(joinpath(output_dir, "iteration_$(iteration)_parameter_distribution.png"), fig)
+    save(joinpath(plots_filepath, "iteration_$(iteration)_parameter_distribution.png"), fig)
 
     obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "10yearaverage_2degree2002-01-01T00-00-00")
 
@@ -151,9 +169,9 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
         S_fig = plot_zonal_average(S_truth[Nt_truth], S_model_field, "S", κ_skew, κ_symmetric)
         b_fig = plot_zonal_average(b_truth[Nt_truth], b_model_field, "b", κ_skew, κ_symmetric)
 
-        save(joinpath(member_path, "T_zonal_average.png"), T_fig)
-        save(joinpath(member_path, "S_zonal_average.png"), S_fig)
-        save(joinpath(member_path, "b_zonal_average.png"), b_fig)
+        save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_T_zonal_average.png"), T_fig)
+        save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_S_zonal_average.png"), S_fig)
+        save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_b_zonal_average.png"), b_fig)
     end
 
 end
