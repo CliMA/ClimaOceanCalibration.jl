@@ -82,18 +82,6 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
 
         closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
 
-        prefix = "halfdegree"
-        if obl_closure isa RiBasedVerticalDiffusivity
-            prefix *= "_RiBased"
-        else
-            prefix *= "_CATKE"
-        end
-
-        prefix *= "_$(κ_skew)_$(κ_symmetric)"
-        prefix *= "_$(start_year)"
-        prefix *= "_$(simulation_length)year"
-        prefix *= "_advectiveGM_multiyearjra55_calibrationsamples"
-
         dir = joinpath(homedir(), "forcing_data_half_degree")
         mkpath(dir)
 
@@ -109,12 +97,12 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
         FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 10)
 
         ocean = ocean_simulation(grid; Δt=1minutes,
-                                momentum_advection,
-                                tracer_advection,
-                                timestepper = :SplitRungeKutta3,
-                                free_surface,
-                                forcing = (; S = FS),
-                                closure)
+                                 momentum_advection,
+                                 tracer_advection,
+                                 timestepper = :SplitRungeKutta3,
+                                 free_surface,
+                                 forcing = (; S = FS),
+                                 closure)
 
         @info "Built ocean model $(ocean)"
 
@@ -158,9 +146,9 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
 
         ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
         sea_ice_outputs = merge((h = sea_ice.model.ice_thickness,
-                                ℵ = sea_ice.model.ice_concentration,
-                                T = sea_ice.model.ice_thermodynamics.top_surface_temperature),
-                                sea_ice.model.velocities)
+                                 ℵ = sea_ice.model.ice_concentration,
+                                 T = sea_ice.model.ice_thermodynamics.top_surface_temperature),
+                                 sea_ice.model.velocities)
 
         ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                                     schedule = TimeInterval(180days),
@@ -174,19 +162,19 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
                                                     overwrite_existing = true)
 
         ocean.output_writers[:time_average] = JLD2Writer(ocean.model, ocean_outputs;
-                                                        schedule = AveragedTimeInterval(3650days, window=3650days),
-                                                        filename = "$(FILE_DIR)/ocean_complete_fields_10year_average",
-                                                        overwrite_existing = true)
+                                                         schedule = AveragedTimeInterval(3650days, window=3650days),
+                                                         filename = "$(FILE_DIR)/ocean_complete_fields_10year_average",
+                                                         overwrite_existing = true)
 
         sea_ice.output_writers[:time_average] = JLD2Writer(sea_ice.model, sea_ice_outputs;
-                                                        schedule = AveragedTimeInterval(3650days, window=3650days),
-                                                        filename = "$(FILE_DIR)/sea_ice_complete_fields_10year_average",
-                                                        overwrite_existing = true)
+                                                           schedule = AveragedTimeInterval(3650days, window=3650days),
+                                                           filename = "$(FILE_DIR)/sea_ice_complete_fields_10year_average",
+                                                           overwrite_existing = true)
 
         ocean.output_writers[:sample_decadal_average] = JLD2Writer(ocean.model, ocean_outputs;
-                                                                schedule = AveragedTimeInterval(simulation_period, window=sampling_window),
-                                                                filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
-                                                                overwrite_existing = true)
+                                                                   schedule = AveragedTimeInterval(simulation_period, window=sampling_window),
+                                                                   filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
+                                                                   overwrite_existing = true)
 
         wall_time = Ref(time_ns())
 

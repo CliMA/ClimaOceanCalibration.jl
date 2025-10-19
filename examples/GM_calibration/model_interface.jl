@@ -35,8 +35,8 @@ function ClimaCalibrate.forward_model(iteration, member; simulation_length, samp
     κ_symmetric = params["κ_symmetric"]
 
     try
-        run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
-        # run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict)
+        # run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
+        run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict)
     catch e
         # Create a failure indicator file with error information
         error_file = joinpath(member_path, "RUN_FAILED.err")
