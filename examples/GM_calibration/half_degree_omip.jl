@@ -31,327 +31,422 @@ else
 end
 
 function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
-    start_year = 1992
-    simulation_length = 20 # years
-    @info "Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year) for a length of $(simulation_length) years."
-    @info "Saving output to $(config_dict["output_dir"])"
+    output_dir = config_dict["output_dir"]
+    logfile_path = joinpath(output_dir, "output.log")
 
-    arch = GPU()
+    logfile = open(logfile_path, "w")
+    original_stdout = stdout
+    original_stderr = stderr
+    
+    redirect_stdout(logfile)
+    redirect_stderr(logfile)
 
-    Nx = 720 # longitudinal direction 
-    Ny = 360 # meridional direction 
-    Nz = 100
+    flusher = @async while isopen(logfile); flush(logfile); sleep(1); end
+    
+    try
+        start_year = 1992
+        simulation_length = config_dict["simulation_length"]
+        sampling_length = config_dict["sampling_length"]
 
-    z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
-    z_surf = z_faces(Nz)
+        @info "Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in $(start_year) for $(simulation_length) years with $(sampling_length)-year sampling window."
+        @info "Saving output to $(config_dict["output_dir"])"
 
-    grid = TripolarGrid(arch;
-                        size = (Nx, Ny, Nz),
-                        z = z_faces,
-                        halo = (7, 7, 7))
+        arch = GPU()
 
-    bottom_height = regrid_bathymetry(grid; minimum_depth=15, major_basins=1, interpolation_passes=55)
-    grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height); active_cells_map=true)
+        Nx = 720 # longitudinal direction 
+        Ny = 360 # meridional direction 
+        Nz = 100
 
-    momentum_advection = WENOVectorInvariant(order=5)
-    tracer_advection   = WENO(order=7)
-    free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=50minutes)
+        z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
+        z_surf = z_faces(Nz)
 
-    @inline Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz) =  2 * (1 / (1 / Δx(i, j, k, grid, lx, ly, lz)^2 + 1 / Δy(i, j, k, grid, lx, ly, lz)^2))
-    @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
+        grid = TripolarGrid(arch;
+                            size = (Nx, Ny, Nz),
+                            z = z_faces,
+                            halo = (7, 7, 7))
 
-    eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
-    # obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
-    obl_closure = RiBasedVerticalDiffusivity()
-    visc_closure  = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
+        bottom_height = regrid_bathymetry(grid; minimum_depth=15, major_basins=1, interpolation_passes=55)
+        grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height); active_cells_map=true)
 
-    closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
+        momentum_advection = WENOVectorInvariant(order=5)
+        tracer_advection   = WENO(order=7)
+        free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=50minutes)
 
-    prefix = "halfdegree"
-    if obl_closure isa RiBasedVerticalDiffusivity
-        prefix *= "_RiBased"
-    else
-        prefix *= "_CATKE"
-    end
+        @inline Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz) =  2 * (1 / (1 / Δx(i, j, k, grid, lx, ly, lz)^2 + 1 / Δy(i, j, k, grid, lx, ly, lz)^2))
+        @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
 
-    prefix *= "_$(κ_skew)_$(κ_symmetric)"
-    prefix *= "_$(start_year)"
-    prefix *= "_$(simulation_length)year"
-    prefix *= "_advectiveGM_multiyearjra55_calibrationsamples"
+        eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
+        # obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
+        obl_closure = RiBasedVerticalDiffusivity()
+        visc_closure  = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 
-    dir = joinpath(homedir(), "forcing_data_half_degree")
-    mkpath(dir)
+        closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
 
-    start_date = DateTime(start_year, 1, 1)
-    end_date = start_date + Year(simulation_length)
-    simulation_period = Dates.value(Second(end_date - start_date))
-    yearly_times = cumsum(vcat([0.], Dates.value.(Second.(diff(start_date:Year(1):end_date)))))
-    decadal_times = cumsum(vcat([0.], Dates.value.(Second.(diff(start_date:Year(10):end_date)))))
-    # sampling_endtimes = decadal_times[3:end]
-    sampling_start_date = end_date - Year(10)
-    sampling_window = Dates.value(Second(end_date - sampling_start_date))
+        prefix = "halfdegree"
+        if obl_closure isa RiBasedVerticalDiffusivity
+            prefix *= "_RiBased"
+        else
+            prefix *= "_CATKE"
+        end
 
-    @info "Settting up salinity restoring..."
-    @inline mask(x, y, z, t) = z ≥ z_surf - 1
-    Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
-    FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 10)
+        prefix *= "_$(κ_skew)_$(κ_symmetric)"
+        prefix *= "_$(start_year)"
+        prefix *= "_$(simulation_length)year"
+        prefix *= "_advectiveGM_multiyearjra55_calibrationsamples"
 
-    ocean = ocean_simulation(grid; Δt=1minutes,
-                            momentum_advection,
-                            tracer_advection,
-                            timestepper = :SplitRungeKutta3,
-                            free_surface,
-                            forcing = (; S = FS),
-                            closure)
+        dir = joinpath(homedir(), "forcing_data_half_degree")
+        mkpath(dir)
 
-    @info "Built ocean model $(ocean)"
+        start_date = DateTime(start_year, 1, 1)
+        end_date = start_date + Year(simulation_length)
+        simulation_period = Dates.value(Second(end_date - start_date))
+        sampling_start_date = end_date - Year(sampling_length)
+        sampling_window = Dates.value(Second(end_date - sampling_start_date))
 
-    set!(ocean.model, T=Metadatum(:temperature; dataset=EN4Monthly(), date=start_date, dir),
-                      S=Metadatum(:salinity;    dataset=EN4Monthly(), date=start_date, dir))
-    @info "Initialized T and S"
+        @info "Settting up salinity restoring..."
+        @inline mask(x, y, z, t) = z ≥ z_surf - 1
+        Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
+        FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 10)
 
-    # Default sea-ice dynamics and salinity coupling are included in the defaults
-    # sea_ice = sea_ice_simulation(grid, ocean; advection=WENO(order=7))
-    sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
-    @info "Built sea ice model $(sea_ice)"
+        ocean = ocean_simulation(grid; Δt=1minutes,
+                                momentum_advection,
+                                tracer_advection,
+                                timestepper = :SplitRungeKutta3,
+                                free_surface,
+                                forcing = (; S = FS),
+                                closure)
 
-    set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), dir),
-                        ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), dir))
+        @info "Built ocean model $(ocean)"
 
-    @info "Initialized sea ice fields"
+        set!(ocean.model, T=Metadatum(:temperature; dataset=EN4Monthly(), date=start_date, dir),
+                        S=Metadatum(:salinity;    dataset=EN4Monthly(), date=start_date, dir))
+        @info "Initialized T and S"
 
-    jra55_dir = joinpath(homedir(), "JRA55_data")
-    mkpath(jra55_dir)
-    dataset = MultiYearJRA55()
-    backend = JRA55NetCDFBackend(100)
+        # Default sea-ice dynamics and salinity coupling are included in the defaults
+        # sea_ice = sea_ice_simulation(grid, ocean; advection=WENO(order=7))
+        sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
+        @info "Built sea ice model $(sea_ice)"
 
-    @info "Setting up presctibed atmosphere $(dataset)"
-    atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
-    radiation  = Radiation()
+        set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), dir),
+                            ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), dir))
 
-    @info "Built atmosphere model $(atmosphere)"
+        @info "Initialized sea ice fields"
 
-    omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
+        jra55_dir = joinpath(homedir(), "JRA55_data")
+        mkpath(jra55_dir)
+        dataset = MultiYearJRA55()
+        backend = JRA55NetCDFBackend(100)
 
-    @info "Built coupled model $(omip)"
+        @info "Setting up presctibed atmosphere $(dataset)"
+        atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
+        radiation  = Radiation()
 
-    omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period) 
-    @info "Built simulation $(omip)"
+        @info "Built atmosphere model $(atmosphere)"
 
-    FILE_DIR = config_dict["output_dir"]
-    mkpath(FILE_DIR)
+        omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
 
-    b = Field(buoyancy(ocean.model))
-    N² = Field(buoyancy_frequency(ocean.model))
+        @info "Built coupled model $(omip)"
 
-    ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
-    sea_ice_outputs = merge((h = sea_ice.model.ice_thickness,
-                            ℵ = sea_ice.model.ice_concentration,
-                            T = sea_ice.model.ice_thermodynamics.top_surface_temperature),
-                            sea_ice.model.velocities)
+        omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period) 
+        @info "Built simulation $(omip)"
 
-    ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
-                                                schedule = TimeInterval(180days),
-                                                filename = "$(FILE_DIR)/ocean_surface_fields",
-                                                indices = (:, :, grid.Nz),
-                                                overwrite_existing = true)
+        FILE_DIR = config_dict["output_dir"]
+        mkpath(FILE_DIR)
 
-    sea_ice.output_writers[:surface] = JLD2Writer(ocean.model, sea_ice_outputs;
-                                                  schedule = TimeInterval(180days),
-                                                  filename = "$(FILE_DIR)/sea_ice_surface_fields",
-                                                  overwrite_existing = true)
+        b = Field(buoyancy(ocean.model))
+        N² = Field(buoyancy_frequency(ocean.model))
 
-    ocean.output_writers[:time_average] = JLD2Writer(ocean.model, ocean_outputs;
-                                                     schedule = AveragedTimeInterval(3650days, window=3650days),
-                                                     filename = "$(FILE_DIR)/ocean_complete_fields_10year_average",
-                                                     overwrite_existing = true)
+        ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
+        sea_ice_outputs = merge((h = sea_ice.model.ice_thickness,
+                                ℵ = sea_ice.model.ice_concentration,
+                                T = sea_ice.model.ice_thermodynamics.top_surface_temperature),
+                                sea_ice.model.velocities)
 
-    sea_ice.output_writers[:time_average] = JLD2Writer(sea_ice.model, sea_ice_outputs;
-                                                       schedule = AveragedTimeInterval(3650days, window=3650days),
-                                                       filename = "$(FILE_DIR)/sea_ice_complete_fields_10year_average",
-                                                       overwrite_existing = true)
+        ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
+                                                    schedule = TimeInterval(180days),
+                                                    filename = "$(FILE_DIR)/ocean_surface_fields",
+                                                    indices = (:, :, grid.Nz),
+                                                    overwrite_existing = true)
 
-    ocean.output_writers[:sample_decadal_average] = JLD2Writer(ocean.model, ocean_outputs;
-                                                               schedule = AveragedTimeInterval(simulation_period, window=sampling_window),
-                                                               filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
-                                                               overwrite_existing = true)
+        sea_ice.output_writers[:surface] = JLD2Writer(ocean.model, sea_ice_outputs;
+                                                    schedule = TimeInterval(180days),
+                                                    filename = "$(FILE_DIR)/sea_ice_surface_fields",
+                                                    overwrite_existing = true)
 
-    wall_time = Ref(time_ns())
+        ocean.output_writers[:time_average] = JLD2Writer(ocean.model, ocean_outputs;
+                                                        schedule = AveragedTimeInterval(3650days, window=3650days),
+                                                        filename = "$(FILE_DIR)/ocean_complete_fields_10year_average",
+                                                        overwrite_existing = true)
 
-    function progress(sim)
-        sea_ice = sim.model.sea_ice
-        ocean   = sim.model.ocean
-        hmax = maximum(sea_ice.model.ice_thickness)
-        ℵmax = maximum(sea_ice.model.ice_concentration)
-        Tmax = maximum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
-        Tmin = minimum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
-        umax = maximum(ocean.model.velocities.u)
-        vmax = maximum(ocean.model.velocities.v)
-        wmax = maximum(ocean.model.velocities.w)
+        sea_ice.output_writers[:time_average] = JLD2Writer(sea_ice.model, sea_ice_outputs;
+                                                        schedule = AveragedTimeInterval(3650days, window=3650days),
+                                                        filename = "$(FILE_DIR)/sea_ice_complete_fields_10year_average",
+                                                        overwrite_existing = true)
 
-        step_time = 1e-9 * (time_ns() - wall_time[])
+        ocean.output_writers[:sample_decadal_average] = JLD2Writer(ocean.model, ocean_outputs;
+                                                                schedule = AveragedTimeInterval(simulation_period, window=sampling_window),
+                                                                filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
+                                                                overwrite_existing = true)
 
-        msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), iteration(sim), prettytime(sim.Δt))
-        msg2 = @sprintf("max(h): %.2e m, max(ℵ): %.2e ", hmax, ℵmax)
-        msg4 = @sprintf("extrema(T): (%.2f, %.2f) ᵒC, ", Tmax, Tmin)
-        msg5 = @sprintf("maximum(u): (%.2f, %.2f, %.2f) m/s, ", umax, vmax, wmax)
-        msg6 = @sprintf("wall time: %s \n", prettytime(step_time))
+        wall_time = Ref(time_ns())
 
-        @info msg1 * msg2 * msg4 * msg5 * msg6
+        function progress(sim)
+            sea_ice = sim.model.sea_ice
+            ocean   = sim.model.ocean
+            hmax = maximum(sea_ice.model.ice_thickness)
+            ℵmax = maximum(sea_ice.model.ice_concentration)
+            Tmax = maximum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
+            Tmin = minimum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
+            umax = maximum(ocean.model.velocities.u)
+            vmax = maximum(ocean.model.velocities.v)
+            wmax = maximum(ocean.model.velocities.w)
 
-        wall_time[] = time_ns()
+            step_time = 1e-9 * (time_ns() - wall_time[])
 
+            msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), iteration(sim), prettytime(sim.Δt))
+            msg2 = @sprintf("max(h): %.2e m, max(ℵ): %.2e ", hmax, ℵmax)
+            msg4 = @sprintf("extrema(T): (%.2f, %.2f) ᵒC, ", Tmax, Tmin)
+            msg5 = @sprintf("maximum(u): (%.2f, %.2f, %.2f) m/s, ", umax, vmax, wmax)
+            msg6 = @sprintf("wall time: %s \n", prettytime(step_time))
+
+            @info msg1 * msg2 * msg4 * msg5 * msg6
+
+            wall_time[] = time_ns()
+
+            return nothing
+        end
+
+        # And add it as a callback to the simulation.
+        add_callback!(omip, progress, IterationInterval(100))
+
+        run!(omip)
         return nothing
+    catch e
+        # Handle errors
+        if e isa InterruptException
+            println(stderr, "Interrupted by user")
+        else
+            println(stderr, "Error occurred: $e")
+            # Optionally rethrow to propagate the error
+            rethrow(e)
+        end
+    finally
+        # Cleanup - ALWAYS runs
+        redirect_stdout(original_stdout)
+        redirect_stderr(original_stderr)
+        close(logfile)
+        println("Log file closed")  # This prints to console, not log
     end
 
-    # And add it as a callback to the simulation.
-    add_callback!(omip, progress, IterationInterval(100))
-
-    run!(omip)
-    return nothing
 end
 
 function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
-    start_year = rand(1992:2011)
-    @info "Dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
-    @info "Saving output to $(config_dict["output_dir"])"
+    output_dir = config_dict["output_dir"]
+    logfile_path = joinpath(output_dir, "output.log")
 
-    arch = GPU()
+    logfile = open(logfile_path, "w")
+    original_stdout = stdout
+    original_stderr = stderr
+    
+    redirect_stdout(logfile)
+    redirect_stderr(logfile)
 
-    Nx = 720 # longitudinal direction 
-    Ny = 360 # meridional direction 
-    Nz = 100
+    flusher = @async while isopen(logfile); flush(logfile); sleep(1); end
+    
+    try
+        start_year = rand(1992:2011)
+        @info "Dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
+        @info "Saving output to $(config_dict["output_dir"])"
 
-    z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
-    z_surf = z_faces(Nz)
+        arch = GPU()
 
-    grid = TripolarGrid(arch;
-                        size = (Nx, Ny, Nz),
-                        z = z_faces,
-                        halo = (7, 7, 7))
+        Nx = 720 # longitudinal direction 
+        Ny = 360 # meridional direction 
+        Nz = 100
 
-    bottom_height = regrid_bathymetry(grid; minimum_depth=15, major_basins=1, interpolation_passes=55)
-    grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height); active_cells_map=true)
+        z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
+        z_surf = z_faces(Nz)
 
-    momentum_advection = WENOVectorInvariant(order=5)
-    tracer_advection   = WENO(order=7)
-    free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=50minutes)
+        grid = TripolarGrid(arch;
+                            size = (Nx, Ny, Nz),
+                            z = z_faces,
+                            halo = (7, 7, 7))
 
-    @inline Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz) =  2 * (1 / (1 / Δx(i, j, k, grid, lx, ly, lz)^2 + 1 / Δy(i, j, k, grid, lx, ly, lz)^2))
-    @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
+        bottom_height = regrid_bathymetry(grid; minimum_depth=15, major_basins=1, interpolation_passes=55)
+        grid = ImmersedBoundaryGrid(grid, GridFittedBottom(bottom_height); active_cells_map=true)
 
-    eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
-    obl_closure = RiBasedVerticalDiffusivity()
-    visc_closure  = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
+        momentum_advection = WENOVectorInvariant(order=5)
+        tracer_advection   = WENO(order=7)
+        free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=50minutes)
 
-    closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
+        @inline Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz) =  2 * (1 / (1 / Δx(i, j, k, grid, lx, ly, lz)^2 + 1 / Δy(i, j, k, grid, lx, ly, lz)^2))
+        @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
 
-    dir = joinpath(homedir(), "forcing_data_half_degree")
-    mkpath(dir)
+        eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
+        obl_closure = RiBasedVerticalDiffusivity()
+        visc_closure  = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 
-    start_date = DateTime(start_year, 1, 1)
-    end_date = start_date + Month(2)
-    simulation_period = Dates.value(Second(end_date - start_date))
+        closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
 
-    @info "Settting up salinity restoring..."
-    @inline mask(x, y, z, t) = z ≥ z_surf - 1
-    Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
-    FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 2)
+        dir = joinpath(homedir(), "forcing_data_half_degree")
+        mkpath(dir)
 
-    ocean = ocean_simulation(grid; Δt=1minutes,
-                            momentum_advection,
-                            tracer_advection,
-                            timestepper = :SplitRungeKutta3,
-                            free_surface,
-                            forcing = (; S = FS),
-                            closure)
+        start_date = DateTime(start_year, 1, 1)
+        end_date = start_date + Month(2)
+        simulation_period = Dates.value(Second(end_date - start_date))
 
-    @info "Built ocean model $(ocean)"
+        @info "Settting up salinity restoring..."
+        @inline mask(x, y, z, t) = z ≥ z_surf - 1
+        Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
+        FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 2)
 
-    set!(ocean.model, T=Metadatum(:temperature; dataset=EN4Monthly(), date=start_date, dir),
-                      S=Metadatum(:salinity;    dataset=EN4Monthly(), date=start_date, dir))
-    @info "Initialized T and S"
+        ocean = ocean_simulation(grid; Δt=1minutes,
+                                momentum_advection,
+                                tracer_advection,
+                                timestepper = :SplitRungeKutta3,
+                                free_surface,
+                                forcing = (; S = FS),
+                                closure)
 
-    sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
-    @info "Built sea ice model $(sea_ice)"
+        @info "Built ocean model $(ocean)"
 
-    set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), dir),
-                        ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), dir))
+        set!(ocean.model, T=Metadatum(:temperature; dataset=EN4Monthly(), date=start_date, dir),
+                        S=Metadatum(:salinity;    dataset=EN4Monthly(), date=start_date, dir))
+        @info "Initialized T and S"
 
-    @info "Initialized sea ice fields"
+        sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
+        @info "Built sea ice model $(sea_ice)"
 
-    jra55_dir = joinpath(homedir(), "JRA55_data")
-    mkpath(jra55_dir)
-    dataset = MultiYearJRA55()
-    backend = JRA55NetCDFBackend(100)
+        set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), dir),
+                            ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), dir))
 
-    @info "Setting up presctibed atmosphere $(dataset)"
-    atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
-    radiation  = Radiation()
+        @info "Initialized sea ice fields"
 
-    @info "Built atmosphere model $(atmosphere)"
+        jra55_dir = joinpath(homedir(), "JRA55_data")
+        mkpath(jra55_dir)
+        dataset = MultiYearJRA55()
+        backend = JRA55NetCDFBackend(100)
 
-    omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
+        @info "Setting up presctibed atmosphere $(dataset)"
+        atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
+        radiation  = Radiation()
 
-    @info "Built coupled model $(omip)"
+        @info "Built atmosphere model $(atmosphere)"
 
-    omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period)
-    @info "Built simulation $(omip)"
+        omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
 
-    FILE_DIR = config_dict["output_dir"]
-    mkpath(FILE_DIR)
+        @info "Built coupled model $(omip)"
 
-    b = Field(buoyancy(ocean.model))
-    N² = Field(buoyancy_frequency(ocean.model))
+        omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period)
+        @info "Built simulation $(omip)"
 
-    ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
+        FILE_DIR = config_dict["output_dir"]
+        mkpath(FILE_DIR)
 
-    ocean.output_writers[:sample_decadal_average] = JLD2Writer(ocean.model, ocean_outputs;
-                                                               schedule = AveragedTimeInterval(simulation_period, window=30days),
-                                                               filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
-                                                               overwrite_existing = true)
+        b = Field(buoyancy(ocean.model))
+        N² = Field(buoyancy_frequency(ocean.model))
 
-    wall_time = Ref(time_ns())
+        ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
 
-    function progress(sim)
-        sea_ice = sim.model.sea_ice
-        ocean   = sim.model.ocean
-        hmax = maximum(sea_ice.model.ice_thickness)
-        ℵmax = maximum(sea_ice.model.ice_concentration)
-        Tmax = maximum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
-        Tmin = minimum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
-        umax = maximum(ocean.model.velocities.u)
-        vmax = maximum(ocean.model.velocities.v)
-        wmax = maximum(ocean.model.velocities.w)
+        ocean.output_writers[:sample_decadal_average] = JLD2Writer(ocean.model, ocean_outputs;
+                                                                schedule = AveragedTimeInterval(simulation_period, window=30days),
+                                                                filename = "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample",
+                                                                overwrite_existing = true)
 
-        step_time = 1e-9 * (time_ns() - wall_time[])
+        wall_time = Ref(time_ns())
 
-        msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), Oceananigans.iteration(sim), prettytime(sim.Δt))
-        msg2 = @sprintf("max(h): %.2e m, max(ℵ): %.2e ", hmax, ℵmax)
-        msg4 = @sprintf("extrema(T): (%.2f, %.2f) ᵒC, ", Tmax, Tmin)
-        msg5 = @sprintf("maximum(u): (%.2f, %.2f, %.2f) m/s, ", umax, vmax, wmax)
-        msg6 = @sprintf("wall time: %s \n", prettytime(step_time))
+        function progress(sim)
+            sea_ice = sim.model.sea_ice
+            ocean   = sim.model.ocean
+            hmax = maximum(sea_ice.model.ice_thickness)
+            ℵmax = maximum(sea_ice.model.ice_concentration)
+            Tmax = maximum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
+            Tmin = minimum(sim.model.interfaces.atmosphere_sea_ice_interface.temperature)
+            umax = maximum(ocean.model.velocities.u)
+            vmax = maximum(ocean.model.velocities.v)
+            wmax = maximum(ocean.model.velocities.w)
 
-        @info msg1 * msg2 * msg4 * msg5 * msg6
+            step_time = 1e-9 * (time_ns() - wall_time[])
 
-        wall_time[] = time_ns()
+            msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), Oceananigans.iteration(sim), prettytime(sim.Δt))
+            msg2 = @sprintf("max(h): %.2e m, max(ℵ): %.2e ", hmax, ℵmax)
+            msg4 = @sprintf("extrema(T): (%.2f, %.2f) ᵒC, ", Tmax, Tmin)
+            msg5 = @sprintf("maximum(u): (%.2f, %.2f, %.2f) m/s, ", umax, vmax, wmax)
+            msg6 = @sprintf("wall time: %s \n", prettytime(step_time))
 
+            @info msg1 * msg2 * msg4 * msg5 * msg6
+
+            wall_time[] = time_ns()
+
+            return nothing
+        end
+
+        add_callback!(omip, progress, IterationInterval(10))
+
+        run!(omip)
         return nothing
+    catch e
+        # Handle errors
+        if e isa InterruptException
+            println(stderr, "Interrupted by user")
+        else
+            println(stderr, "Error occurred: $e")
+            # Optionally rethrow to propagate the error
+            rethrow(e)
+        end
+    finally
+        # Cleanup - ALWAYS runs
+        redirect_stdout(original_stdout)
+        redirect_stderr(original_stderr)
+        close(logfile)
+        println("Log file closed")  # This prints to console, not log
     end
-
-    add_callback!(omip, progress, IterationInterval(10))
-
-    run!(omip)
-    return nothing
 end
 
 # function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
-#     start_year = rand(1992:2011)
-#     @info "Dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
-#     @info "Saving output to $(config_dict["output_dir"])"
-#     FILE_DIR = config_dict["output_dir"]
-#     mkpath(FILE_DIR)
+#     output_dir = config_dict["output_dir"]
+#     logfile_path = joinpath(output_dir, "output.log")
 
-#     cp(joinpath(homedir(), "ocean_complete_fields_10year_average_calibrationsample.jld2"), "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample.jld2")
-#     return nothing
+#     logfile = open(logfile_path, "w")
+#     original_stdout = stdout
+#     original_stderr = stderr
+    
+#     redirect_stdout(logfile)
+#     redirect_stderr(logfile)
+
+#     flusher = @async while isopen(logfile); flush(logfile); sleep(1); end
+    
+#     try
+#         # ALL your main code goes here
+#         println("Starting work...")
+        
+#         start_year = rand(1992:2011)
+#         member = config_dict["member"]
+#         iteration = config_dict["iteration"]
+#         @info "Member $member, iter $iteration dry run: Using κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s, starting in year $(start_year)"
+#         @info "Saving output to $(config_dict["output_dir"])"
+#         FILE_DIR = config_dict["output_dir"]
+#         mkpath(FILE_DIR)
+
+#         cp(joinpath(homedir(), "ocean_complete_fields_10year_average_calibrationsample.jld2"), "$(FILE_DIR)/ocean_complete_fields_10year_average_calibrationsample.jld2")
+        
+#         println("Finished successfully")
+        
+#         return nothing
+#     catch e
+#         # Handle errors
+#         if e isa InterruptException
+#             println(stderr, "Interrupted by user")
+#         else
+#             println(stderr, "Error occurred: $e")
+#             # Optionally rethrow to propagate the error
+#             rethrow(e)
+#         end
+#     finally
+#         # Cleanup - ALWAYS runs
+#         redirect_stdout(original_stdout)
+#         redirect_stderr(original_stderr)
+#         close(logfile)
+#         println("Log file closed")  # This prints to console, not log
+#     end
 # end
