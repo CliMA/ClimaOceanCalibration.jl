@@ -1,5 +1,24 @@
 const ensemble_size = 5
 using Distributed
+using ArgParse
+
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table! s begin
+        "--simulation_length"
+            help = "Length of calibration simulation in years"
+            arg_type = Int
+            default = 20
+        "--zonal_average"
+            help = "Whether to perform zonal averaging in loss function"
+            arg_type = Bool
+            default = false
+    end
+    return parse_args(s)
+end
+
+args = parse_commandline()
 
 # Add workers with pre-set environment variables
 nprocs = ensemble_size
@@ -27,24 +46,7 @@ addprocs(nprocs)
     include(joinpath(pwd(), "examples", "GM_calibration", "data_processing.jl"))
     include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
-    using ArgParse
-    function parse_commandline()
-        s = ArgParseSettings()
-    
-        @add_arg_table! s begin
-        "--simulation_length"
-            help = "Length of calibration simulation in years"
-            arg_type = Int
-            default = 20
-        "--zonal_average"
-            help = "Whether to perform zonal averaging in loss function"
-            arg_type = Bool
-            default = false
-        end
-        return parse_args(s)
-    end
-
-    args = parse_commandline()
+    args = $args
 
     const simulation_length = args["simulation_length"]
     const sampling_length = simulation_length - 10
