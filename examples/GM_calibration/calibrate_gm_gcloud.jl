@@ -13,6 +13,7 @@ include(joinpath(pwd(), "examples", "GM_calibration", "gcloud_configuration.jl")
 include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
 const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco")
+const zonal_average = false
 
 n_iterations = 3
 κ_skew_prior = constrained_gaussian("κ_skew", 5e2, 3e2, 0, Inf)
@@ -25,7 +26,7 @@ calibration_target_obs_path = obs_paths[findfirst(x -> occursin("2002", x), obs_
 
 synthetic_obs_paths = abspath.(glob("*500.0_500.0*20year*", joinpath("calibration_data", "synthetic_observations")))
 
-Y = hcat(process_observation.(obs_paths, no_tapering)..., process_member_data.(synthetic_obs_paths, no_tapering)...)
+Y = hcat(process_observation.(obs_paths, no_tapering, zonal_average)..., process_member_data.(synthetic_obs_paths, no_tapering, zonal_average)...)
 
 n_trials = size(Y, 2)
 # the noise estimated from the samples (will have rank n_trials-1)
@@ -42,7 +43,7 @@ model_error_cov += 1e-6*I
 # Combine...
 covariance = SVDplusD(internal_cov, model_error_cov)
 
-Y_obs = Observation(Dict("samples" => process_observation(calibration_target_obs_path, taper_interior_ocean),
+Y_obs = Observation(Dict("samples" => process_observation(calibration_target_obs_path, taper_interior_ocean, zonal_average),
                          "covariances" => covariance,
                          "names" => basename(calibration_target_obs_path)))
 

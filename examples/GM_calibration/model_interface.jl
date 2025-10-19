@@ -57,7 +57,7 @@ function gm_forward_model(iteration, member; simulation_length, sampling_length)
     return nothing
 end
 
-function ClimaCalibrate.observation_map(iteration)
+function gm_construct_g_ensemble(iteration, zonal_average)
     G_ensemble = zeros(output_dim, ensemble_size)
 
     for m in 1:ensemble_size
@@ -67,7 +67,7 @@ function ClimaCalibrate.observation_map(iteration)
             @warn "Skipping member $m for iteration $iteration due to failed run."
             G_ensemble[:, m] .= NaN
         else
-            G_ensemble[:, m] .= process_member_data(member_path, taper_interior_ocean)
+            G_ensemble[:, m] .= process_member_data(member_path, taper_interior_ocean, zonal_average)
         end
     end
 

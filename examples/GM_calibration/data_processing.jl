@@ -5,6 +5,7 @@ using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 using Oceananigans.Architectures: on_architecture
 using XESMF
 using JLD2
+using NaNStatistics
 
 function regrid_model_data(simdir)
     @info "Regridding model data in $(simdir)..."
@@ -64,7 +65,7 @@ end
 
 extract_southern_ocean_section(fts, vertical_weighting=no_tapering) = extract_field_section(fts, (-80, -50); vertical_weighting)
 
-function process_observation(obs_path, vertical_weighting=no_tapering)
+function process_observation(obs_path, vertical_weighting, zonal_average)
     T_filepath = joinpath(obs_path, "T.jld2")
     S_filepath = joinpath(obs_path, "S.jld2")
     
@@ -82,14 +83,24 @@ function process_observation(obs_path, vertical_weighting=no_tapering)
     T_section = extract_southern_ocean_section(T_data, vertical_weighting)
     S_section = extract_southern_ocean_section(S_data, vertical_weighting)
 
+    if zonal_average
+        T_section = nanmean(T_section, dims=1)
+        S_section = nanmean(S_section, dims=1)
+    end
+
     return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
 end
 
-function process_member_data(simdir, vertical_weighting=no_tapering)
+function process_member_data(simdir, vertical_weighting, zonal_average)
     T_target, S_target = regrid_model_data(simdir)
 
     T_section = extract_southern_ocean_section(T_target, vertical_weighting)
     S_section = extract_southern_ocean_section(S_target, vertical_weighting)
+
+    if zonal_average
+        T_section = nanmean(T_section, dims=1)
+        S_section = nanmean(S_section, dims=1)
+    end
 
     return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
 end

@@ -27,7 +27,13 @@ addprocs(nprocs)
     include(joinpath(pwd(), "examples", "GM_calibration", "data_processing.jl"))
     include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco_distributed_obscov")
+    const simulation_length = 15
+    const sampling_length = 5
+    const zonal_average = true
+
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
+    ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length)
+    ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
 
 n_iterations = 5
@@ -37,14 +43,14 @@ n_iterations = 5
 
 priors = combine_distributions([κ_skew_prior, κ_symmetric_prior])
 
-obs_paths = abspath.(vcat(glob("10yearaverage_2degree*", joinpath("calibration_data", "ECCO4Monthly")),
-                          glob("10yearaverage_2degree*", joinpath("calibration_data", "EN4Monthly"))))
+obs_paths = abspath.(vcat(glob("$(sampling_length)yearaverage_2degree*", joinpath("calibration_data", "ECCO4Monthly")),
+                          glob("$(sampling_length)yearaverage_2degree*", joinpath("calibration_data", "EN4Monthly"))))
 
-calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "10yearaverage_2degree2002-01-01T00-00-00"))
+calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "$(sampling_length)yearaverage_2degree2002-01-01T00-00-00"))
 
 # synthetic_obs_paths = abspath.(glob("*500.0_500.0*20year*", joinpath("calibration_data", "synthetic_observations")))
-# Y = hcat(process_observation.(obs_paths, no_tapering)..., process_member_data.(synthetic_obs_paths, no_tapering)...)
-Y = hcat(process_observation.(obs_paths, no_tapering)...)
+# Y = hcat(process_observation.(obs_paths, no_tapering)..., \.(synthetic_obs_paths, no_tapering)...)
+Y = hcat(process_observation.(obs_paths, no_tapering, zonal_average)...)
 
 const output_dim = size(Y, 1)
 
@@ -64,16 +70,12 @@ model_error_cov += 1e-6*I
 # Combine...
 covariance = SVDplusD(internal_cov, model_error_cov)
 
-Y_obs = Observation(Dict("samples" => process_observation(calibration_target_obs_path, taper_interior_ocean),
+Y_obs = Observation(Dict("samples" => process_observation(calibration_target_obs_path, taper_interior_ocean, zonal_average),
                          "covariances" => covariance,
                          "names" => basename(calibration_target_obs_path)))
 
 utki = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors))
 
 backend = ClimaCalibrate.WorkerBackend
-
-simulation_length = 20
-sampling_length = 10
-ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length)
 
 ClimaCalibrate.calibrate(ClimaCalibrate.WorkerBackend, utki, n_iterations, priors, output_dir)
