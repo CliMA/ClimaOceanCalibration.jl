@@ -10,11 +10,7 @@ include("half_degree_omip.jl")
 include("data_processing.jl")
 include("data_plotting.jl")
 
-const output_dir = joinpath(pwd(), "calibration_runs", "gm_20year_ecco")
-const ensemble_size = 5
-const output_dim = 278694
-
-function ClimaCalibrate.forward_model(iteration, member)
+function ClimaCalibrate.forward_model(iteration, member; simulation_length, sampling_length)
     config_dict = Dict()
     
     # Set the output path for the current member
@@ -31,6 +27,8 @@ function ClimaCalibrate.forward_model(iteration, member)
 
     config_dict["iteration"] = iteration
     config_dict["member"] = member
+    config_dict["simulation_length"] = simulation_length
+    config_dict["sampling_length"] = sampling_length
 
     params = TOML.parsefile(parameter_path)
     κ_skew = params["κ_skew"]
@@ -86,7 +84,7 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     avg_rmse = compute_average_rmse(ekp)
     error_metrics = get_error_metrics(ekp)
 
-    jldopen(joinpath(output_dir, "iteration_$(iteration)_ekp_diagnostics.jld2"), "w") do file
+    jldopen(joinpath(output_dir, "ekp_diagnostics_iteration$(iteration).jld2"), "w") do file
         file["ϕs"] = ϕs
         file["avg_rmse"] = avg_rmse
         file["error_metrics"] = error_metrics
