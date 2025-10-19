@@ -27,11 +27,30 @@ addprocs(nprocs)
     include(joinpath(pwd(), "examples", "GM_calibration", "data_processing.jl"))
     include(joinpath(pwd(), "examples", "GM_calibration", "model_interface.jl"))
 
-    const simulation_length = 15
-    const sampling_length = 5
-    const zonal_average = true
+    using ArgParse
+    function parse_commandline()
+        s = ArgParseSettings()
+    
+        @add_arg_table! s begin
+        "--simulation_length"
+            help = "Length of calibration simulation in years"
+            arg_type = Int
+            default = 20
+        "--zonal_average"
+            help = "Whether to perform zonal averaging in loss function"
+            arg_type = Bool
+            default = false
+        end
+        return parse_args(s)
+    end
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
+    args = parse_commandline()
+
+    const simulation_length = args["simulation_length"]
+    const sampling_length = simulation_length - 10
+    const zonal_average = args["zonal_average"]
+
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_distributed_obscov$(zonal_average ? "_zonalavg" : "")_2")
     ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length)
     ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
