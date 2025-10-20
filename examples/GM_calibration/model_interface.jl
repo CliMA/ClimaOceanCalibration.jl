@@ -78,26 +78,26 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     @info "Mean constrained parameter(s): $(get_ϕ_mean_final(prior, ekp))"
     @info "Covariance-weighted error: $(last(get_error(ekp)))"
 
-    ϕs = get_ϕ_final(prior, ekp)
-
-    compute_error!(ekp)
-    avg_rmse = compute_average_rmse(ekp)
-    error_metrics = get_error_metrics(ekp)
+    ϕs = get_ϕ(prior, ekp)
 
     jldopen(joinpath(output_dir, "ekp_diagnostics_iteration$(iteration).jld2"), "w") do file
         file["ϕs"] = ϕs
-        file["avg_rmse"] = avg_rmse
-        file["error_metrics"] = error_metrics
         file["g_ensemble"] = g_ensemble
         file["prior"] = prior
         file["ekp"] = ekp
-        file["ϕ_mean"] = get_ϕ_mean_final(prior, ekp)
+    end
+
+    try
+        ϕ = ϕs[iteration + 1]
+    catch
+        @info "iteration $(iteration) is the last iteration in ϕs."
+        ϕ = ϕs[iteration]
     end
 
     plots_filepath = abspath(joinpath(output_dir, "diagnostics_output"))
     mkpath(plots_filepath)
 
-    fig = plot_parameter_distribution(ϕs, avg_rmse)
+    fig = plot_parameter_distribution(ϕ, avg_rmse)
     save(joinpath(plots_filepath, "iteration_$(iteration)_parameter_distribution.png"), fig)
 
     obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "10yearaverage_2degree2002-01-01T00-00-00")
@@ -137,7 +137,7 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     for m in 1:ensemble_size
         @info "Plotting zonal averages for member $m"
 
-        κ_skew, κ_symmetric = ϕs[:, m]
+        κ_skew, κ_symmetric = ϕ[:, m]
         member_path = ClimaCalibrate.path_to_ensemble_member(output_dir, iteration, m)
         model_filepath = joinpath(member_path, "ocean_complete_fields_10year_average_calibrationsample.jld2")
 
