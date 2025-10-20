@@ -6,10 +6,11 @@ using Oceananigans.Architectures: on_architecture
 using XESMF
 using JLD2
 using NaNStatistics
+using Glob
 
 function regrid_model_data(simdir)
     @info "Regridding model data in $(simdir)..."
-    filepath = joinpath(simdir, "ocean_complete_fields_10year_average_calibrationsample.jld2")
+    filepath = first(glob("*calibrationsample*", simdir))
     T_data = FieldTimeSeries(filepath, "T", backend=OnDisk())
     S_data = FieldTimeSeries(filepath, "S", backend=OnDisk())
 
