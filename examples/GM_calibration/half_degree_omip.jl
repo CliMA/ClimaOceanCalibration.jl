@@ -30,7 +30,7 @@ else
     @warn "✗ UCX libraries detected! This can cause issues with MPI+CUDA. Detected libs:\n$(join(ucx_libs, "\n"))"
 end
 
-function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
+function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict, obl_closure)
     output_dir = config_dict["output_dir"]
     logfile_path = joinpath(output_dir, "output.log")
 
@@ -77,7 +77,7 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
 
         eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
         # obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
-        obl_closure = RiBasedVerticalDiffusivity()
+        # obl_closure = RiBasedVerticalDiffusivity()
         visc_closure  = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 
         closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)

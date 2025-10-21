@@ -10,7 +10,7 @@ include("half_degree_omip.jl")
 include("data_processing.jl")
 include("data_plotting.jl")
 
-function gm_forward_model(iteration, member; simulation_length, sampling_length)
+function gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure)
     config_dict = Dict()
     
     # Set the output path for the current member
@@ -36,7 +36,7 @@ function gm_forward_model(iteration, member; simulation_length, sampling_length)
 
     try
         # run_gm_calibration_omip_dry_run(κ_skew["value"], κ_symmetric["value"], config_dict)
-        run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict)
+        run_gm_calibration_omip(κ_skew["value"], κ_symmetric["value"], config_dict, obl_closure)
     catch e
         # Create a failure indicator file with error information
         error_file = joinpath(member_path, "RUN_FAILED.err")
@@ -97,8 +97,12 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     plots_filepath = abspath(joinpath(output_dir, "diagnostics_output"))
     mkpath(plots_filepath)
 
-    fig = plot_parameter_distribution(ϕ, avg_rmse)
-    save(joinpath(plots_filepath, "iteration_$(iteration)_parameter_distribution.png"), fig)
+    try
+        fig = plot_parameter_distribution(ϕ, avg_rmse)
+        save(joinpath(plots_filepath, "iteration_$(iteration)_parameter_distribution.png"), fig)
+    catch e
+        @error "Failed to plot parameter distribution for iteration $(iteration)" exception=(e, catch_backtrace())
+    end
 
     obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "10yearaverage_2degree2002-01-01T00-00-00")
 
@@ -135,41 +139,45 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     end
 
     for m in 1:ensemble_size
-        @info "Plotting zonal averages for member $m"
+        try
+            @info "Plotting zonal averages for member $m"
 
-        κ_skew, κ_symmetric = ϕ[:, m]
-        member_path = ClimaCalibrate.path_to_ensemble_member(output_dir, iteration, m)
-        model_filepath = joinpath(member_path, "ocean_complete_fields_10year_average_calibrationsample.jld2")
+            κ_skew, κ_symmetric = ϕ[:, m]
+            member_path = ClimaCalibrate.path_to_ensemble_member(output_dir, iteration, m)
+            model_filepath = joinpath(member_path, "ocean_complete_fields_10year_average_calibrationsample.jld2")
 
-        T_model = FieldTimeSeries(model_filepath, "T", backend=InMemory())
-        S_model = FieldTimeSeries(model_filepath, "S", backend=InMemory())
-        b_model = FieldTimeSeries(model_filepath, "b", backend=InMemory())
+            T_model = FieldTimeSeries(model_filepath, "T", backend=InMemory())
+            S_model = FieldTimeSeries(model_filepath, "S", backend=InMemory())
+            b_model = FieldTimeSeries(model_filepath, "b", backend=InMemory())
 
-        T_model_field = CenterField(target_grid)
-        S_model_field = CenterField(target_grid)
-        b_model_field = CenterField(target_grid)
+            T_model_field = CenterField(target_grid)
+            S_model_field = CenterField(target_grid)
+            b_model_field = CenterField(target_grid)
 
-        Nt_model = length(T_model.times)
+            Nt_model = length(T_model.times)
 
-        mask_immersed_field!(T_model[Nt_model], NaN)
-        mask_immersed_field!(S_model[Nt_model], NaN)
-        mask_immersed_field!(b_model[Nt_model], NaN)
+            mask_immersed_field!(T_model[Nt_model], NaN)
+            mask_immersed_field!(S_model[Nt_model], NaN)
+            mask_immersed_field!(b_model[Nt_model], NaN)
 
-        regrid!(T_model_field, regridder, T_model[Nt_model])
-        regrid!(S_model_field, regridder, S_model[Nt_model])
-        regrid!(b_model_field, regridder, b_model[Nt_model])
+            regrid!(T_model_field, regridder, T_model[Nt_model])
+            regrid!(S_model_field, regridder, S_model[Nt_model])
+            regrid!(b_model_field, regridder, b_model[Nt_model])
 
-        mask_immersed_field!(T_model_field, NaN)
-        mask_immersed_field!(S_model_field, NaN)
-        mask_immersed_field!(b_model_field, NaN)
+            mask_immersed_field!(T_model_field, NaN)
+            mask_immersed_field!(S_model_field, NaN)
+            mask_immersed_field!(b_model_field, NaN)
 
-        T_fig = plot_zonal_average(T_truth[Nt_truth], T_model_field, "T", κ_skew, κ_symmetric)
-        S_fig = plot_zonal_average(S_truth[Nt_truth], S_model_field, "S", κ_skew, κ_symmetric)
-        b_fig = plot_zonal_average(b_truth[Nt_truth], b_model_field, "b", κ_skew, κ_symmetric)
+            T_fig = plot_zonal_average(T_truth[Nt_truth], T_model_field, "T", κ_skew, κ_symmetric)
+            S_fig = plot_zonal_average(S_truth[Nt_truth], S_model_field, "S", κ_skew, κ_symmetric)
+            b_fig = plot_zonal_average(b_truth[Nt_truth], b_model_field, "b", κ_skew, κ_symmetric)
 
-        save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_T_zonal_average.png"), T_fig)
-        save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_S_zonal_average.png"), S_fig)
-        save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_b_zonal_average.png"), b_fig)
+            save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_T_zonal_average.png"), T_fig)
+            save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_S_zonal_average.png"), S_fig)
+            save(joinpath(plots_filepath, "iter$(iteration)_member$(m)_skew_$(κ_skew)_sym_$(κ_symmetric)_b_zonal_average.png"), b_fig)
+        catch e
+            @error "Failed to plot zonal averages for member $m in iteration $iteration" exception=(e, catch_backtrace())
+        end
     end
 
 end
