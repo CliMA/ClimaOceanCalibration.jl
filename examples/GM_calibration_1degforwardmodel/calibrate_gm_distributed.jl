@@ -1,0 +1,95 @@
+const ensemble_size = 5
+using Distributed
+using ArgParse
+
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table! s begin
+        "--zonal_average"
+            help = "Whether to perform zonal averaging in loss function"
+            arg_type = Bool
+            default = false
+    end
+    return parse_args(s)
+end
+
+args = parse_commandline()
+
+# Add workers with pre-set environment variables
+nprocs = ensemble_size
+addprocs(nprocs)
+@everywhere @info "Worker $(myid())"
+@everywhere ENV["CUDA_VISIBLE_DEVICES"] = myid() - 1
+
+# Now load CUDA on all workers
+@everywhere using CUDA
+# Verify each worker sees exactly one GPU
+@everywhere println("Worker $(myid()) sees GPU: $(CUDA.NVML.index(CUDA.NVML.Device(CUDA.uuid(CUDA.device()))))")
+
+@everywhere begin
+    using ClimaCalibrate
+    using Distributed
+    using ClimaOceanCalibration.DataWrangling
+    using Oceananigans
+    using EnsembleKalmanProcesses
+    using EnsembleKalmanProcesses.ParameterDistributions
+    using LinearAlgebra
+    using JLD2
+    using Glob
+    using Statistics
+    import ClimaCalibrate: generate_sbatch_script
+    include(joinpath(pwd(), "examples", "GM_calibration_1degforwardmodel", "data_processing.jl"))
+    include(joinpath(pwd(), "examples", "GM_calibration_1degforwardmodel", "model_interface.jl"))
+
+    args = $args
+
+    const sampling_length = 10
+    const zonal_average = args["zonal_average"]
+
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_1degforwardmodel_25year_ecco_eccoinitial_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
+    ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length)
+    ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
+end
+
+n_iterations = 10
+
+κ_skew_prior = constrained_gaussian("κ_skew", 1e3, 5e2, 0, Inf)
+κ_symmetric_prior = constrained_gaussian("κ_symmetric", 1e2, 5e2, 0, Inf)
+
+priors = combine_distributions([κ_skew_prior, κ_symmetric_prior])
+
+obs_paths = abspath.(vcat(glob("$(sampling_length)yearaverage_1deggrid_2degree*", joinpath("calibration_data", "ECCO4Monthly")),
+                          glob("$(sampling_length)yearaverage_1deggrid_2degree*", joinpath("calibration_data", "EN4Monthly"))))
+
+calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "$(sampling_length)yearaverage_1deggrid_2degree2007-01-01T00-00-00"))
+
+Y = hcat(process_observation.(obs_paths, no_tapering, zonal_average)...)
+
+const output_dim = size(Y, 1)
+
+n_trials = size(Y, 2)
+
+# the noise estimated from the samples (will have rank n_trials-1)
+internal_cov = tsvd_cov_from_samples(Y) # SVD object
+
+# the "5%" model error (diagonal)
+model_error_frac = 0.05
+data_mean = vec(mean(Y,dims=2))
+model_error_cov = Diagonal((model_error_frac*data_mean).^2)
+
+# regularize the model error diagonal (in case of zero entries)
+model_error_cov += 1e-6*I
+
+# Combine...
+covariance = SVDplusD(internal_cov, model_error_cov)
+
+Y_obs = Observation(Dict("samples" => process_observation(calibration_target_obs_path, taper_interior_ocean, zonal_average),
+                         "covariances" => covariance,
+                         "names" => basename(calibration_target_obs_path)))
+
+utki = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors))
+
+backend = ClimaCalibrate.WorkerBackend
+
+ClimaCalibrate.calibrate(ClimaCalibrate.WorkerBackend, utki, n_iterations, priors, output_dir)
