@@ -33,7 +33,7 @@ addprocs(nprocs)
 
 @everywhere begin
     using ClimaCalibrate
-    using Distributed
+    using ClimaOcean
     using ClimaOceanCalibration.DataWrangling
     using Oceananigans
     using EnsembleKalmanProcesses
@@ -52,10 +52,16 @@ addprocs(nprocs)
     const sampling_length = simulation_length - 10
     const zonal_average = args["zonal_average"]
 
-    obl_closure = RiBasedVerticalDiffusivity()
-    # obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
+    # obl_closure = RiBasedVerticalDiffusivity()
+    obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_eccoinitial_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
+    if obl_closure isa RiBasedVerticalDiffusivity
+        obl_str = "_RiBased"
+    else
+        obl_str = "CATKE"
+    end
+
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_eccoinitial$(obl_str)_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
     ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure)
     ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
