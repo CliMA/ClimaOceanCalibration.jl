@@ -82,7 +82,7 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
 
         closure = (obl_closure, VerticalScalarDiffusivity(κ=1e-5, ν=3e-4), visc_closure, eddy_closure)
 
-        dir = joinpath(homedir(), "forcing_data_half_degree")
+        dir = joinpath(homedir(), "ECCO_data")
         mkpath(dir)
 
         start_date = DateTime(start_year, 1, 1)
