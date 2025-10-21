@@ -93,7 +93,7 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
 
         @info "Settting up salinity restoring..."
         @inline mask(x, y, z, t) = z ≥ z_surf - 1
-        Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
+        Smetadata = Metadata(:salinity; dataset=ECCO4Monthly(), dir, start_date, end_date)
         FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 10)
 
         ocean = ocean_simulation(grid; Δt=1minutes,
@@ -106,8 +106,8 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
 
         @info "Built ocean model $(ocean)"
 
-        set!(ocean.model, T=Metadatum(:temperature; dataset=EN4Monthly(), date=start_date, dir),
-                        S=Metadatum(:salinity;    dataset=EN4Monthly(), date=start_date, dir))
+        set!(ocean.model, T=Metadatum(:temperature; dataset=ECCO4Monthly(), date=start_date, dir),
+                          S=Metadatum(:salinity;    dataset=ECCO4Monthly(), date=start_date, dir))
         @info "Initialized T and S"
 
         # Default sea-ice dynamics and salinity coupling are included in the defaults
@@ -285,7 +285,7 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
 
         @info "Settting up salinity restoring..."
         @inline mask(x, y, z, t) = z ≥ z_surf - 1
-        Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir, start_date, end_date)
+        Smetadata = Metadata(:salinity; dataset=ECCO4Monthly(), dir, start_date, end_date)
         FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 2)
 
         ocean = ocean_simulation(grid; Δt=1minutes,
@@ -298,8 +298,8 @@ function run_gm_calibration_omip_dry_run(κ_skew, κ_symmetric, config_dict)
 
         @info "Built ocean model $(ocean)"
 
-        set!(ocean.model, T=Metadatum(:temperature; dataset=EN4Monthly(), date=start_date, dir),
-                        S=Metadatum(:salinity;    dataset=EN4Monthly(), date=start_date, dir))
+        set!(ocean.model, T=Metadatum(:temperature; dataset=ECCO4Monthly(), date=start_date, dir),
+                          S=Metadatum(:salinity;    dataset=ECCO4Monthly(), date=start_date, dir))
         @info "Initialized T and S"
 
         sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
