@@ -52,7 +52,7 @@ addprocs(nprocs)
     const sampling_length = simulation_length - 10
     const zonal_average = args["zonal_average"]
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_distributed_obscov$(zonal_average ? "_zonalavg" : "")_2")
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_eccoinitial_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
     ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length)
     ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
