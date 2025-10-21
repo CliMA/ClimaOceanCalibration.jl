@@ -115,8 +115,8 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict)
         sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
         @info "Built sea ice model $(sea_ice)"
 
-        set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), dir),
-                            ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), dir))
+        set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), date=start_date, dir),
+                            ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), date=start_date, dir))
 
         @info "Initialized sea ice fields"
 
