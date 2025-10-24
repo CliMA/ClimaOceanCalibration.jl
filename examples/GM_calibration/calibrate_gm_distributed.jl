@@ -69,7 +69,13 @@ addprocs(nprocs)
         obl_str = "CATKE"
     end
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)yr_$(sampling_length)yravg_ecco_$(obl_str)_obscov$(zonal_average ? "_zonalavg" : "")")
+    if observation_covariance
+        cov_str = "obscov"
+    else
+        cov_str = "diagcov"
+    end
+
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)yr_$(sampling_length)yravg_ecco_$(obl_str)_$(cov_str)$(zonal_average ? "_zonalavg" : "")")
     ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure)
     ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
