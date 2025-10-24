@@ -5,6 +5,7 @@ using EnsembleKalmanProcesses
 using Oceananigans
 using Oceananigans.Architectures: on_architecture
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
+using Oceananigans.Fields: location
 using JLD2
 include("half_degree_omip.jl")
 include("data_processing.jl")
@@ -79,6 +80,7 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
     @info "Covariance-weighted error: $(last(get_error(ekp)))"
 
     ϕs = get_ϕ(prior, ekp)
+    model_error = get_error(ekp)
 
     jldopen(joinpath(output_dir, "ekp_diagnostics_iteration$(iteration).jld2"), "w") do file
         file["ϕs"] = ϕs
@@ -87,24 +89,19 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
         file["ekp"] = ekp
     end
 
-    try
-        ϕ = ϕs[iteration + 1]
-    catch
-        @info "iteration $(iteration) is the last iteration in ϕs."
-        ϕ = ϕs[iteration]
-    end
+    ϕ = ϕs[iteration + 1]
 
     plots_filepath = abspath(joinpath(output_dir, "diagnostics_output"))
     mkpath(plots_filepath)
 
     try
-        fig = plot_parameter_distribution(ϕ, avg_rmse)
+        fig = plot_parameter_distribution(ϕ, last(model_error))
         save(joinpath(plots_filepath, "iteration_$(iteration)_parameter_distribution.png"), fig)
     catch e
         @error "Failed to plot parameter distribution for iteration $(iteration)" exception=(e, catch_backtrace())
     end
 
-    obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "10yearaverage_2degree2002-01-01T00-00-00")
+    obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "1yearaverage_2degree1997-01-01T00-00-00")
 
     T_truth_filepath = joinpath(obs_path, "T.jld2")
     S_truth_filepath = joinpath(obs_path, "S.jld2")
@@ -144,7 +141,7 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
 
             κ_skew, κ_symmetric = ϕ[:, m]
             member_path = ClimaCalibrate.path_to_ensemble_member(output_dir, iteration, m)
-            model_filepath = joinpath(member_path, "ocean_complete_fields_10year_average_calibrationsample.jld2")
+            model_filepath = joinpath(member_path, "ocean_complete_fields_1year_average_calibrationsample.jld2")
 
             T_model = FieldTimeSeries(model_filepath, "T", backend=InMemory())
             S_model = FieldTimeSeries(model_filepath, "S", backend=InMemory())

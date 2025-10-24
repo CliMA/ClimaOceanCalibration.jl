@@ -6,7 +6,7 @@ using ColorSchemes
 
 function plot_parameter_distribution(κs, error)
     fig = Figure()
-    ax = Axis(fig[1, 1]; xlabel="κ skew (m²/s)", ylabel="κ symmetric (m²/s)", title="Parameter Distribution, RMSE at mean = $error")
+    ax = Axis(fig[1, 1]; xlabel="κ skew (m²/s)", ylabel="κ symmetric (m²/s)", title="Parameter Distribution, Covariance-weighted loss at mean = $error")
     scatter!(ax, κs[1, :], κs[2, :])
     return fig
 end
@@ -48,17 +48,22 @@ function plot_zonal_average(truth_data, model_data, field_name, κ_skew, κ_symm
         field_levels = exp_levels(fieldlim[1], fieldlim[2], 15)
         field_colorbar_kwargs = (label="Temperature (°C)",)
         diff_colorbar_kwargs = (label="Temperature Anomaly (°C)",)
+        difflim = (-0.7, 0.7)
     elseif field_name == "S"
         @info "Plotting salinity zonal average..."
         field_colorbar_kwargs = (label="Salinity (psu)",)
         diff_colorbar_kwargs = (label="Salinity Anomaly (psu)",)
-        fieldlim = (nanminimum([truth_field; model_field[2:end, :]]), nanmaximum([truth_field; model_field[2:end, :]]))
-        difflim = (-nanmaximum(abs.(diff_field[2:end, :])) / 2, nanmaximum(abs.(diff_field[2:end, :])) / 2)
+        # fieldlim = (nanminimum([truth_field; model_field[2:end, :]]), nanmaximum([truth_field; model_field[2:end, :]]))
+        # difflim = (-nanmaximum(abs.(diff_field[2:end, :])) / 2, nanmaximum(abs.(diff_field[2:end, :])) / 2)
+        fieldlim = (34, 36)
+        difflim = (-0.1, 0.1)
         # field_levels = inverted_exp_levels(fieldlim[1], fieldlim[2], 15)
-        field_levels = range(fieldlim[1], fieldlim[2], length=15)
+        # field_levels = range(fieldlim[1], fieldlim[2], length=15)
+        field_levels = exp_levels(fieldlim[1], fieldlim[2], 15)
     elseif field_name == "b"
         @info "Plotting buoyancy zonal average..."
         field_levels = exp_levels(fieldlim[1], fieldlim[2], 15)
+        difflim = (-0.001, 0.001)
         field_colorbar_kwargs = (label="Buoyancy (m/s²)",)
         diff_colorbar_kwargs = (label="Buoyancy Anomaly (m/s²)",)
     else
@@ -81,6 +86,6 @@ function plot_zonal_average(truth_data, model_data, field_name, κ_skew, κ_symm
     ylims!(axmodel, -6000, 0)
     ylims!(axdiff, -6000, 0)
 
-    Label(fig[0, 1:2], "Zonal Average of $field_name (κ_skew=$(round(κ_skew, digits=1)), κ_symmetric=$(round(κ_symmetric))", fontsize=25, font=:bold)
+    Label(fig[0, 1:2], "Zonal Average of $field_name (κ_skew=$(round(κ_skew, digits=1)), κ_symmetric=$(round(κ_symmetric)))", fontsize=25, font=:bold)
     return fig
 end

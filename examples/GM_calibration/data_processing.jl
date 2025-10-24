@@ -65,6 +65,7 @@ function extract_field_section(fts::FieldTimeSeries, latitude_range; vertical_we
 end
 
 extract_southern_ocean_section(fts, vertical_weighting=no_tapering) = extract_field_section(fts, (-80, -50); vertical_weighting)
+extract_ocean_section(fts, vertical_weighting=no_tapering) = extract_field_section(fts, (-80, 0); vertical_weighting)
 
 function process_observation(obs_path, vertical_weighting, zonal_average)
     T_filepath = joinpath(obs_path, "T.jld2")
@@ -81,8 +82,10 @@ function process_observation(obs_path, vertical_weighting, zonal_average)
     T_data = T_afts.data
     S_data = S_afts.data
 
-    T_section = extract_southern_ocean_section(T_data, vertical_weighting)
-    S_section = extract_southern_ocean_section(S_data, vertical_weighting)
+    # T_section = extract_southern_ocean_section(T_data, vertical_weighting)
+    # S_section = extract_southern_ocean_section(S_data, vertical_weighting)
+    T_section = extract_ocean_section(T_data, vertical_weighting)
+    S_section = extract_ocean_section(S_data, vertical_weighting)
 
     if zonal_average
         T_section = nanmean(T_section, dims=1)
@@ -95,8 +98,10 @@ end
 function process_member_data(simdir, vertical_weighting, zonal_average)
     T_target, S_target = regrid_model_data(simdir)
 
-    T_section = extract_southern_ocean_section(T_target, vertical_weighting)
-    S_section = extract_southern_ocean_section(S_target, vertical_weighting)
+    # T_section = extract_southern_ocean_section(T_target, vertical_weighting)
+    # S_section = extract_southern_ocean_section(S_target, vertical_weighting)
+    T_section = extract_ocean_section(T_target, vertical_weighting)
+    S_section = extract_ocean_section(S_target, vertical_weighting)
 
     if zonal_average
         T_section = nanmean(T_section, dims=1)

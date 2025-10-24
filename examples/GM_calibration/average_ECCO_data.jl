@@ -21,18 +21,19 @@ dataset = ECCO4Monthly()
 
 dir = joinpath(homedir(), "ECCO_data")
 mkpath(dir)
-start_dates = [DateTime(1992, 1, 1), DateTime(2002, 1, 1)]
-
+start_dates = [DateTime(year) for year in 1992:2017] 
+sampling_length = 1 # year
 buoyancy_model = SeawaterBuoyancy(equation_of_state=TEOS10EquationOfState())
 
 for start_date in start_dates
-    end_date = start_date + Year(10) - Month(1)
+    @info "Processing data starting from $(start_date)..."
+    end_date = start_date + Year(sampling_length) - Month(1)
 
     T = Metadata(:temperature; dataset, dir, start_date, end_date)
     S = Metadata(:salinity; dataset, dir, start_date, end_date)
 
-    T_data = FieldTimeSeries(T, grid, time_indices_in_memory=20)
-    S_data = FieldTimeSeries(S, grid, time_indices_in_memory=20)
+    T_data = FieldTimeSeries(T, grid, time_indices_in_memory=12)
+    S_data = FieldTimeSeries(S, grid, time_indices_in_memory=12)
 
     T_averaging = TimeAverageOperator(T_data)
     T_averaged_fts = AveragedFieldTimeSeries(T_averaging(T_data), T_averaging, nothing)
@@ -43,44 +44,7 @@ for start_date in start_dates
     b_averaging = TimeAverageBuoyancyOperator(T_data)
     b_averaged_fts = AveragedFieldTimeSeries(b_averaging(T_data, S_data, buoyancy_model), b_averaging, nothing)
 
-    prefix = "10yearaverage_2degree"
-    date_str = replace(string(start_date), ":" => "-")
-
-    dirname = prefix * date_str
-
-    SAVE_PATH = joinpath(pwd(), "calibration_data", "ECCO4Monthly", dirname)
-    mkpath(SAVE_PATH)
-
-    T_filepath = joinpath(SAVE_PATH, "T.jld2")
-    S_filepath = joinpath(SAVE_PATH, "S.jld2")
-    b_filepath = joinpath(SAVE_PATH, "b.jld2")
-
-    save_averaged_fieldtimeseries(T_averaged_fts, T, filename=T_filepath, overwrite_existing=true)
-    save_averaged_fieldtimeseries(S_averaged_fts, S, filename=S_filepath, overwrite_existing=true)
-    save_averaged_fieldtimeseries(b_averaged_fts, nothing, filename=b_filepath, overwrite_existing=true)
-end
-
-start_dates = [DateTime(1992), DateTime(1997), DateTime(2002), DateTime(2007), DateTime(2012)]
-
-for start_date in start_dates
-    end_date = start_date + Year(5) - Month(1)
-
-    T = Metadata(:temperature; dataset, dir, start_date, end_date)
-    S = Metadata(:salinity; dataset, dir, start_date, end_date)
-
-    T_data = FieldTimeSeries(T, grid, time_indices_in_memory=20)
-    S_data = FieldTimeSeries(S, grid, time_indices_in_memory=20)
-
-    T_averaging = TimeAverageOperator(T_data)
-    T_averaged_fts = AveragedFieldTimeSeries(T_averaging(T_data), T_averaging, nothing)
-
-    S_averaging = TimeAverageOperator(S_data)
-    S_averaged_fts = AveragedFieldTimeSeries(S_averaging(S_data), S_averaging, nothing)
-
-    b_averaging = TimeAverageBuoyancyOperator(T_data)
-    b_averaged_fts = AveragedFieldTimeSeries(b_averaging(T_data, S_data, buoyancy_model), b_averaging, nothing)
-
-    prefix = "5yearaverage_2degree"
+    prefix = "$(sampling_length)yearaverage_2degree"
     date_str = replace(string(start_date), ":" => "-")
 
     dirname = prefix * date_str

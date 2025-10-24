@@ -9,7 +9,11 @@ function parse_commandline()
         "--simulation_length"
             help = "Length of calibration simulation in years"
             arg_type = Int
-            default = 20
+            default = 6
+        "--sampling_length"
+            help = "Length of sampling period in years"
+            arg_type = Int
+            default = 1
         "--zonal_average"
             help = "Whether to perform zonal averaging in loss function"
             arg_type = Bool
@@ -49,37 +53,33 @@ addprocs(nprocs)
     args = $args
 
     const simulation_length = args["simulation_length"]
-    const sampling_length = simulation_length - 10
+    const sampling_length = args["sampling_length"]
     const zonal_average = args["zonal_average"]
 
-    # obl_closure = RiBasedVerticalDiffusivity()
     obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
 
     if obl_closure isa RiBasedVerticalDiffusivity
-        obl_str = "_RiBased"
+        obl_str = "RiBased"
     else
         obl_str = "CATKE"
     end
 
-    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)year_ecco_eccoinitial$(obl_str)_distributed_obscov$(zonal_average ? "_zonalavg" : "")")
+    const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)yr_$(sampling_length)yravg_ecco_$(obl_str)_obscov$(zonal_average ? "_zonalavg" : "")")
     ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure)
     ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
 
-n_iterations = 5
+n_iterations = 10
 
 κ_skew_prior = constrained_gaussian("κ_skew", 5e2, 3e2, 0, Inf)
 κ_symmetric_prior = constrained_gaussian("κ_symmetric", 5e2, 3e2, 0, Inf)
 
 priors = combine_distributions([κ_skew_prior, κ_symmetric_prior])
 
-obs_paths = abspath.(vcat(glob("$(sampling_length)yearaverage_2degree*", joinpath("calibration_data", "ECCO4Monthly")),
-                          glob("$(sampling_length)yearaverage_2degree*", joinpath("calibration_data", "EN4Monthly"))))
+obs_paths = abspath.(glob("$(sampling_length)yearaverage_2degree*", joinpath("calibration_data", "ECCO4Monthly")))
 
-calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "$(sampling_length)yearaverage_2degree2002-01-01T00-00-00"))
+calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "$(sampling_length)yearaverage_2degree1997-01-01T00-00-00"))
 
-# synthetic_obs_paths = abspath.(glob("*500.0_500.0*20year*", joinpath("calibration_data", "synthetic_observations")))
-# Y = hcat(process_observation.(obs_paths, no_tapering)..., \.(synthetic_obs_paths, no_tapering)...)
 Y = hcat(process_observation.(obs_paths, no_tapering, zonal_average)...)
 
 const output_dim = size(Y, 1)
