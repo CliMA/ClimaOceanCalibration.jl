@@ -18,6 +18,10 @@ function parse_commandline()
             help = "Whether to perform zonal averaging in loss function"
             arg_type = Bool
             default = false
+        "--observation_covariance"
+            help = "Type of covariance to use (observations vs predetermined)"
+            arg_type = Bool
+            default = true
     end
     return parse_args(s)
 end
@@ -55,6 +59,7 @@ addprocs(nprocs)
     const simulation_length = args["simulation_length"]
     const sampling_length = args["sampling_length"]
     const zonal_average = args["zonal_average"]
+    const observation_covariance = args["observation_covariance"]
 
     obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
 
@@ -86,19 +91,26 @@ const output_dim = size(Y, 1)
 
 n_trials = size(Y, 2)
 
-# the noise estimated from the samples (will have rank n_trials-1)
-internal_cov = tsvd_cov_from_samples(Y) # SVD object
+if observation_covariance
+    # the noise estimated from the samples (will have rank n_trials-1)
+    internal_cov = tsvd_cov_from_samples(Y) # SVD object
 
-# the "5%" model error (diagonal)
-model_error_frac = 0.05
-data_mean = vec(mean(Y,dims=2))
-model_error_cov = Diagonal((model_error_frac*data_mean).^2)
+    # the "5%" model error (diagonal)
+    model_error_frac = 0.05
+    data_mean = vec(mean(Y,dims=2))
+    model_error_cov = Diagonal((model_error_frac*data_mean).^2)
 
-# regularize the model error diagonal (in case of zero entries)
-model_error_cov += 1e-6*I
+    # regularize the model error diagonal (in case of zero entries)
+    model_error_cov += 1e-6*I
 
-# Combine...
-covariance = SVDplusD(internal_cov, model_error_cov)
+    # Combine...
+    covariance = SVDplusD(internal_cov, model_error_cov)
+else
+    T_variance = 0.7^2
+    S_variance = 0.1^2
+    N_data = output_dim ÷ 2
+    covariance = Diagonal(vcat(fill(T_variance, N_data), fill(S_variance, N_data)))
+end
 
 Y_obs = Observation(Dict("samples" => process_observation(calibration_target_obs_path, taper_interior_ocean, zonal_average),
                          "covariances" => covariance,
