@@ -64,8 +64,7 @@ addprocs(nprocs)
     const sampling_length = args["sampling_length"]
     const zonal_average = args["zonal_average"]
     const observation_covariance = args["observation_covariance"]
-    const pickup = args["pickup"] ? nothing : Dict("ocean" => joinpath(pwd(), "pickups", "ocean_pickup.jld2"),
-                                                   "sea_ice" => joinpath(pwd(), "pickups", "seaice_pickup.jld2"))
+    const pickup = args["pickup"] ? Dict("ocean" => joinpath(pwd(), "pickups", "ocean_pickup.jld2"), "sea_ice" => joinpath(pwd(), "pickups", "seaice_pickup.jld2")) : nothing
 
     obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
 
