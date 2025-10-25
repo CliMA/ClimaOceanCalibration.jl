@@ -11,7 +11,7 @@ include("half_degree_omip.jl")
 include("data_processing.jl")
 include("data_plotting.jl")
 
-function gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure)
+function gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure, pickup)
     config_dict = Dict()
     
     # Set the output path for the current member
@@ -30,6 +30,7 @@ function gm_forward_model(iteration, member; simulation_length, sampling_length,
     config_dict["member"] = member
     config_dict["simulation_length"] = simulation_length
     config_dict["sampling_length"] = sampling_length
+    config_dict["pickup"] = pickup
 
     params = TOML.parsefile(parameter_path)
     κ_skew = params["κ_skew"]
@@ -101,7 +102,7 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, output_dir, it
         @error "Failed to plot parameter distribution for iteration $(iteration)" exception=(e, catch_backtrace())
     end
 
-    obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "1yearaverage_2degree1997-01-01T00-00-00")
+    obs_path = joinpath(pwd(), "calibration_data", "ECCO4Monthly", "1yearaverage_2degree2007-01-01T00-00-00")
 
     T_truth_filepath = joinpath(obs_path, "T.jld2")
     S_truth_filepath = joinpath(obs_path, "S.jld2")

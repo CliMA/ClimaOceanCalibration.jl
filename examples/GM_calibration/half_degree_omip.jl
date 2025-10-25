@@ -32,6 +32,13 @@ end
 
 function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict, obl_closure)
     output_dir = config_dict["output_dir"]
+    pickup = config_dict["pickup"]
+
+    if !(pickup isa Nothing)
+        ocean_pickup_file = pickup["ocean"]
+        seaice_pickup_file = pickup["sea_ice"]
+    end
+
     logfile_path = joinpath(output_dir, "output.log")
 
     logfile = open(logfile_path, "w")
@@ -44,7 +51,7 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict, obl_closure
     flusher = @async while isopen(logfile); flush(logfile); sleep(1); end
     
     try
-        start_year = 1992
+        start_year = 2002
         simulation_length = config_dict["simulation_length"]
         sampling_length = config_dict["sampling_length"]
 
@@ -104,19 +111,28 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict, obl_closure
 
         @info "Built ocean model $(ocean)"
 
-        set!(ocean.model, T=Metadatum(:temperature; dataset=ECCO4Monthly(), date=start_date, dir),
-                          S=Metadatum(:salinity;    dataset=ECCO4Monthly(), date=start_date, dir))
-        @info "Initialized T and S"
+        if pickup isa Nothing
+            set!(ocean.model, T=Metadatum(:temperature; dataset=ECCO4Monthly(), date=start_date, dir),
+                              S=Metadatum(:salinity;    dataset=ECCO4Monthly(), date=start_date, dir))
+            @info "Initialized T and S with ECCO data"
+        else
+            set!(ocean.model, pickup=ocean_pickup_file)
+            @info "Initialized T and S from pickup file $(ocean_pickup_file)"
+        end
 
         # Default sea-ice dynamics and salinity coupling are included in the defaults
         # sea_ice = sea_ice_simulation(grid, ocean; advection=WENO(order=7))
         sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
         @info "Built sea ice model $(sea_ice)"
 
-        set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), date=start_date, dir),
-                            ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), date=start_date, dir))
-
-        @info "Initialized sea ice fields"
+        if pickup isa Nothing
+            set!(sea_ice.model, h=Metadatum(:sea_ice_thickness;     dataset=ECCO4Monthly(), date=start_date, dir),
+                                ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), date=start_date, dir))
+            @info "Initialized sea ice fields with ECCO data"
+        else
+            set!(sea_ice.model, pickup=seaice_pickup_file)
+            @info "Initialized sea ice fields from pickup file $(seaice_pickup_file)"
+        end
 
         jra55_dir = joinpath(homedir(), "JRA55_data")
         mkpath(jra55_dir)

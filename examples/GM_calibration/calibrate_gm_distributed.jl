@@ -22,6 +22,10 @@ function parse_commandline()
             help = "Type of covariance to use (observations vs predetermined)"
             arg_type = Bool
             default = true
+        "--pickup"
+            help = "Pickup files for simulation spinup"
+            arg_type = Bool
+            default = false
     end
     return parse_args(s)
 end
@@ -60,6 +64,8 @@ addprocs(nprocs)
     const sampling_length = args["sampling_length"]
     const zonal_average = args["zonal_average"]
     const observation_covariance = args["observation_covariance"]
+    const pickup = args["pickup"] ? nothing : Dict("ocean" => joinpath(pwd(), "pickups", "ocean_pickup.jld2"),
+                                                   "sea_ice" => joinpath(pwd(), "pickups", "seaice_pickup.jld2"))
 
     obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
 
@@ -76,7 +82,7 @@ addprocs(nprocs)
     end
 
     const output_dir = joinpath(pwd(), "calibration_runs", "gm_$(simulation_length)yr_$(sampling_length)yravg_ecco_$(obl_str)_$(cov_str)$(zonal_average ? "_zonalavg" : "")")
-    ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure)
+    ClimaCalibrate.forward_model(iteration, member) = gm_forward_model(iteration, member; simulation_length, sampling_length, obl_closure, pickup)
     ClimaCalibrate.observation_map(iteration) = gm_construct_g_ensemble(iteration, zonal_average)
 end
 
@@ -89,7 +95,7 @@ priors = combine_distributions([κ_skew_prior, κ_symmetric_prior])
 
 obs_paths = abspath.(glob("$(sampling_length)yearaverage_2degree*", joinpath("calibration_data", "ECCO4Monthly")))
 
-calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "$(sampling_length)yearaverage_2degree1997-01-01T00-00-00"))
+calibration_target_obs_path = abspath(joinpath("calibration_data", "ECCO4Monthly", "$(sampling_length)yearaverage_2degree2007-01-01T00-00-00"))
 
 Y = hcat(process_observation.(obs_paths, no_tapering, zonal_average)...)
 
