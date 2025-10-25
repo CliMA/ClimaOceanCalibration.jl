@@ -1,0 +1,107 @@
+using Oceananigans
+using Oceananigans.Grids: znodes, φnodes
+using Oceananigans.Fields: location
+using Oceananigans.ImmersedBoundaries: mask_immersed_field!
+using Oceananigans.Architectures: on_architecture
+using XESMF
+using JLD2
+using NaNStatistics
+using Glob
+
+function regrid_model_data(simdir)
+    @info "Regridding model data in $(simdir)..."
+    filepath = first(glob("*calibrationsample*", simdir))
+    T_data = FieldTimeSeries(filepath, "T", backend=OnDisk())
+    S_data = FieldTimeSeries(filepath, "S", backend=OnDisk())
+
+    source_grid = T_data.grid
+    LX, LY, LZ = location(T_data)
+    boundary_conditions = T_data.boundary_conditions
+    times = T_data.times
+
+    Nx, Ny, Nz = (180, 84, 100)
+    z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
+
+    target_grid, regridder = jldopen(joinpath(pwd(), "examples", "GM_calibration_1degforwardmodel", "grids_and_regridder.jld2"), "r") do file
+        return file["target_grid"], file["regridder"]
+    end
+
+    T_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
+    S_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
+
+    for t in 1:length(times)
+        regrid!(T_target[t], regridder, T_data[t])
+        regrid!(S_target[t], regridder, S_data[t])
+    end
+    return T_target, S_target
+end
+
+taper_interior_ocean(z, z_scale=3500, width=1000) = 0.5 * (1 + tanh((z + z_scale) / width))
+no_tapering(z) = 1
+
+function extract_field_section(fts::FieldTimeSeries, latitude_range; vertical_weighting=no_tapering)
+    fts = on_architecture(CPU(), fts)
+    LX, LY, LZ = location(fts)
+    grid = fts.grid
+
+    φᶜ = φnodes(grid, LX(), LY(), LZ())
+    zᶜ = znodes(grid, LX(), LY(), LZ())
+
+    φmin, φmax = latitude_range
+
+    lat_indices = findfirst(x -> x >= φmin, φᶜ):findlast(x -> x <= φmax, φᶜ)
+    z_weights = vertical_weighting.(zᶜ)
+
+    times = fts.times
+
+    Nt = length(times)
+    for t in 1:length(times)
+        mask_immersed_field!(fts[t], NaN)
+    end
+
+    field_section = reshape(z_weights, 1, 1, :) .* interior(fts[Nt], :, lat_indices, :)
+
+    return field_section
+end
+
+extract_southern_ocean_section(fts, vertical_weighting=no_tapering) = extract_field_section(fts, (-80, -50); vertical_weighting)
+
+function process_observation(obs_path, vertical_weighting, zonal_average)
+    T_filepath = joinpath(obs_path, "T.jld2")
+    S_filepath = joinpath(obs_path, "S.jld2")
+    
+    T_afts = jldopen(T_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    S_afts = jldopen(S_filepath, "r") do file
+        return file["averaged_fieldtimeseries"]
+    end
+
+    T_data = T_afts.data
+    S_data = S_afts.data
+
+    T_section = extract_southern_ocean_section(T_data, vertical_weighting)
+    S_section = extract_southern_ocean_section(S_data, vertical_weighting)
+
+    if zonal_average
+        T_section = nanmean(T_section, dims=1)
+        S_section = nanmean(S_section, dims=1)
+    end
+
+    return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
+end
+
+function process_member_data(simdir, vertical_weighting, zonal_average)
+    T_target, S_target = regrid_model_data(simdir)
+
+    T_section = extract_southern_ocean_section(T_target, vertical_weighting)
+    S_section = extract_southern_ocean_section(S_target, vertical_weighting)
+
+    if zonal_average
+        T_section = nanmean(T_section, dims=1)
+        S_section = nanmean(S_section, dims=1)
+    end
+
+    return vcat(T_section[.!isnan.(T_section)], S_section[.!isnan.(S_section)])
+end
