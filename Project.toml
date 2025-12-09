@@ -1,7 +1,7 @@
 name = "ClimaOceanCalibration"
 uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
-authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 version = "0.1.0"
+authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -15,6 +15,7 @@ ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 EnsembleKalmanProcesses = "aa8a2aa5-91d8-4396-bcef-d4f2ec43552d"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
@@ -31,11 +32,17 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 
+[sources]
+ClimaCalibrate = {rev = "main", url = "https://github.com/xkykai/ClimaCalibrate.jl.git"}
+ClimaOcean = {rev = "xk/half-degree-simulation", url = "https://github.com/CliMA/ClimaOcean.jl.git"}
+Oceananigans = {rev = "main", url = "https://github.com/CliMA/Oceananigans.jl.git"}
+
 [compat]
 CFTime = "0.2"
 CUDA = "5.8.5, 5.9"
 ClimaOcean = "0.8.5"
 EnsembleKalmanProcesses = "2.6.0"
+GLMakie = "0.12.0"
 KernelAbstractions = "0.9.38"
 Oceananigans = "0.100.3"
 OrderedCollections = "1"
