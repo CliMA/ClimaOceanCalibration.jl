@@ -2,23 +2,41 @@ name = "ClimaOceanCalibration"
 uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
 authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 version = "0.1.0"
+authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 
 [deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 CFTime = "179af706-886a-5703-950a-314cd64e0468"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ClimaCalibrate = "4347a170-ebd6-470c-89d3-5c705c0cacc2"
 ClimaOcean = "0376089a-ecfe-4b0e-a64f-9c555d74d754"
 ClimaSeaIce = "6ba0ff68-24e6-4315-936c-2e99227c95a4"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 EnsembleKalmanProcesses = "aa8a2aa5-91d8-4396-bcef-d4f2ec43552d"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+MPIPreferences = "3da0fdf6-3ccc-4f1b-acd9-58baa6c99267"
+NaNStatistics = "b946abbf-3ea7-4610-9019-9858bfdeaf2d"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 PkgDev = "149e707d-584d-56d3-88ec-740c18e106ff"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SeawaterPolynomials = "d496a93d-167e-4197-9f49-d3af4ff8fe40"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
+
+[sources]
+ClimaCalibrate = {rev = "main", url = "https://github.com/xkykai/ClimaCalibrate.jl.git"}
+ClimaOcean = {rev = "xk/half-degree-simulation", url = "https://github.com/CliMA/ClimaOcean.jl.git"}
+Oceananigans = {rev = "main", url = "https://github.com/CliMA/Oceananigans.jl.git"}
 
 [compat]
 CFTime = "0.2"
@@ -27,6 +45,7 @@ ClimaCalibrate = "0.1"
 ClimaOcean = "0.8.5"
 ClimaSeaIce = "0.3"
 EnsembleKalmanProcesses = "2.6.0"
+GLMakie = "0.12.0"
 KernelAbstractions = "0.9.38"
 Oceananigans = "0.100.3"
 OrderedCollections = "1"
