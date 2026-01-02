@@ -46,3 +46,7 @@ Manifest.toml
 # HPC log files
 *.out
 *.err
+
+# calibration data and files
+calibration_data/
+calibration_runs
