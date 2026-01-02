@@ -1,5 +1,6 @@
 name = "ClimaOceanCalibration"
 uuid = "b5b0db0a-afc0-4eaa-813c-9b0f9c9ed209"
+authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 version = "0.1.0"
 authors = ["Gregory Wagner <wagner.greg@gmail.com>", "Xin Kai Lee <xinkai@mit.edu>"]
 
@@ -40,7 +41,9 @@ Oceananigans = {rev = "main", url = "https://github.com/CliMA/Oceananigans.jl.gi
 [compat]
 CFTime = "0.2"
 CUDA = "5.8.5, 5.9"
+ClimaCalibrate = "0.1"
 ClimaOcean = "0.8.5"
+ClimaSeaIce = "0.3"
 EnsembleKalmanProcesses = "2.6.0"
 GLMakie = "0.12.0"
 KernelAbstractions = "0.9.38"
