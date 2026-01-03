@@ -33,6 +33,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 
 [compat]
+ArgParse = "1"
 CFTime = "0.2"
 CUDA = "5.9"
 ClimaCalibrate = "0.1"
