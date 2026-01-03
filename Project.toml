@@ -35,6 +35,7 @@ XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 [compat]
 CFTime = "0.2"
 CUDA = "5.9"
+CairoMakie = "0.15"
 ClimaCalibrate = "0.1"
 ClimaOcean = "0.8"
 ClimaSeaIce = "0.3"
