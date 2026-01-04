@@ -64,7 +64,7 @@ end_date = start_date + Year(simulation_length)
 simulation_period = Dates.value(Second(end_date - start_date))
 
 @info "Settting up salinity restoring..."
-@inline mask(x, y, z, t) = z ≥ z_surf - 1
+@inline mask(x, y, z, t) = z >= z_surf - 1
 Smetadata = Metadata(:salinity; dataset=EN4Monthly(), dir=EN4_dir, start_date, end_date)
 FS = DatasetRestoring(Smetadata, grid; rate = 1/30days, mask, time_indices_in_memory = 10)
 
