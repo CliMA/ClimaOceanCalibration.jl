@@ -171,17 +171,17 @@ ocean.output_writers[:average_10year] = JLD2Writer(ocean.model, ocean_outputs;
                                                    filename = "$(FILE_DIR)/ocean_complete_fields_10year_average",
                                                    overwrite_existing = true)
 
-ice.output_writers[:average_1year] = JLD2Writer(sea_ice.model, sea_ice_outputs;
+sea_ice.output_writers[:average_1year] = JLD2Writer(sea_ice.model, sea_ice_outputs;
                                                  schedule = AveragedTimeInterval(simulation_period, window=sampling_window_1year),
                                                  filename = "$(FILE_DIR)/sea_ice_complete_fields_1year_average",
                                                  overwrite_existing = true)
 
-ice.output_writers[:average_5year] = JLD2Writer(sea_ice.model, sea_ice_outputs;
+sea_ice.output_writers[:average_5year] = JLD2Writer(sea_ice.model, sea_ice_outputs;
                                                  schedule = AveragedTimeInterval(simulation_period, window=sampling_window_5year),
                                                  filename = "$(FILE_DIR)/sea_ice_complete_fields_5year_average",
                                                  overwrite_existing = true)
 
-ice.output_writers[:average_10year] = JLD2Writer(sea_ice.model, sea_ice_outputs;
+sea_ice.output_writers[:average_10year] = JLD2Writer(sea_ice.model, sea_ice_outputs;
                                                   schedule =AveragedTimeInterval(simulation_period, window=sampling_window_10year),
                                                   filename = "$(FILE_DIR)/sea_ice_complete_fields_10year_average",
                                                   overwrite_existing = true)
