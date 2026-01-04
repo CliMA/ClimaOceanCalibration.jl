@@ -114,7 +114,7 @@ omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period)
 FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_$(start_year)")
 mkpath(FILE_DIR)
 
-b = buoyancy_field(ocean.model)
+b = buoyancy(ocean.model)
 N² = Field(buoyancy_frequency(ocean.model))
 
 ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
