@@ -25,8 +25,8 @@ else
     @warn "✗ UCX libraries detected! This can cause issues with MPI+CUDA. Detected libs:\n$(join(ucx_libs, "\n"))"
 end
 
-start_year = 1959
-simulation_length = 30
+start_year = 1962
+simulation_length = 40
 
 arch = GPU()
 
@@ -111,7 +111,7 @@ omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
 omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period) 
 @info "Built simulation $(omip)"
 
-FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_$(start_year)")
+FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_$(start_year)_$(simulation_length)years")
 mkpath(FILE_DIR)
 
 b = buoyancy(ocean.model)
