@@ -16,8 +16,9 @@ using Oceananigans.TurbulenceClosures.TKEBasedVerticalDiffusivities: CATKEVertic
 using Oceananigans.Operators: Δx, Δy
 using Oceananigans: prognostic_fields
 using Oceananigans.AbstractOperations: condition_operand
-using Oceananigans.Grids: φnode
 using Statistics
+using EnsembleKalmanProcesses
+using Random
 
 import Oceananigans.OutputWriters: checkpointer_address
 
@@ -28,6 +29,9 @@ if isempty(ucx_libs)
 else
     @warn "✗ UCX libraries detected! This can cause issues with MPI+CUDA. Detected libs:\n$(join(ucx_libs, "\n"))"
 end
+
+κ_skew = 195
+κ_symmetric = 149
 
 start_year = 1962
 simulation_length = 40
@@ -58,7 +62,8 @@ free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=40minutes
 
 horizontal_viscosity = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 catke_closure = ClimaOcean.Oceans.default_ocean_closure()
-closure = (catke_closure, horizontal_viscosity)
+eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
+closure = (catke_closure, horizontal_viscosity, eddy_closure)
 
 EN4_dir = joinpath(homedir(), "EN4_data")
 mkpath(EN4_dir)
@@ -102,7 +107,7 @@ mkpath(jra55_dir)
 dataset = MultiYearJRA55()
 backend = JRA55NetCDFBackend(100)
 
-@info "Setting up presctibed atmosphere $(dataset)"
+@info "Setting up prescribed atmosphere $(dataset)"
 atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
 radiation  = Radiation()
 
@@ -120,12 +125,11 @@ omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, interfaces)
 omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period) 
 @info "Built simulation $(omip)"
 
-FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_threeequationseaice_$(start_year)_$(simulation_length)years")
+FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_skew_$(κ_skew)_symmetric_$(κ_symmetric)_threeequationseaice_$(start_year)_$(simulation_length)years")
 mkpath(FILE_DIR)
 
 b = buoyancy_field(ocean.model)
 N² = Field(buoyancy_frequency(ocean.model))
-
 h, ℵ = sea_ice.model.ice_thickness, sea_ice.model.ice_concentration
 
 @inline is_northern_hemisphere(i, j, k, grid) = φnode(i, j, grid.underlying_grid, Center(), Center()) > 0
@@ -191,11 +195,6 @@ sampling_window_10year = Dates.value(Dates.Second(end_date - (end_date - Year(10
 ocean.output_writers[:average_1year] = JLD2Writer(ocean.model, ocean_outputs;
                                                   schedule = AveragedTimeInterval(simulation_period, window=sampling_window_1year),
                                                   filename = "$(FILE_DIR)/ocean_complete_fields_1year_average",
-                                                  overwrite_existing = true)
-
-ocean.output_writers[:average_5year] = JLD2Writer(ocean.model, ocean_outputs;
-                                                  schedule = AveragedTimeInterval(simulation_period, window=sampling_window_5year),
-                                                  filename = "$(FILE_DIR)/ocean_complete_fields_5year_average",
                                                   overwrite_existing = true)
 
 ocean.output_writers[:average_10year] = JLD2Writer(ocean.model, ocean_outputs;
