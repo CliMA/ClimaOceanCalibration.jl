@@ -183,9 +183,21 @@ mkpath(FILE_DIR)
 
 b = buoyancy(ocean.model)
 N² = Field(buoyancy_frequency(ocean.model))
+h, ℵ = sea_ice.model.ice_thickness, sea_ice.model.ice_concentration
+
+@inline is_northern_hemisphere(i, j, k, grid) = φnode(i, j, grid.underlying_grid, Center(), Center()) > 0
+@inline is_southern_hemisphere(i, j, k, grid) = φnode(i, j, grid.underlying_grid, Center(), Center()) < 0
+
+h_north = condition_operand(identity, h, is_northern_hemisphere, 0)
+h_south = condition_operand(identity, h, is_southern_hemisphere, 0)
+ℵ_north = condition_operand(identity, ℵ, is_northern_hemisphere, 0)
+ℵ_south = condition_operand(identity, ℵ, is_southern_hemisphere, 0)
+sea_ice_extent_north = Integral(h_north * ℵ_north, dims=(1, 2))
+sea_ice_extent_south = Integral(h_south * ℵ_south, dims=(1, 2))
 
 ocean_outputs = merge(prognostic_fields(ocean.model), (; b, N²))
 sea_ice_outputs = merge(prognostic_fields(sea_ice.model), (; T = sea_ice.model.ice_thermodynamics.top_surface_temperature))
+sea_ice_extent_outputs = (; north=sea_ice_extent_north, south=sea_ice_extent_south)
 
 ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                             schedule = TimeInterval(15days),
@@ -202,6 +214,33 @@ save_times = start_date:Year(1):end_date
 times = Dates.value.(Dates.Second.(save_times[2:end] .- start_date))
 annual_times = SpecifiedTimes(times)
 
+times_5year = start_date:Year(5):end_date
+times_5year_vals = Dates.value.(Dates.Second.(times_5year[2:end] .- start_date))
+five_year_times = SpecifiedTimes(times_5year_vals)
+
+final_year_jan = end_date - Year(1)
+final_year_feb = final_year_jan + Month(1)
+final_year_mar = final_year_jan + Month(2)
+final_year_apr = final_year_jan + Month(3)
+final_year_may = final_year_jan + Month(4)
+final_year_jun = final_year_jan + Month(5)
+final_year_jul = final_year_jan + Month(6)
+final_year_aug = final_year_jan + Month(7)
+final_year_sep = final_year_jan + Month(8)
+final_year_oct = final_year_jan + Month(9)
+final_year_nov = final_year_jan + Month(10)
+final_year_dec = final_year_jan + Month(11)
+
+ocean.output_writers[:annual_snapshot] = JLD2Writer(ocean.model, ocean_outputs;
+                                                    schedule = annual_times,
+                                                    filename = "$(FILE_DIR)/ocean_annual_snapshot_fields",
+                                                    overwrite_existing = true)
+
+sea_ice.output_writers[:annual_snapshot] = JLD2Writer(sea_ice.model, sea_ice_outputs;
+                                                        schedule = annual_times,
+                                                        filename = "$(FILE_DIR)/sea_ice_annual_snapshot_fields",
+                                                        overwrite_existing = true)
+
 ocean.output_writers[:average_1year] = JLD2Writer(ocean.model, ocean_outputs;
                                                   schedule = AveragedTimeInterval(simulation_period, window=simulation_period),
                                                   filename = "$(FILE_DIR)/ocean_complete_fields_1year_average",
@@ -211,6 +250,78 @@ sea_ice.output_writers[:average_1year] = JLD2Writer(sea_ice.model, sea_ice_outpu
                                                  schedule = AveragedTimeInterval(simulation_period, window=simulation_period),
                                                  filename = "$(FILE_DIR)/sea_ice_complete_fields_1year_average",
                                                  overwrite_existing = true)
+
+sea_ice.output_writers[:extent_jan] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_feb, window=Dates.value(Dates.Second(final_year_feb - final_year_jan))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_jan",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_feb] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_mar, window=Dates.value(Dates.Second(final_year_mar - final_year_feb))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_feb",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_mar] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_apr, window=Dates.value(Dates.Second(final_year_apr - final_year_mar))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_mar",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_apr] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_may, window=Dates.value(Dates.Second(final_year_may - final_year_apr))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_apr",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_may] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs; 
+                                                 schedule = AveragedTimeInterval(final_year_jun, window=Dates.value(Dates.Second(final_year_jun - final_year_may))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_may",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_jun] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_jul, window=Dates.value(Dates.Second(final_year_jul - final_year_jun))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_jun",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_jul] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_aug, window=Dates.value(Dates.Second(final_year_aug - final_year_jul))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_jul",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_aug] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_sep, window=Dates.value(Dates.Second(final_year_sep - final_year_aug))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_aug",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_sep] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_oct, window=Dates.value(Dates.Second(final_year_oct - final_year_sep))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_sep",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_oct] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_nov, window=Dates.value(Dates.Second(final_year_nov - final_year_oct))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_oct",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_nov] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(final_year_dec, window=Dates.value(Dates.Second(final_year_dec - final_year_nov))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_nov",
+                                                 overwrite_existing = true)
+
+sea_ice.output_writers[:extent_dec] = JLD2Writer(sea_ice.model, sea_ice_extent_outputs;
+                                                 schedule = AveragedTimeInterval(end_date, window=Dates.value(Dates.Second(end_date - final_year_dec))),
+                                                 filename = "$(FILE_DIR)/sea_ice_extent_dec",
+                                                 overwrite_existing = true)
+
+ocean.output_writers[:checkpointer] = Checkpointer(ocean.model;
+                                                   schedule = five_year_times,
+                                                   dir = FILE_DIR,
+                                                   prefix = "ocean_checkpointer",
+                                                   overwrite_existing = true)
+
+sea_ice.output_writers[:checkpointer] = Checkpointer(sea_ice.model;
+                                                      schedule = five_year_times,
+                                                      dir = FILE_DIR,
+                                                      prefix = "sea_ice_checkpointer",
+                                                      overwrite_existing = true)
 
 wall_time = Ref(time_ns())
 
