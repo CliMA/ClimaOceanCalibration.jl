@@ -14,6 +14,7 @@ using Oceananigans.TurbulenceClosures: ExplicitTimeDiscretization, AdvectiveForm
 using Oceananigans.TurbulenceClosures.TKEBasedVerticalDiffusivities: CATKEVerticalDiffusivity, CATKEMixingLength, CATKEEquation
 using Oceananigans.Operators: Δx, Δy
 using Oceananigans: prognostic_fields
+using Oceananigans.AbstractOperations: condition_operand
 using Statistics
 using EnsembleKalmanProcesses
 using Random
@@ -199,7 +200,7 @@ ocean_outputs = merge(prognostic_fields(ocean.model), (; b, N²))
 sea_ice_outputs = merge(prognostic_fields(sea_ice.model), (; T = sea_ice.model.ice_thermodynamics.top_surface_temperature))
 sea_ice_extent_outputs = (; north=sea_ice_extent_north, south=sea_ice_extent_south)
 
-ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
+ocean.output_writers[:surface] = JLD2Writer(ocean.model, merge(ocean.model.tracers, ocean.model.velocities, (; b, N²));
                                             schedule = TimeInterval(15days),
                                             filename = "$(FILE_DIR)/ocean_surface_fields",
                                             indices = (:, :, grid.Nz),
