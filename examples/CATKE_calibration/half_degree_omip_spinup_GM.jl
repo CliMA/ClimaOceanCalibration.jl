@@ -14,6 +14,8 @@ using Oceananigans.TurbulenceClosures: ExplicitTimeDiscretization, AdvectiveForm
 using Oceananigans.TurbulenceClosures.TKEBasedVerticalDiffusivities: CATKEVerticalDiffusivity, CATKEMixingLength, CATKEEquation
 using Oceananigans.Operators: Δx, Δy
 using Statistics
+using EnsembleKalmanProcesses
+using Random
 
 import Oceananigans.OutputWriters: checkpointer_address
 
@@ -24,6 +26,9 @@ if isempty(ucx_libs)
 else
     @warn "✗ UCX libraries detected! This can cause issues with MPI+CUDA. Detected libs:\n$(join(ucx_libs, "\n"))"
 end
+
+κ_skew = 195
+κ_symmetric = 149
 
 start_year = 1962
 simulation_length = 40
@@ -54,7 +59,8 @@ free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=40minutes
 
 horizontal_viscosity = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 catke_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
-closure = (catke_closure, horizontal_viscosity)
+eddy_closure  = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
+closure = (catke_closure, horizontal_viscosity, eddy_closure)
 
 EN4_dir = joinpath(homedir(), "EN4_data")
 mkpath(EN4_dir)
@@ -98,7 +104,7 @@ mkpath(jra55_dir)
 dataset = MultiYearJRA55()
 backend = JRA55NetCDFBackend(100)
 
-@info "Setting up presctibed atmosphere $(dataset)"
+@info "Setting up prescribed atmosphere $(dataset)"
 atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
 radiation  = Radiation()
 
