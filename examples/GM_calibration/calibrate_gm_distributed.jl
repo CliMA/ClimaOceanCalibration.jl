@@ -66,7 +66,7 @@ addprocs(nprocs)
     const observation_covariance = args["observation_covariance"]
     const pickup = args["pickup"] ? Dict("ocean" => joinpath(pwd(), "pickups", "ocean_pickup.jld2"), "sea_ice" => joinpath(pwd(), "pickups", "seaice_pickup.jld2")) : nothing
 
-    obl_closure = ClimaOcean.OceanSimulations.default_ocean_closure()
+    obl_closure = ClimaOcean.Oceans.default_ocean_closure()
 
     if obl_closure isa RiBasedVerticalDiffusivity
         obl_str = "RiBased"

@@ -84,7 +84,7 @@ free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=40minutes
 @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
 
 horizontal_viscosity = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
-CATKE_default = ClimaOcean.OceanSimulations.default_ocean_closure()
+CATKE_default = ClimaOcean.Oceans.default_ocean_closure()
 
 Cˢ = CATKE_default.mixing_length.Cˢ * Cˢ_scaling
 
