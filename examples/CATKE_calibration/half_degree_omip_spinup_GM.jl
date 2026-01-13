@@ -13,6 +13,7 @@ using ArgParse
 using Oceananigans.TurbulenceClosures: ExplicitTimeDiscretization, AdvectiveFormulation, IsopycnalSkewSymmetricDiffusivity
 using Oceananigans.TurbulenceClosures.TKEBasedVerticalDiffusivities: CATKEVerticalDiffusivity, CATKEMixingLength, CATKEEquation
 using Oceananigans.Operators: Δx, Δy
+using Oceananigans: prognostic_fields
 using Statistics
 using EnsembleKalmanProcesses
 using Random
@@ -123,11 +124,8 @@ mkpath(FILE_DIR)
 b = buoyancy(ocean.model)
 N² = Field(buoyancy_frequency(ocean.model))
 
-ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))
-sea_ice_outputs = merge((h = sea_ice.model.ice_thickness,
-                         ℵ = sea_ice.model.ice_concentration,
-                         T = sea_ice.model.ice_thermodynamics.top_surface_temperature),
-                         sea_ice.model.velocities)
+ocean_outputs = merge(prognostic_fields(ocean.model), (; b, N²))
+sea_ice_outputs = merge(prognostic_fields(sea_ice.model), (; T = sea_ice.model.ice_thermodynamics.top_surface_temperature))
 
 ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                             schedule = TimeInterval(180days),
