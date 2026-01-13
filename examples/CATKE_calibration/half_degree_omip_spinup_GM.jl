@@ -117,7 +117,7 @@ omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
 omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period) 
 @info "Built simulation $(omip)"
 
-FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_$(start_year)_$(simulation_length)years")
+FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_skew_$(κ_skew)_symmetric_$(κ_symmetric)_$(start_year)_$(simulation_length)years")
 mkpath(FILE_DIR)
 
 b = buoyancy(ocean.model)
