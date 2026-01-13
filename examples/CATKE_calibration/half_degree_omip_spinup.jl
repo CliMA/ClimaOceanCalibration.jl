@@ -3,7 +3,7 @@ using ClimaSeaIce
 using Oceananigans
 using Oceananigans.Grids
 using Oceananigans.Units
-using Oceananigans.BuoyancyFormulations: buoyancy, buoyancy_frequency
+using Oceananigans.Models: buoyancy_field, buoyancy_frequency
 using ClimaOcean.DataWrangling
 using Printf
 using Dates
@@ -117,7 +117,7 @@ omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period)
 FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_fullprognosticfields_$(start_year)_$(simulation_length)years")
 mkpath(FILE_DIR)
 
-b = buoyancy(ocean.model)
+b = buoyancy_field(ocean.model)
 N² = Field(buoyancy_frequency(ocean.model))
 
 h, ℵ = sea_ice.model.ice_thickness, sea_ice.model.ice_concentration
