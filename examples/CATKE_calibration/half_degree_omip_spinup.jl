@@ -1,4 +1,5 @@
 using ClimaOcean
+using ClimaOcean.OceanSeaIceModels: ThreeEquationHeatFlux
 using ClimaSeaIce
 using Oceananigans
 using Oceananigans.Grids
@@ -28,8 +29,41 @@ else
     @warn "✗ UCX libraries detected! This can cause issues with MPI+CUDA. Detected libs:\n$(join(ucx_libs, "\n"))"
 end
 
-start_year = 1962
-simulation_length = 40
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table! s begin
+        "--kappa_skew"
+            help = "GM diffusivity (m²/s)"
+            arg_type = Float64
+            default = 0.0
+        "--kappa_symmetric"
+            help = "Redi diffusivity (m²/s)"
+            arg_type = Float64
+            default = 0.0
+        "--ocean_seaice_formulation"
+            help = "Ocean-sea ice interface formulation (default vs three_equation)"
+            arg_type = String
+            default = "default"
+        "--start_year"
+            help = "Start year for simulation"
+            arg_type = Int
+            default = 1962
+        "--simulation_length"
+            help = "Simulation length in years"
+            arg_type = Int
+            default = 40
+    end
+    return parse_args(s)
+end
+
+args = parse_commandline()
+
+κ_skew = args["kappa_skew"]
+κ_symmetric = args["kappa_symmetric"]
+ocean_seaice_formulation = args["ocean_seaice_formulation"]
+start_year = args["start_year"]
+simulation_length = args["simulation_length"]
 
 arch = GPU()
 
@@ -57,7 +91,15 @@ free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=40minutes
 
 horizontal_viscosity = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
 catke_closure = ClimaOcean.Oceans.default_ocean_closure()
-closure = (catke_closure, horizontal_viscosity)
+
+# Add GM and Redi closures if specified
+if κ_skew > 0 || κ_symmetric > 0
+    @info "Using GM/Redi with κ_skew = $(κ_skew) m²/s and κ_symmetric = $(κ_symmetric) m²/s"
+    eddy_closure = IsopycnalSkewSymmetricDiffusivity(; κ_skew, κ_symmetric, skew_flux_formulation=AdvectiveFormulation())
+    closure = (catke_closure, horizontal_viscosity, eddy_closure)
+else
+    closure = (catke_closure, horizontal_viscosity)
+end
 
 EN4_dir = joinpath(homedir(), "EN4_data")
 mkpath(EN4_dir)
@@ -107,14 +149,35 @@ radiation  = Radiation()
 
 @info "Built atmosphere model $(atmosphere)"
 
-omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
+# Set up ocean-sea ice coupling based on formulation
+if ocean_seaice_formulation == "three_equation"
+    @info "Using three-equation heat flux formulation"
+    sea_ice_ocean_heat_flux = ThreeEquationHeatFlux()
+    interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
+                                     radiation,
+                                     sea_ice_ocean_heat_flux)
+    omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, interfaces)
+else
+    @info "Using default ocean-sea ice formulation"
+    omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
+end
 
 @info "Built coupled model $(omip)"
 
-omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period) 
+omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period)
 @info "Built simulation $(omip)"
 
-FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_fullprognosticfields_$(start_year)_$(simulation_length)years")
+# Create output directory name based on configuration
+dir_name = "half_degree_omip_spinup"
+if κ_skew > 0 || κ_symmetric > 0
+    dir_name *= "_skew_$(κ_skew)_symmetric_$(κ_symmetric)"
+end
+if ocean_seaice_formulation == "three_equation"
+    dir_name *= "_threeequationseaice"
+end
+dir_name *= "_$(start_year)_$(simulation_length)years"
+
+FILE_DIR = joinpath(pwd(), "calibration_data", dir_name)
 mkpath(FILE_DIR)
 
 b = buoyancy_field(ocean.model)
