@@ -13,7 +13,7 @@ import Oceananigans.Architectures: on_architecture
 
 Nz = 100
 z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
-Nx_target, Ny_target = (120, 56)
+Nx_target, Ny_target = (90, 42)
 
 minimum_depth = 15
 major_basins = 1
@@ -73,7 +73,7 @@ new_field = CenterField(target_grid)
 mask_immersed_field!(new_field, NaN)
 @assert sum(isnan.(interior(new_field))) == sum(isnan.(interior(dst_field)))
 
-SAVE_PATH = joinpath(pwd(), "examples", "CATKE_calibration", "3deg_grids_and_regridder.jld2")
+SAVE_PATH = joinpath(pwd(), "examples", "CATKE_calibration", "4deg_grids_and_regridder.jld2")
 jldopen(SAVE_PATH, "w") do file
     file["source_grid"] = on_architecture(CPU(), source_grid)
     file["target_grid"] = on_architecture(CPU(), target_grid)
