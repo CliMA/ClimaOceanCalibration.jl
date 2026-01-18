@@ -24,6 +24,9 @@
 # 3. Build observation covariance from all available years (1992-2017)
 # 4. Run EKI calibration with batched Slurm backend
 
+using Pkg
+Pkg.activate("CATKECalibration")
+
 using CATKECalibration
 using ClimaCalibrate
 using EnsembleKalmanProcesses
