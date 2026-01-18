@@ -7,9 +7,6 @@
 #
 # The main calibration script (calibrate_catke_module.jl) defines output_dir,
 # ensemble_size, output_dim, and zonal_average before including this file.
-using Pkg
-Pkg.activate("CATKECalibration")
-
 using CATKECalibration
 using ClimaCalibrate
 using TOML
