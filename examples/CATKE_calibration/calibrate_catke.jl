@@ -33,14 +33,6 @@ include(joinpath(@__DIR__, "batched_slurm_backend.jl"))
 include(joinpath(@__DIR__, "data_processing.jl"))
 
 # ============================================
-# Model Interface
-# ============================================
-model_interface = joinpath(@__DIR__, "model_interface.jl")
-
-# Include model interface so observation_map is available to the controller
-include(model_interface)
-
-# ============================================
 # Calibration Configuration
 # ============================================
 
@@ -49,7 +41,7 @@ include(model_interface)
 const n_iterations = 10
 
 # Output directory
-const output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov")
 mkpath(output_dir)
 
 # Data processing options
@@ -145,6 +137,11 @@ jldopen(joinpath(pwd(), "examples", "CATKE_calibration", "calibration_metadata.j
     file["ensemble_size"] = ensemble_size
     file["output_dim"] = output_dim
 end
+
+model_interface = joinpath(@__DIR__, "model_interface.jl")
+
+# Include model interface so observation_map is available to the controller
+include(model_interface)
 
 @info "Calibration configuration:"
 @info "  Number of parameters: 5"
