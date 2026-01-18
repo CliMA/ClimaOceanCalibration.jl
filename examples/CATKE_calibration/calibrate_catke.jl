@@ -29,9 +29,16 @@ using Statistics
 # Include the batched Slurm backend
 include(joinpath(@__DIR__, "batched_slurm_backend.jl"))
 
-
 # Include data processing utilities
 include(joinpath(@__DIR__, "data_processing.jl"))
+
+# ============================================
+# Model Interface
+# ============================================
+model_interface = joinpath(@__DIR__, "model_interface.jl")
+
+# Include model interface so observation_map is available to the controller
+include(model_interface)
 
 # ============================================
 # Calibration Configuration
@@ -154,14 +161,6 @@ hpc_kwargs = Dict(
     :partition => "a3mega",
     :exclusive => true,        # Get exclusive access to entire node (all 8 GPUs)
 )
-
-# ============================================
-# Model Interface
-# ============================================
-model_interface = joinpath(@__DIR__, "model_interface.jl")
-
-# Include model interface so observation_map is available to the controller
-include(model_interface)
 
 # ============================================
 # Run Calibration
