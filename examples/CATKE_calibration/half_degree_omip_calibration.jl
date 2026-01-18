@@ -60,7 +60,7 @@ function run_CATKE_calibration_omip(Cˢ_scaling, Cᵘⁿ_scaling, Cᶜ_scaling, 
     Nz = 100
 
     z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
-    const z_surf = z_faces(Nz)
+    z_surf = z_faces(Nz)
 
     grid = TripolarGrid(arch;
                         size = (Nx, Ny, Nz),
@@ -180,7 +180,7 @@ function run_CATKE_calibration_omip(Cˢ_scaling, Cᵘⁿ_scaling, Cᶜ_scaling, 
 
         step_time = 1e-9 * (time_ns() - wall_time[])
 
-        msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), iteration(sim), prettytime(sim.Δt))
+        msg1 = @sprintf("time: %s, iteration: %d, Δt: %s, ", prettytime(sim), Oceananigans.iteration(sim), prettytime(sim.Δt))
         msg2 = @sprintf("max(h): %.2e m, max(ℵ): %.2e ", hmax, ℵmax)
         msg4 = @sprintf("extrema(T): (%.2f, %.2f) ᵒC, ", Tmax, Tmin)
         msg5 = @sprintf("maximum(u): (%.2f, %.2f, %.2f) m/s, ", umax, vmax, wmax)
