@@ -291,22 +291,22 @@ function generate_batched_sbatch_script(
     mkdir -p "$member_path"
     export CUDA_VISIBLE_DEVICES=$gpu_id
     echo "[Member $member] Starting on GPU $gpu_id at \$(date)"
-    stdbuf -oL -eL ~/julia-1.12.2/bin/julia $exeflags --project=$experiment_dir -e '
+    script -q -c "~/julia-1.12.2/bin/julia $exeflags --project=$experiment_dir -e '
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
-        model_interface = "$model_interface"
+        model_interface = \"$model_interface\"
         include(model_interface)
         try
             CAL.forward_model(iteration, member)
-            CAL.write_model_completed("$output_dir", iteration, member)
-            println("[Member $member] Completed successfully")
+            CAL.write_model_completed(\"$output_dir\", iteration, member)
+            println(\"[Member $member] Completed successfully\")
         catch e
-            println("[Member $member] FAILED with error:")
+            println(\"[Member $member] FAILED with error:\")
             showerror(stdout, e, catch_backtrace())
             rethrow(e)
         end
-    ' >> "$member_log" 2>&1
+    '" /dev/null >> "$member_log" 2>&1
     echo "[Member $member] Finished at \$(date)"
 ) &
 PIDS[$gpu_id]=\$!
