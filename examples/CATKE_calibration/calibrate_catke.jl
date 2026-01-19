@@ -41,7 +41,7 @@ include(joinpath(@__DIR__, "data_processing.jl"))
 const n_iterations = 10
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov_nodzweighting")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov_nodzweighting_2")
 mkpath(output_dir)
 
 # Data processing options
