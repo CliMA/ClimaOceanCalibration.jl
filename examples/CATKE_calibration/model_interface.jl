@@ -136,7 +136,7 @@ Construct the G ensemble matrix from forward model outputs.
 Returns a matrix of size (output_dim × ensemble_size) where each column
 contains the processed model output for one ensemble member.
 
-Note: dz weighting is applied to match the weighting applied to Y_target.
+Note: dz weighting is disabled (apply_dz_weighting=false).
 """
 function ClimaCalibrate.observation_map(iteration)
     G_ensemble = zeros(output_dim, ensemble_size)
@@ -149,7 +149,7 @@ function ClimaCalibrate.observation_map(iteration)
             G_ensemble[:, m] .= NaN
         else
             try
-                G_ensemble[:, m] .= process_member_data(member_path, zonal_average; apply_dz_weighting=true)
+                G_ensemble[:, m] .= process_member_data(member_path, zonal_average; apply_dz_weighting=false)
             catch e
                 @warn "Failed to process member $m for iteration $iteration: $e"
                 G_ensemble[:, m] .= NaN

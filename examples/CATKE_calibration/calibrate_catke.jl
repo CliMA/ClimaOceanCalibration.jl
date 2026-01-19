@@ -41,7 +41,7 @@ include(joinpath(@__DIR__, "data_processing.jl"))
 const n_iterations = 10
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov_nodzweighting")
 mkpath(output_dir)
 
 # Data processing options
@@ -106,8 +106,8 @@ calibration_target_obs_path = first(calibration_target_obs_path)
 # Process all observations to build covariance (without dz weighting)
 covariance, Y_all = build_observation_covariance(obs_paths, zonal_average)
 
-# Get the target observation (all 12 months of 1993 concatenated) with dz weighting
-Y_target = vec(process_monthly_observations(calibration_target_obs_path, zonal_average; apply_dz_weighting=true))
+# Get the target observation (all 12 months of 1993 concatenated) without dz weighting
+Y_target = vec(process_monthly_observations(calibration_target_obs_path, zonal_average; apply_dz_weighting=false))
 
 # Store output dimension for model interface
 const output_dim = length(Y_target)
