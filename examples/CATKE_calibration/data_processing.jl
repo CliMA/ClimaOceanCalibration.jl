@@ -65,9 +65,16 @@ function regrid_model_data(simdir, target_grid, regridder, month_name)
     T_target = CenterField(target_grid)
     S_target = CenterField(target_grid)
 
-    Nt = 2
-    regrid!(T_target, regridder, T_data[Nt])
-    regrid!(S_target, regridder, S_data[Nt])
+    # Each monthly file should have 2 time indices:
+    # - Time index 1: initial snapshot at t=0
+    # - Time index 2: the monthly average
+    # Warn if there are more than 2, and always use the 2nd timestep.
+    Nt = length(T_data.times)
+    if Nt > 2
+        @warn "Expected 2 time indices in $filepath, found $Nt. Using 2nd time index."
+    end
+    regrid!(T_target, regridder, T_data[2])
+    regrid!(S_target, regridder, S_data[2])
     
     return T_target, S_target
 end
