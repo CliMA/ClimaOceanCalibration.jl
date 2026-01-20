@@ -264,7 +264,7 @@ function process_member_data(simdir, zonal_average; apply_dz_weighting=false)
 end
 
 """
-    build_observation_covariance(obs_paths, zonal_average)
+    build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05)
 
 Build observation covariance from multiple years of monthly ECCO data.
 
@@ -275,9 +275,14 @@ Note: Covariance is computed WITHOUT dz weighting. The dz weighting is applied
 separately when computing Y_target and model forward runs.
 
 Uses SVD-based rank reduction for the internal covariance plus a diagonal
-model error term (5% of mean).
+model error term.
+
+Arguments:
+- `obs_paths`: Vector of paths to observation data directories
+- `zonal_average`: Whether to use zonal averaging
+- `model_error_frac`: Fraction of mean field values to use as model error (default 0.05 = 5%)
 """
-function build_observation_covariance(obs_paths, zonal_average)
+function build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05)
     # Collect yearly observations (all 12 months concatenated per year)
     # No dz weighting applied here - weighting is applied to Y_target and model output
     all_yearly_obs = []
@@ -295,8 +300,8 @@ function build_observation_covariance(obs_paths, zonal_average)
     # SVD-based internal covariance (rank n_trials-1)
     internal_cov = tsvd_cov_from_samples(Y)
 
-    # Model error: 5% of mean field values (diagonal)
-    model_error_frac = 0.05
+    # Model error: fraction of mean field values (diagonal)
+    @info "Using model error fraction: $(model_error_frac * 100)%"
     data_mean = vec(mean(Y, dims=2))
     model_error_cov = Diagonal((model_error_frac * data_mean).^2)
     model_error_cov += 1e-6 * I  # Regularization
