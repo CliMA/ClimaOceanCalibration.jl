@@ -295,6 +295,7 @@ function generate_batched_sbatch_script(
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
+        output_dir = \\\\\\\"$output_dir\\\\\\\"
         model_interface = \\\\\\\"$model_interface\\\\\\\"
         include(model_interface)
         try

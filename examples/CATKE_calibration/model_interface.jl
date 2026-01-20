@@ -5,8 +5,9 @@
 # ClimaCalibrate. It is designed to work with the batched Slurm backend where
 # multiple ensemble members run in parallel on a single node.
 #
-# The main calibration script (calibrate_catke.jl) defines output_dir, ensemble_size,
-# output_dim, and zonal_average before including this file.
+# Variables are provided by:
+# - calibrate_catke.jl (controller): defines output_dir, ensemble_size, output_dim, zonal_average
+# - sbatch script (worker): defines output_dir, then metadata is read from output_dir/calibration_metadata.jld2
 
 using ClimaCalibrate
 using TOML
@@ -24,17 +25,13 @@ using Dates
 include(joinpath(@__DIR__, "half_degree_omip_calibration.jl"))
 include(joinpath(@__DIR__, "data_processing.jl"))
 
-metadata_file = joinpath(pwd(), "examples", "CATKE_calibration", "calibration_metadata.jld2")
-
+# output_dir must be defined before including this file (by calibrate_catke.jl or sbatch script)
 if !@isdefined(output_dir)
-    @info "Loading output_dir from metadata file..."
-    output_dir = jldopen(metadata_file, "r") do file
-        return file["output_dir"]
-    end
-    @info "Loaded: output_dir=$output_dir"
-else
-    @info "Using output_dir from parent scope: $output_dir"
+    error("output_dir must be defined before including model_interface.jl")
 end
+
+# Load other variables from metadata file if not already defined (worker case)
+metadata_file = joinpath(output_dir, "calibration_metadata.jld2")
 
 if !@isdefined(zonal_average)
     @info "Loading zonal_average from metadata file..."

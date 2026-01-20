@@ -39,10 +39,10 @@ include(joinpath(@__DIR__, "data_processing.jl"))
 # Ensemble configuration
 # With 5 parameters and TransformUnscented, we get 2*5+1 = 11 ensemble members
 const n_iterations = 10
-# const model_error_frac = 0.01  # Fraction of mean field values for model error covariance
-# const error_regularizer = 1e-6  # Regularization term for observation covariance
-const model_error_frac = 0.  # Fraction of mean field values for model error covariance
-const error_regularizer = 1e-4  # Regularization term for observation covariance
+const model_error_frac = 0.01  # Fraction of mean field values for model error covariance
+const error_regularizer = 1e-6  # Regularization term for observation covariance
+# const model_error_frac = 0.  # Fraction of mean field values for model error covariance
+# const error_regularizer = 1e-4  # Regularization term for observation covariance
 
 # Output directory
 output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)")
@@ -127,19 +127,22 @@ Y_obs = Observation(Dict(
 # ============================================
 # Create EKP
 # ============================================
+scheduler = DataMisfitController(on_terminate="continue")
+
 @info "Creating EnsembleKalmanProcess..."
-ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"))
+ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
 
 const ensemble_size = EnsembleKalmanProcesses.get_N_ens(ekp)
 n_batches = ceil(Int, ensemble_size / 8)
 
 const output_dim = length(Y_target)
 
-jldopen(joinpath(pwd(), "examples", "CATKE_calibration", "calibration_metadata.jld2"), "w") do file
-    file["output_dir"] = output_dir
+jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["zonal_average"] = zonal_average
     file["ensemble_size"] = ensemble_size
     file["output_dim"] = output_dim
+    file["model_error_frac"] = model_error_frac
+    file["error_regularizer"] = error_regularizer
 end
 
 model_interface = joinpath(@__DIR__, "model_interface.jl")
