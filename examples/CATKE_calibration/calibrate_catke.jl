@@ -39,10 +39,13 @@ include(joinpath(@__DIR__, "data_processing.jl"))
 # Ensemble configuration
 # With 5 parameters and TransformUnscented, we get 2*5+1 = 11 ensemble members
 const n_iterations = 10
-const model_error_frac = 0.01  # Fraction of mean field values for model error covariance
+# const model_error_frac = 0.01  # Fraction of mean field values for model error covariance
+# const error_regularizer = 1e-6  # Regularization term for observation covariance
+const model_error_frac = 0.  # Fraction of mean field values for model error covariance
+const error_regularizer = 1e-4  # Regularization term for observation covariance
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ecco_obscov_nodzweighting_errorfrac_$(model_error_frac)")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)")
 mkpath(output_dir)
 
 # Data processing options
@@ -105,7 +108,7 @@ calibration_target_obs_path = first(calibration_target_obs_path)
 @info "Building observation covariance from $(length(obs_paths)) years of data..."
 
 # Process all observations to build covariance (without dz weighting)
-covariance, Y_all = build_observation_covariance(obs_paths, zonal_average; model_error_frac)
+covariance, Y_all = build_observation_covariance(obs_paths, zonal_average; model_error_frac, error_regularizer)
 
 # Get the target observation (all 12 months of 1993 concatenated) without dz weighting
 Y_target = vec(process_monthly_observations(calibration_target_obs_path, zonal_average; apply_dz_weighting=false))

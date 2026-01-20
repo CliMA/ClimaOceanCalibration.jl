@@ -281,8 +281,9 @@ Arguments:
 - `obs_paths`: Vector of paths to observation data directories
 - `zonal_average`: Whether to use zonal averaging
 - `model_error_frac`: Fraction of mean field values to use as model error (default 0.05 = 5%)
+- `error_regularizer`: Small regularization term added to diagonal for numerical stability (default 1e-6)
 """
-function build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05)
+function build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05, error_regularizer=1e-6)
     # Collect yearly observations (all 12 months concatenated per year)
     # No dz weighting applied here - weighting is applied to Y_target and model output
     all_yearly_obs = []
@@ -304,7 +305,7 @@ function build_observation_covariance(obs_paths, zonal_average; model_error_frac
     @info "Using model error fraction: $(model_error_frac * 100)%"
     data_mean = vec(mean(Y, dims=2))
     model_error_cov = Diagonal((model_error_frac * data_mean).^2)
-    model_error_cov += 1e-6 * I  # Regularization
+    model_error_cov += error_regularizer * I  # Regularization
 
     # Combine internal variability and model error
     covariance = SVDplusD(internal_cov, model_error_cov)
