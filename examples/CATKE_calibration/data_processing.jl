@@ -55,8 +55,9 @@ Arguments:
 - `target_grid`: Target grid for regridding (4° lat-lon)
 - `regridder`: XESMF regridder object
 - `month_name`: Month symbol (e.g., :jan, :feb) to specify which monthly average file to read
+- `buoyancy`: If true, process buoyancy as well as temperature and salinity
 """
-function regrid_model_data(simdir, target_grid, regridder, month_name)
+function regrid_model_data(simdir, target_grid, regridder, month_name; buoyancy=false)
     filepath = joinpath(simdir, "ocean_$(month_name)_average.jld2")
 
     T_data = FieldTimeSeries(filepath, "T", backend=OnDisk())
@@ -75,6 +76,13 @@ function regrid_model_data(simdir, target_grid, regridder, month_name)
     end
     regrid!(T_target, regridder, T_data[2])
     regrid!(S_target, regridder, S_data[2])
+
+    if buoyancy
+        b_data = FieldTimeSeries(filepath, "b", backend=OnDisk())
+        b_target = CenterField(target_grid)
+        regrid!(b_target, regridder, b_data[2])
+        return T_target, S_target, b_target
+    end
     
     return T_target, S_target
 end
