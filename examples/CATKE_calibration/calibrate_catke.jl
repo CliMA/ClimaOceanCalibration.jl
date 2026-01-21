@@ -39,10 +39,8 @@ include(joinpath(@__DIR__, "data_processing.jl"))
 # Ensemble configuration
 # With 5 parameters and TransformUnscented, we get 2*5+1 = 11 ensemble members
 const n_iterations = 10
-const model_error_frac = 0.01  # Fraction of mean field values for model error covariance
-const error_regularizer = 1e-6  # Regularization term for observation covariance
-# const model_error_frac = 0.  # Fraction of mean field values for model error covariance
-# const error_regularizer = 1e-4  # Regularization term for observation covariance
+const model_error_frac = 0.  # Fraction of mean field values for model error covariance
+const error_regularizer = 1e-4  # Regularization term for observation covariance
 
 # Output directory
 output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)")
@@ -131,6 +129,11 @@ scheduler = DataMisfitController(on_terminate="continue")
 
 @info "Creating EnsembleKalmanProcess..."
 ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
+# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
+
+# J = 16
+# initial_ensemble = construct_initial_ensemble(priors, J)
+# ekp = EnsembleKalmanProcess(initial_ensemble, Y_obs, TransformInversion(priors); scheduler)
 
 const ensemble_size = EnsembleKalmanProcesses.get_N_ens(ekp)
 n_batches = ceil(Int, ensemble_size / 8)
