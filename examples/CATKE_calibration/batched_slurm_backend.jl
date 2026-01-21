@@ -9,11 +9,153 @@
 using ClimaCalibrate
 using ClimaCalibrate: HPCBackend, path_to_iteration, path_to_ensemble_member,
                       path_to_model_log, write_model_started, write_model_completed,
-                      model_completed, model_started, wait_for_jobs,
+                      model_completed, model_started,
                       generate_sbatch_directives, submit_slurm_job
 using EnsembleKalmanProcesses: EnsembleKalmanProcess
 
+using ClimaCalibrate: checkpoint_path
+
 import ClimaCalibrate: run_hpc_iteration, module_load_string
+
+"""
+    write_model_failed(output_dir, iteration, member)
+
+Write a "failed" marker to the checkpoint file for a failed ensemble member.
+"""
+write_model_failed(output_dir, iteration, member) =
+    open(checkpoint_path(output_dir, iteration, member), "w") do io
+        write(io, "failed")
+    end
+
+"""
+    model_finished(output_dir, iteration, member) -> Bool
+
+Check if a model run has finished (either completed successfully or failed).
+Returns true if the checkpoint file contains "completed" or "failed".
+"""
+function model_finished(output_dir, iteration, member)
+    file = checkpoint_path(output_dir, iteration, member)
+    !isfile(file) && return false
+    status = readline(file)
+    return status == "completed" || status == "failed"
+end
+
+"""
+    get_slurm_job_status(job_id::Int) -> Symbol
+
+Query Slurm for the status of a job. Returns one of:
+- :PENDING - job is waiting to run
+- :RUNNING - job is currently running
+- :COMPLETED - job finished successfully
+- :FAILED - job failed or was cancelled
+- :UNKNOWN - job not found (may not be registered yet)
+"""
+function get_slurm_job_status(job_id::Int)
+    cmd = `squeue -j $job_id --format=%T --noheader`
+    stdout_pipe = Pipe()
+    stderr_pipe = Pipe()
+    process = run(pipeline(ignorestatus(cmd), stdout=stdout_pipe, stderr=stderr_pipe))
+    close(stdout_pipe.in)
+    close(stderr_pipe.in)
+
+    status_str = strip(String(read(stdout_pipe)))
+    stderr_str = String(read(stderr_pipe))
+    exit_code = process.exitcode
+
+    # Job not in queue - could be completed or never existed
+    if status_str == "" && exit_code == 0 && stderr_str == ""
+        return :COMPLETED
+    end
+
+    # Invalid job ID error - job finished and left accounting
+    if exit_code != 0 && contains(stderr_str, "Invalid job id")
+        return :COMPLETED
+    end
+
+    # Check for various Slurm states
+    pending_states = ["PENDING", "CONFIGURING", "REQUEUE_FED", "REQUEUE_HOLD", "REQUEUED", "RESIZING"]
+    running_states = ["RUNNING", "COMPLETING", "STAGED", "SUSPENDED", "STOPPED"]
+    failed_states = ["FAILED", "CANCELLED", "TIMEOUT", "NODE_FAIL", "PREEMPTED", "OUT_OF_MEMORY"]
+
+    for state in pending_states
+        contains(status_str, state) && return :PENDING
+    end
+    for state in running_states
+        contains(status_str, state) && return :RUNNING
+    end
+    for state in failed_states
+        contains(status_str, state) && return :FAILED
+    end
+
+    # Unknown status
+    @warn "Job $job_id has unknown status: '$status_str'"
+    return :UNKNOWN
+end
+
+"""
+    wait_for_member_completion(output_dir, iter, members; poll_interval=30, timeout=nothing)
+
+Wait for all ensemble members to finish (either success or failure).
+
+This is more reliable than checking Slurm job status because:
+1. The marker is written by Julia AFTER all file I/O is done
+2. It doesn't depend on Slurm's job accounting being consistent
+
+Arguments:
+- `output_dir`: Calibration output directory
+- `iter`: Current iteration number
+- `members`: Vector of member numbers to wait for
+- `poll_interval`: Seconds between checks (default: 30)
+- `timeout`: Max seconds to wait, or nothing for no timeout (default: nothing)
+"""
+function wait_for_member_completion(output_dir, iter, members::Vector{Int}; poll_interval=30, timeout=nothing)
+    if isempty(members)
+        return
+    end
+
+    @info "Waiting for $(length(members)) ensemble member(s) to finish: $members"
+
+    start_time = time()
+    finished_members = Set{Int}()
+
+    while length(finished_members) < length(members)
+        for member in members
+            member in finished_members && continue
+
+            if model_finished(output_dir, iter, member)
+                push!(finished_members, member)
+                # Check if it was success or failure
+                file = checkpoint_path(output_dir, iter, member)
+                status = readline(file)
+                status_str = status == "completed" ? "completed" : "FAILED"
+                @info "Member $member $status_str ($(length(finished_members))/$(length(members)) done)"
+            end
+        end
+
+        if length(finished_members) < length(members)
+            # Check timeout
+            if !isnothing(timeout)
+                elapsed = time() - start_time
+                if elapsed > timeout
+                    not_finished = setdiff(Set(members), finished_members)
+                    error("Timeout waiting for members to finish after $(timeout)s. " *
+                          "Members not finished: $not_finished")
+                end
+            end
+
+            # Log progress periodically
+            elapsed = time() - start_time
+            if elapsed > 0 && mod(round(Int, elapsed), 300) < poll_interval  # Every ~5 minutes
+                not_done = setdiff(Set(members), finished_members)
+                @info "Still waiting for members: $not_done (elapsed: $(round(elapsed/60, digits=1)) minutes)"
+            end
+
+            sleep(poll_interval)
+        end
+    end
+
+    @info "All $(length(members)) ensemble members have finished"
+end
 
 """
     BatchedSlurmGCPBackend <: HPCBackend
@@ -148,19 +290,16 @@ function run_hpc_iteration(
         end
     end
 
-    # Wait for all batched jobs to complete
-    if !isempty(job_ids)
-        wait_for_jobs(
-            job_ids,
-            output_dir,
-            iter,
-            experiment_dir,
-            model_interface,
-            module_load_str;
-            hpc_kwargs,
-            verbose,
-            reruns = 0,  # Don't auto-rerun batched jobs - handle failures manually
-        )
+    # Wait for all ensemble members to write their completion markers
+    # This is more reliable than checking Slurm job status because the marker
+    # is written by Julia AFTER all simulation output is complete
+    #
+    # Timeout is set to 7 days (604800 seconds) as a safety net for very long runs
+    # The completion marker is written even on failure, so this should always complete
+    if !isempty(members_to_run)
+        wait_for_member_completion(output_dir, iter, members_to_run;
+                                   poll_interval=30,
+                                   timeout=604800)  # 7 days
     end
 end
 
@@ -305,6 +444,10 @@ function generate_batched_sbatch_script(
         catch e
             println(\\\\\\\"[Member $member] FAILED with error:\\\\\\\")
             showerror(stdout, e, catch_backtrace())
+            # Write failed marker so wait doesn't hang
+            open(CAL.checkpoint_path(\\\\\\\"$output_dir\\\\\\\", iteration, member), \\\\\\\"w\\\\\\\") do io
+                write(io, \\\\\\\"failed\\\\\\\")
+            end
             rethrow(e)
         end
     \\\"" /dev/null >> "$member_log" 2>&1
