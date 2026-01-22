@@ -130,8 +130,8 @@ Y_obs = Observation(Dict(
 scheduler = DataMisfitController(on_terminate="continue")
 
 @info "Creating EnsembleKalmanProcess..."
-# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
-ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
+ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
+# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
 
 # Display initial ensemble parameters
 function display_initial_parameters(priors, ekp)
