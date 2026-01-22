@@ -145,7 +145,7 @@ function wait_for_member_completion(output_dir, iter, members::Vector{Int}; poll
 
             # Log progress periodically
             elapsed = time() - start_time
-            if elapsed > 0 && mod(round(Int, elapsed), 300) < poll_interval  # Every ~5 minutes
+            if elapsed > 0 && mod(round(Int, elapsed), 1800) < poll_interval  # Every ~5 minutes
                 not_done = setdiff(Set(members), finished_members)
                 @info "Still waiting for members: $not_done (elapsed: $(round(elapsed/60, digits=1)) minutes)"
             end
