@@ -320,3 +320,28 @@ function build_observation_covariance(obs_paths, zonal_average; model_error_frac
 
     return covariance, Y
 end
+
+"""
+    build_diagonal_covariance(Y_target; T_variance=1.0, S_variance=0.01)
+
+Build a simple diagonal observation covariance with user-specified variances
+for temperature and salinity fields.
+
+Assumes Y_target is structured as 12 months of [T..., S...] with equal-sized
+T and S sections per month.
+
+Arguments:
+- `Y_target`: Flattened observation vector (used to determine dimensions)
+- `T_variance`: Variance for temperature observations (default 1.0 °C²)
+- `S_variance`: Variance for salinity observations (default 0.25 PSU²)
+"""
+function build_diagonal_covariance(Y_target; T_variance=1, S_variance=0.25^2)
+    n_total = length(Y_target)
+    n_per_month = n_total ÷ 12
+    n_field = n_per_month ÷ 2  # T and S have equal sizes
+
+    # Build diagonal: 12 months of [T..., S...]
+    diagonal_values = repeat(vcat(fill(T_variance, n_field), fill(S_variance, n_field)), 12)
+
+    return Diagonal(diagonal_values)
+end
