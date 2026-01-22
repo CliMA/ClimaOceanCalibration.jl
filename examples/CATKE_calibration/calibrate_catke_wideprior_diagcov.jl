@@ -65,10 +65,6 @@ Cᵉc_prior = constrained_gaussian("Cᵉc_scaling", 1.0, prior_std, 0, Inf)   # 
 
 priors = combine_distributions([Cˢ_prior, Cᵘⁿ_prior, Cᶜ_prior, Cˢᵖ_prior, Cᵉc_prior])
 
-prior1 = constrained_gaussian("param1", 0, 1, -Inf, Inf, repeat=2)
-prior2 = constrained_gaussian("param2", 0, 1, -Inf, Inf, repeat=2)
-prior3 = constrained_gaussian("param3", 0, 1, -Inf, Inf, repeat=2)
-priors = combine_distributions([prior1, prior2, prior3])
 #%%
 # fig_priors = Figure(size = (1200, 600))
 # viz.plot_parameter_distribution(fig_priors[1, 1], priors)
