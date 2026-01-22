@@ -65,11 +65,6 @@ Cᵉc_prior = constrained_gaussian("Cᵉc_scaling", 1.0, prior_std, 0, Inf)   # 
 
 priors = combine_distributions([Cˢ_prior, Cᵘⁿ_prior, Cᶜ_prior, Cˢᵖ_prior, Cᵉc_prior])
 
-
-prior1 = constrained_gaussian("param1", 0, 1, -Inf, Inf, repeat=2)
-prior2 = constrained_gaussian("param2", 0, 1, -Inf, Inf, repeat=2)
-prior3 = constrained_gaussian("param3", 0, 1, -Inf, Inf, repeat=2)
-priors = combine_distributions([prior1, prior2, prior3])
 #%%
 # fig_priors = Figure(size = (1200, 600))
 # viz.plot_parameter_distribution(fig_priors[1, 1], priors)
@@ -134,8 +129,24 @@ Y_obs = Observation(Dict(
 scheduler = DataMisfitController(on_terminate="continue")
 
 @info "Creating EnsembleKalmanProcess..."
-# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
-ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
+ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
+# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
+
+# Display initial ensemble parameters
+function display_initial_parameters(priors, ekp)
+    ϕ_all = get_ϕ(priors, ekp)
+    ϕ = ϕ_all[end]  # get_ϕ returns a vector of matrices, one per iteration
+    param_names = get_name(priors)
+    n_params, n_ensemble = size(ϕ)
+
+    @info "Initial ensemble parameters (iteration 0):"
+    for i in 1:n_params
+        vals = ϕ[i, :]
+        @info "  $(param_names[i]): $(round.(vals, digits=4))"
+    end
+end
+
+display_initial_parameters(priors, ekp)
 
 const ensemble_size = EnsembleKalmanProcesses.get_N_ens(ekp)
 n_batches = ceil(Int, ensemble_size / 8)
