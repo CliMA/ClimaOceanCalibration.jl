@@ -63,6 +63,26 @@ else
     @info "Using output_dim from parent scope: $output_dim"
 end
 
+if !@isdefined(latitude_range)
+    @info "Loading latitude_range from metadata file..."
+    latitude_range = jldopen(metadata_file, "r") do file
+        return haskey(file, "latitude_range") ? file["latitude_range"] : (-52, 52)
+    end
+    @info "Loaded: latitude_range=$latitude_range"
+else
+    @info "Using latitude_range from parent scope: $latitude_range"
+end
+
+if !@isdefined(z_min)
+    @info "Loading z_min from metadata file..."
+    z_min = jldopen(metadata_file, "r") do file
+        return haskey(file, "z_min") ? file["z_min"] : -1000
+    end
+    @info "Loaded: z_min=$z_min"
+else
+    @info "Using z_min from parent scope: $z_min"
+end
+
 """
     ClimaCalibrate.forward_model(iteration, member)
 
@@ -146,7 +166,7 @@ function ClimaCalibrate.observation_map(iteration)
             G_ensemble[:, m] .= NaN
         else
             try
-                G_ensemble[:, m] .= process_member_data(member_path, zonal_average; apply_dz_weighting=false)
+                G_ensemble[:, m] .= process_member_data(member_path, zonal_average; apply_dz_weighting=false, latitude_range, z_min)
             catch e
                 @warn "Failed to process member $m for iteration $iteration: $e"
                 G_ensemble[:, m] .= NaN

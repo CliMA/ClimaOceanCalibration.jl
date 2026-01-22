@@ -181,7 +181,8 @@ end
 extract_midlatitude_section(fts; kwargs...) = extract_field_section(fts, (-52, 52); kwargs...)
 
 """
-    process_observation(obs_path, zonal_average; month_index=nothing, apply_dz_weighting=false)
+    process_observation(obs_path, zonal_average; month_index=nothing, apply_dz_weighting=false,
+                        latitude_range=(-52, 52), z_min=-1000)
 
 Process observation data from a given path.
 
@@ -189,8 +190,11 @@ For CATKE calibration with monthly averages:
 - obs_path should contain T.jld2 and S.jld2 files with 12 monthly time indices
 - month_index (1-12) selects which month to use; if nothing, uses last time index
 - apply_dz_weighting: if true, applies weights proportional to grid cell thickness
+- latitude_range: tuple of (min, max) latitude to extract (default (-52, 52))
+- z_min: minimum depth to include (default -1000m)
 """
-function process_observation(obs_path, zonal_average; month_index=nothing, apply_dz_weighting=false)
+function process_observation(obs_path, zonal_average; month_index=nothing, apply_dz_weighting=false,
+                             latitude_range=(-52, 52), z_min=-1000)
     T_filepath = joinpath(obs_path, "T.jld2")
     S_filepath = joinpath(obs_path, "S.jld2")
 
@@ -205,9 +209,9 @@ function process_observation(obs_path, zonal_average; month_index=nothing, apply
     T_data = T_afts.data
     S_data = S_afts.data
 
-    # Extract mid-latitude ocean section with specified month
-    T_section = extract_midlatitude_section(T_data; time_index=month_index, apply_dz_weighting)
-    S_section = extract_midlatitude_section(S_data; time_index=month_index, apply_dz_weighting)
+    # Extract ocean section with specified month
+    T_section = extract_field_section(T_data, latitude_range; time_index=month_index, apply_dz_weighting, z_min)
+    S_section = extract_field_section(S_data, latitude_range; time_index=month_index, apply_dz_weighting, z_min)
 
     if zonal_average
         T_section = nanmean(T_section, dims=1)
@@ -218,18 +222,21 @@ function process_observation(obs_path, zonal_average; month_index=nothing, apply
 end
 
 """
-    process_monthly_observations(obs_path, zonal_average; apply_dz_weighting=false)
+    process_monthly_observations(obs_path, zonal_average; apply_dz_weighting=false,
+                                  latitude_range=(-52, 52), z_min=-1000)
 
 Process all 12 monthly observations from a given path and return as a matrix.
 Each column corresponds to one month (Jan-Dec).
 """
-function process_monthly_observations(obs_path, zonal_average; apply_dz_weighting=false)
-    monthly_obs = [process_observation(obs_path, zonal_average; month_index=m, apply_dz_weighting) for m in 1:12]
+function process_monthly_observations(obs_path, zonal_average; apply_dz_weighting=false,
+                                       latitude_range=(-52, 52), z_min=-1000)
+    monthly_obs = [process_observation(obs_path, zonal_average; month_index=m, apply_dz_weighting, latitude_range, z_min) for m in 1:12]
     return hcat(monthly_obs...)
 end
 
 """
-    process_member_data(simdir, zonal_average; apply_dz_weighting=false)
+    process_member_data(simdir, zonal_average; apply_dz_weighting=false,
+                        latitude_range=(-52, 52), z_min=-1000)
 
 Process model output from a single ensemble member.
 
@@ -237,7 +244,8 @@ For CATKE calibration, this reads the 12 monthly average output files and
 concatenates them into a single observation vector matching the format of
 the target observations.
 """
-function process_member_data(simdir, zonal_average; apply_dz_weighting=false)
+function process_member_data(simdir, zonal_average; apply_dz_weighting=false,
+                             latitude_range=(-52, 52), z_min=-1000)
     month_names = [:jan, :feb, :mar, :apr, :may, :jun, :jul, :aug, :sep, :oct, :nov, :dec]
 
     # Load target grid and regridder once
@@ -255,8 +263,8 @@ function process_member_data(simdir, zonal_average; apply_dz_weighting=false)
 
         T_target, S_target = regrid_model_data(simdir, target_grid, regridder, month_name)
 
-        T_section = extract_midlatitude_section(T_target; apply_dz_weighting)
-        S_section = extract_midlatitude_section(S_target; apply_dz_weighting)
+        T_section = extract_field_section(T_target, latitude_range; apply_dz_weighting, z_min)
+        S_section = extract_field_section(S_target, latitude_range; apply_dz_weighting, z_min)
 
         if zonal_average
             T_section = nanmean(T_section, dims=1)
@@ -272,7 +280,8 @@ function process_member_data(simdir, zonal_average; apply_dz_weighting=false)
 end
 
 """
-    build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05)
+    build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05,
+                                  error_regularizer=1e-6, latitude_range=(-52, 52), z_min=-1000)
 
 Build observation covariance from multiple years of monthly ECCO data.
 
@@ -290,13 +299,16 @@ Arguments:
 - `zonal_average`: Whether to use zonal averaging
 - `model_error_frac`: Fraction of mean field values to use as model error (default 0.05 = 5%)
 - `error_regularizer`: Small regularization term added to diagonal for numerical stability (default 1e-6)
+- `latitude_range`: tuple of (min, max) latitude to extract (default (-52, 52))
+- `z_min`: minimum depth to include (default -1000m)
 """
-function build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05, error_regularizer=1e-6)
+function build_observation_covariance(obs_paths, zonal_average; model_error_frac=0.05, error_regularizer=1e-6,
+                                       latitude_range=(-52, 52), z_min=-1000)
     # Collect yearly observations (all 12 months concatenated per year)
     # No dz weighting applied here - weighting is applied to Y_target and model output
     all_yearly_obs = []
     for obs_path in obs_paths
-        monthly_obs = process_monthly_observations(obs_path, zonal_average; apply_dz_weighting=false)
+        monthly_obs = process_monthly_observations(obs_path, zonal_average; apply_dz_weighting=false, latitude_range, z_min)
         # Concatenate all 12 months into single vector
         yearly_vec = vcat([monthly_obs[:, m] for m in 1:12]...)
         push!(all_yearly_obs, yearly_vec)
