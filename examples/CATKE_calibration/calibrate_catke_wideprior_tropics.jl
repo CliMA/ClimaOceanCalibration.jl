@@ -43,14 +43,14 @@ const model_error_frac = 0.  # Fraction of mean field values for model error cov
 const error_regularizer = 1e-4  # Regularization term for observation covariance
 const prior_std = 1
 
-# Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_tropics_lat$(latitude_range[1])to$(latitude_range[2])_zmin$(z_min)_priorstd_$(prior_std)")
-mkpath(output_dir)
-
 # Data processing options
 const zonal_average = false  # Use full 3D fields, not zonal averages
 const latitude_range = (-24, 24)  # Tropical region only
 const z_min = -500  # Upper 500m only
+
+# Output directory
+output_dir = joinpath(pwd(), "calibration_runs", "catke_lat$(latitude_range[1])to$(latitude_range[2])_zmin$(z_min)_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)")
+mkpath(output_dir)
 
 # ============================================
 # Prior Definitions for CATKE Scaling Parameters
