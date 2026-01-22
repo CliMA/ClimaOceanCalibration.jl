@@ -158,11 +158,11 @@ function run_CATKE_calibration_omip(Cˢ_scaling, Cᵘⁿ_scaling, Cᶜ_scaling, 
                                                     filename = "$(output_dir)/ocean_$(month_name)_average",
                                                     overwrite_existing = true)
 
-        sea_ice.output_writers[Symbol("$(month_name)_average")] = JLD2Writer(sea_ice.model, sea_ice_outputs;
-                                                    schedule = AveragedTimeInterval(Dates.value(Dates.Second(month_end - start_date)), 
-                                                                window=month_length),
-                                                    filename = "$(output_dir)/sea_ice_$(month_name)_average",
-                                                    overwrite_existing = true)
+        # sea_ice.output_writers[Symbol("$(month_name)_average")] = JLD2Writer(sea_ice.model, sea_ice_outputs;
+        #                                             schedule = AveragedTimeInterval(Dates.value(Dates.Second(month_end - start_date)), 
+        #                                                         window=month_length),
+        #                                             filename = "$(output_dir)/sea_ice_$(month_name)_average",
+        #                                             overwrite_existing = true)
     end
 
     wall_time = Ref(time_ns())
