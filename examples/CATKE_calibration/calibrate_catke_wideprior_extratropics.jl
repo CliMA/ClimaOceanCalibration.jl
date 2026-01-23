@@ -40,16 +40,16 @@ include(joinpath(@__DIR__, "data_processing.jl"))
 # With 5 parameters and TransformUnscented, we get 2*5+1 = 11 ensemble members
 const n_iterations = 10
 const model_error_frac = 0.  # Fraction of mean field values for model error covariance
-const error_regularizer = 1e-4  # Regularization term for observation covariance
+const error_regularizer = 1e-3  # Regularization term for observation covariance
 const prior_std = 1
 
 # Data processing options
 const zonal_average = false  # Use full 3D fields, not zonal averages
 const latitude_range = [(-54, -20), (20, 54)]  # Extratropical regions (Southern: -54 to -20, Northern: 20 to 54)
-const z_min = -1000  # Upper 1000m only
+const z_min = -500  # Upper 1000m only
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_extratropics_$(latitude_range[end][1])_$(latitude_range[end][2])_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_extratropics_$(latitude_range[end][1])_$(latitude_range[end][2])_zmin_$(z_min)_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)")
 mkpath(output_dir)
 
 # ============================================
