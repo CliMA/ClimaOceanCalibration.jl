@@ -88,12 +88,37 @@ function regrid_model_data(simdir, target_grid, regridder, month_name; buoyancy=
 end
 
 """
+    get_latitude_indices(φᶜ, latitude_range)
+
+Get latitude indices for the given latitude range(s).
+`latitude_range` can be either:
+- A tuple (min, max) for a single contiguous range
+- A vector of tuples [(min1, max1), (min2, max2), ...] for multiple ranges (e.g., extratropics)
+
+Returns a vector of indices (sorted).
+"""
+function get_latitude_indices(φᶜ, latitude_range)
+    if latitude_range isa Tuple
+        # Single range
+        φmin, φmax = latitude_range
+        return findall(φ -> φmin <= φ <= φmax, φᶜ)
+    else
+        # Multiple ranges
+        return findall(φ -> any(φmin <= φ <= φmax for (φmin, φmax) in latitude_range), φᶜ)
+    end
+end
+
+"""
     extract_field_section(fts::FieldTimeSeries, latitude_range;
                           apply_dz_weighting=false, time_index=nothing,
                           z_min=-1000)
 
 Extract a latitude section from a FieldTimeSeries with optional dz-based weighting.
 If time_index is not provided, uses the last time index.
+
+`latitude_range` can be either:
+- A tuple (min, max) for a single contiguous range (e.g., tropics: (-24, 24))
+- A vector of tuples for multiple ranges (e.g., extratropics: [(-54, -20), (20, 54)])
 
 When apply_dz_weighting=true, applies weights proportional to grid cell thickness (Δz).
 This compensates for vertical grid stretching in the loss function.
@@ -111,9 +136,7 @@ function extract_field_section(fts::FieldTimeSeries, latitude_range;
     φᶜ = φnodes(grid, LX(), LY(), LZ())
     zᶜ = znodes(grid, LX(), LY(), LZ())
 
-    φmin, φmax = latitude_range
-
-    lat_indices = findfirst(x -> x >= φmin, φᶜ):findlast(x -> x <= φmax, φᶜ)
+    lat_indices = get_latitude_indices(φᶜ, latitude_range)
 
     # Filter by depth: only use z >= z_min (upper ocean)
     z_indices = findall(z -> z >= z_min, zᶜ)
@@ -142,6 +165,10 @@ end
 
 Extract a latitude section from a Field with optional dz-based weighting.
 
+`latitude_range` can be either:
+- A tuple (min, max) for a single contiguous range (e.g., tropics: (-24, 24))
+- A vector of tuples for multiple ranges (e.g., extratropics: [(-54, -20), (20, 54)])
+
 When apply_dz_weighting=true, applies weights proportional to grid cell thickness (Δz).
 This compensates for vertical grid stretching in the loss function.
 
@@ -157,9 +184,7 @@ function extract_field_section(field::Field, latitude_range;
     φᶜ = φnodes(grid, LX(), LY(), LZ())
     zᶜ = znodes(grid, LX(), LY(), LZ())
 
-    φmin, φmax = latitude_range
-
-    lat_indices = findfirst(x -> x >= φmin, φᶜ):findlast(x -> x <= φmax, φᶜ)
+    lat_indices = get_latitude_indices(φᶜ, latitude_range)
 
     # Filter by depth: only use z >= z_min (upper ocean)
     z_indices = findall(z -> z >= z_min, zᶜ)
