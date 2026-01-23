@@ -45,7 +45,7 @@ const prior_std = 1
 
 # Data processing options
 const zonal_average = false  # Use full 3D fields, not zonal averages
-const latitude_range = [(-52 -20), (20, 52)]  # Extratropical regions (Southern: -54 to -20, Northern: 20 to 54)
+const latitude_range = [(-52, -20), (20, 52)]  # Extratropical regions (Southern: -52 to -20, Northern: 20 to 52)
 const z_min = -500  # Upper 1000m only
 
 # Output directory
