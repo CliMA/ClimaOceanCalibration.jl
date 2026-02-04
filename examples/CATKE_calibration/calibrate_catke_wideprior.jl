@@ -44,7 +44,7 @@ const error_regularizer = 1e-4  # Regularization term for observation covariance
 const prior_std = 1
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)_newcov")
 mkpath(output_dir)
 
 # Data processing options
@@ -129,8 +129,8 @@ Y_obs = Observation(Dict(
 scheduler = DataMisfitController(on_terminate="continue")
 
 @info "Creating EnsembleKalmanProcess..."
-ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
-# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
+# ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors, sigma_points="simplex"); scheduler)
+ekp = EnsembleKalmanProcess(Y_obs, TransformUnscented(priors); scheduler)
 
 # Display initial ensemble parameters
 function display_initial_parameters(priors, ekp)
