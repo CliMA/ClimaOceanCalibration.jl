@@ -44,7 +44,7 @@ const error_regularizer = 1e-4  # Regularization term for observation covariance
 const prior_std = 1
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)_newcov")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ECCOPrescribedAtmosphere_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)_priorstd_$(prior_std)_newcov")
 mkpath(output_dir)
 
 # Data processing options
