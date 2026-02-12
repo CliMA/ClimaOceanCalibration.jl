@@ -23,6 +23,7 @@ using LinearAlgebra
 using JLD2
 using Glob
 using Statistics
+using Printf
 # using CairoMakie
 # import EnsembleKalmanProcesses.Visualize as viz
 
@@ -43,7 +44,7 @@ const model_error_frac = 0.  # Fraction of mean field values for model error cov
 const error_regularizer = 1e-4  # Regularization term for observation covariance
 
 # Output directory
-output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)")
+output_dir = joinpath(pwd(), "calibration_runs", "catke_2yr_monthly_ECCOPrescribedAtmosphere_errorfrac_$(model_error_frac)_errorreg_$(error_regularizer)")
 mkpath(output_dir)
 
 # Data processing options
@@ -65,7 +66,7 @@ Cᵉc_prior = constrained_gaussian("Cᵉc_scaling", 1.0, 0.5, 0, Inf)   # TKE eq
 priors = combine_distributions([Cˢ_prior, Cᵘⁿ_prior, Cᶜ_prior, Cˢᵖ_prior, Cᵉc_prior])
 
 #%%
-# fig_priors = CairoMakie.Figure(size = (1200, 600))
+# fig_priors = Figure(size = (1200, 600))
 # viz.plot_parameter_distribution(fig_priors[1, 1], priors)
 
 # fig_priors
