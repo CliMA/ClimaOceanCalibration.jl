@@ -122,7 +122,9 @@ function run_CATKE_calibration_omip(Cˢ_scaling, Cᵘⁿ_scaling, Cᶜ_scaling, 
     backend = JRA55NetCDFBackend(100)
 
     @info "Setting up prescribed atmosphere $(dataset)"
-    atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
+    # atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
+    atmosphere = ECCOPrescribedAtmosphere(arch; dir=jra55_dir, backend, start_date, end_date)
+
     radiation  = Radiation()
 
     @info "Built atmosphere model $(atmosphere)"
