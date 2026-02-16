@@ -117,14 +117,16 @@ function run_CATKE_calibration_omip(Cˢ_scaling, Cᵘⁿ_scaling, Cᶜ_scaling, 
                         ℵ=Metadatum(:sea_ice_concentration; dataset=ECCO4Monthly(), date=start_date, dir=ECCO_dir))
     @info "Initialized sea ice fields with ECCO data"
 
-    jra55_dir = joinpath(homedir(), "JRA55_data")
-    mkpath(jra55_dir)
-    dataset = MultiYearJRA55()
-    backend = JRA55NetCDFBackend(100)
+    # jra55_dir = joinpath(homedir(), "JRA55_data")
+    # mkpath(jra55_dir)
+    # dataset = MultiYearJRA55()
+    # backend = JRA55NetCDFBackend(100)
 
-    @info "Setting up prescribed atmosphere $(dataset)"
+    # @info "Setting up prescribed atmosphere $(dataset)"
     # atmosphere = JRA55PrescribedAtmosphere(arch; dir=jra55_dir, dataset, backend, include_rivers_and_icebergs=true, start_date, end_date)
-    atmosphere = ECCOPrescribedAtmosphere(arch; dir=jra55_dir, backend, start_date, end_date)
+
+    @info "Setting up prescribed atmosphere (ECCO4 forcing)"
+    atmosphere = ECCOPrescribedAtmosphere(arch; dir=ECCO_dir, start_date, end_date, time_indices_in_memory=10)
 
     radiation  = Radiation()
 
