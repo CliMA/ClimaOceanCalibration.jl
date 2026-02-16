@@ -1,4 +1,5 @@
 using ClimaOcean
+using ClimaOcean.DataWrangling.ECCO
 using ClimaSeaIce
 using Oceananigans
 using Oceananigans.Grids
