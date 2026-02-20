@@ -1,11 +1,11 @@
-using ClimaOcean
-using ClimaOcean.DataWrangling.ECCO
+using NumericalEarth
+using NumericalEarth.DataWrangling.ECCO
 using ClimaSeaIce
 using Oceananigans
 using Oceananigans.Grids
 using Oceananigans.Units
 using Oceananigans.Models: buoyancy_field, buoyancy_frequency
-using ClimaOcean.DataWrangling
+using NumericalEarth.DataWrangling
 using Printf
 using Dates
 using CUDA
@@ -33,7 +33,7 @@ function run_CATKE_calibration_omip(Cˢ_scaling, Cᵘⁿ_scaling, Cᶜ_scaling, 
     output_dir = config_dict["output_dir"]
     mkpath(output_dir)
 
-    CATKE_default = ClimaOcean.Oceans.default_ocean_closure()
+    CATKE_default = NumericalEarth.Oceans.default_ocean_closure()
 
     Cˢ = CATKE_default.mixing_length.Cˢ * Cˢ_scaling
 

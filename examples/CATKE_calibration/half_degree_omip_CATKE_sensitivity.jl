@@ -1,10 +1,11 @@
-using ClimaOcean
+using NumericalEarth
 using ClimaSeaIce
 using Oceananigans
 using Oceananigans.Grids
 using Oceananigans.Units
-using Oceananigans.Models: buoyancy_field, buoyancy_frequency
-using ClimaOcean.DataWrangling
+# using Oceananigans.Models: buoyancy_field, buoyancy_frequency
+using Oceananigans.BuoyancyFormulations: buoyancy, buoyancy_frequency
+using NumericalEarth.DataWrangling
 using Printf
 using Dates
 using CUDA
@@ -84,7 +85,8 @@ free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=40minutes
 @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
 
 horizontal_viscosity = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
-CATKE_default = ClimaOcean.Oceans.default_ocean_closure()
+# CATKE_default = NumericalEarth.Oceans.default_ocean_closure()
+CATKE_default = NumericalEarth.OceanSimulations.default_ocean_closure()
 
 Cˢ = CATKE_default.mixing_length.Cˢ * Cˢ_scaling
 
@@ -127,7 +129,7 @@ ocean = ocean_simulation(grid; Δt=1minutes,
 
 @info "Built ocean model $(ocean)"
 
-spinup_dir = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_1962_40years")
+spinup_dir = joinpath(pwd(), "calibration_data", "half_degree_omip_spinup_1962_40years_old")
 spinup_ocean_filepath = joinpath(spinup_dir, "ocean_annual_snapshot_fields.jld2")
 spinup_sea_ice_filepath = joinpath(spinup_dir, "sea_ice_annual_snapshot_fields.jld2")
 
@@ -144,11 +146,11 @@ h_spinup = sea_ice_spinup_data["h"][Nt]
 ℵ_spinup = sea_ice_spinup_data["ℵ"][Nt]
 T_sea_ice_spinup = sea_ice_spinup_data["T"][Nt]
 
-ocean.model.tracers.T .= T_spinup
-ocean.model.tracers.S .= S_spinup
-ocean.model.velocities.u .= u_spinup
-ocean.model.velocities.v .= v_spinup
-ocean.model.velocities.w .= w_spinup
+set!(ocean.model.tracers.T, T_spinup)
+set!(ocean.model.tracers.S, S_spinup)
+set!(ocean.model.velocities.u, u_spinup)
+set!(ocean.model.velocities.v, v_spinup)
+set!(ocean.model.velocities.w, w_spinup)
 @info "Initialized ocean fields with spinup data"
 
 # Default sea-ice dynamics and salinity coupling are included in the defaults
@@ -156,9 +158,9 @@ ocean.model.velocities.w .= w_spinup
 sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)
 @info "Built sea ice model $(sea_ice)"
 
-sea_ice.model.ice_thickness .= h_spinup
-sea_ice.model.ice_concentration .= ℵ_spinup
-sea_ice.model.ice_thermodynamics.top_surface_temperature .= T_sea_ice_spinup
+set!(sea_ice.model.ice_thickness, h_spinup)
+set!(sea_ice.model.ice_concentration, ℵ_spinup)
+set!(sea_ice.model.ice_thermodynamics.top_surface_temperature, T_sea_ice_spinup)
 @info "Initialized sea ice fields with spinup data"
 
 jra55_dir = joinpath(homedir(), "JRA55_data")
@@ -182,7 +184,8 @@ omip = Simulation(omip, Δt=30minutes, stop_time=simulation_period)
 FILE_DIR = joinpath(pwd(), "calibration_data", "half_degree_omip_Cs_$(Cˢ_scaling)_Cun_$(Cᵘⁿ_scaling)_Cc_$(Cᶜ_scaling)_$(start_year)_$(simulation_length)years")
 mkpath(FILE_DIR)
 
-b = buoyancy_field(ocean.model)
+# b = buoyancy_field(ocean.model)
+b = Field(buoyancy(ocean.model))
 N² = Field(buoyancy_frequency(ocean.model))
 h, ℵ = sea_ice.model.ice_thickness, sea_ice.model.ice_concentration
 
@@ -214,10 +217,6 @@ sea_ice.output_writers[:surface] = JLD2Writer(ocean.model, sea_ice_outputs;
 save_times = start_date:Year(1):end_date
 times = Dates.value.(Dates.Second.(save_times[2:end] .- start_date))
 annual_times = SpecifiedTimes(times)
-
-times_5year = start_date:Year(5):end_date
-times_5year_vals = Dates.value.(Dates.Second.(times_5year[2:end] .- start_date))
-five_year_times = SpecifiedTimes(times_5year_vals)
 
 final_year_jan = end_date - Year(1)
 final_year_feb = final_year_jan + Month(1)
@@ -323,18 +322,6 @@ sea_ice.output_writers[:extent_dec] = JLD2Writer(sea_ice.model, sea_ice_extent_o
                                                             window=Dates.value(Dates.Second(end_date - final_year_dec))),
                                                  filename = "$(FILE_DIR)/sea_ice_extent_dec",
                                                  overwrite_existing = true)
-
-ocean.output_writers[:checkpointer] = Checkpointer(ocean.model;
-                                                   schedule = five_year_times,
-                                                   dir = FILE_DIR,
-                                                   prefix = "ocean_checkpointer",
-                                                   overwrite_existing = true)
-
-sea_ice.output_writers[:checkpointer] = Checkpointer(sea_ice.model;
-                                                      schedule = five_year_times,
-                                                      dir = FILE_DIR,
-                                                      prefix = "sea_ice_checkpointer",
-                                                      overwrite_existing = true)
 
 wall_time = Ref(time_ns())
 

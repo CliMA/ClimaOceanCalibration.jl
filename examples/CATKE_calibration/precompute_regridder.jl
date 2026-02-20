@@ -1,4 +1,4 @@
-using ClimaOcean
+using NumericalEarth
 using Oceananigans
 using Oceananigans.Architectures: on_architecture, architecture
 using Oceananigans.Utils: launch!

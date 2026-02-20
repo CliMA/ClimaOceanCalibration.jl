@@ -12,8 +12,8 @@ using Oceananigans.Grids: znodes, φnodes
 using Oceananigans.Fields: location, Field
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 using Oceananigans.Architectures: on_architecture
-using ClimaOcean
-using ClimaOcean.DataWrangling
+using NumericalEarth
+using NumericalEarth.DataWrangling
 using XESMF
 using JLD2
 using NaNStatistics

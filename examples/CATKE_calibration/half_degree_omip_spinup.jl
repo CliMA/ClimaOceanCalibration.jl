@@ -1,11 +1,12 @@
-using ClimaOcean
-using ClimaOcean.OceanSeaIceModels: ThreeEquationHeatFlux
+using NumericalEarth
+# using NumericalEarth.OceanSeaIceModels: ThreeEquationHeatFlux
 using ClimaSeaIce
 using Oceananigans
 using Oceananigans.Grids
 using Oceananigans.Units
 using Oceananigans.Models: buoyancy_field, buoyancy_frequency
-using ClimaOcean.DataWrangling
+# using Oceananigans.BuoyancyFormulations: buoyancy, buoyancy_frequency
+using NumericalEarth.DataWrangling
 using Printf
 using Dates
 using CUDA
@@ -90,7 +91,8 @@ free_surface       = SplitExplicitFreeSurface(grid; cfl=0.8, fixed_Δt=40minutes
 @inline geometric_νhb(i, j, k, grid, lx, ly, lz, clock, fields, λ) = Δ²ᵃᵃᵃ(i, j, k, grid, lx, ly, lz)^2 / λ
 
 horizontal_viscosity = HorizontalScalarBiharmonicDiffusivity(ν=geometric_νhb, discrete_form=true, parameters=25days)
-catke_closure = ClimaOcean.Oceans.default_ocean_closure()
+catke_closure = NumericalEarth.Oceans.default_ocean_closure()
+# catke_closure = NumericalEarth.OceanSimulations.default_ocean_closure()
 
 # Add GM and Redi closures if specified
 if κ_skew > 0 || κ_symmetric > 0
@@ -151,12 +153,14 @@ radiation  = Radiation()
 
 # Set up ocean-sea ice coupling based on formulation
 if ocean_seaice_formulation == "three_equation"
-    @info "Using three-equation heat flux formulation"
-    sea_ice_ocean_heat_flux = ThreeEquationHeatFlux()
-    interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
-                                     radiation,
-                                     sea_ice_ocean_heat_flux)
-    omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, interfaces)
+    # @info "Using three-equation heat flux formulation"
+    # sea_ice_ocean_heat_flux = ThreeEquationHeatFlux()
+    # interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
+    #                                  radiation,
+    #                                  sea_ice_ocean_heat_flux)
+    # omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, interfaces)
+    @error "Three-equation formulation is not yet implemented"
+    # omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
 else
     @info "Using default ocean-sea ice formulation"
     omip = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
@@ -173,14 +177,17 @@ if κ_skew > 0 || κ_symmetric > 0
     dir_name *= "_skew_$(κ_skew)_symmetric_$(κ_symmetric)"
 end
 if ocean_seaice_formulation == "three_equation"
-    dir_name *= "_threeequationseaice"
+    # dir_name *= "_threeequationseaice"
 end
 dir_name *= "_$(start_year)_$(simulation_length)years"
+
+dir_name *= "_main"
 
 FILE_DIR = joinpath(pwd(), "calibration_data", dir_name)
 mkpath(FILE_DIR)
 
 b = buoyancy_field(ocean.model)
+# b = Field(buoyancy(ocean.model))
 N² = Field(buoyancy_frequency(ocean.model))
 
 h, ℵ = sea_ice.model.ice_thickness, sea_ice.model.ice_concentration
