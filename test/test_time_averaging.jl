@@ -116,11 +116,11 @@ end
 # using Oceananigans
 # using Oceananigans.Fields
 # using Oceananigans.Grids
-# using ClimaOcean
-# using ClimaOcean.Copernicus
-# using ClimaOcean.DataWrangling
-# using ClimaOcean.DataWrangling
-# using ClimaOcean.DataWrangling: download_dataset, NearestNeighborInpainting
+# using NumericalEarth
+# using NumericalEarth.Copernicus
+# using NumericalEarth.DataWrangling
+# using NumericalEarth.DataWrangling
+# using NumericalEarth.DataWrangling: download_dataset, NearestNeighborInpainting
 # using ClimaOceanCalibration.DataWrangling: TimeAverageOperator
 # using PythonCall
 # using Statistics

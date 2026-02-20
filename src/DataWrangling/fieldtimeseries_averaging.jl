@@ -5,8 +5,8 @@ using Oceananigans.BuoyancyFormulations: buoyancy_perturbationᶜᶜᶜ
 using Oceananigans.Architectures: architecture
 using Oceananigans.Utils: launch!
 using Oceananigans.Fields: interpolate!
-using ClimaOcean
-using ClimaOcean.DataWrangling: DatasetFieldTimeSeries, native_grid
+using NumericalEarth
+using NumericalEarth.DataWrangling: DatasetFieldTimeSeries, native_grid
 using Dates
 using JLD2
 using KernelAbstractions
