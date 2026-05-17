@@ -44,7 +44,7 @@ Oceananigans = "0.100, 0.103"
 OrderedCollections = "1"
 PkgDev = "1.7"
 Statistics = "1"
-XESMF = "0.1"
+XESMF = "0.1, 0.2"
 julia = "1.12"
 
 [extras]
