@@ -356,6 +356,17 @@ function omip_simulation(config::Symbol = :halfdegree;
 
     cfg = Val(config)
 
+    # Create input/output directories up front. `build_ocean` immediately
+    # writes WOA climatology into `restoring_dir` via `DatasetRestoring`,
+    # which no longer auto-creates the parent dir, so it must exist first.
+    # Only rank 0 creates dirs; others barrier inside @root and proceed once
+    # the dirs exist.
+    @root for dir in [forcing_dir, restoring_dir, output_dir]
+        if !isdir(dir)
+            mkdir(dir)
+        end
+    end
+
     grid = build_grid(cfg, arch, Nz, depth; Δz_top)
 
     ocean = build_ocean(cfg, grid;
@@ -390,15 +401,6 @@ function omip_simulation(config::Symbol = :halfdegree;
                                   ocean_minimum_salinity)
 
     simulation = Simulation(coupled; Δt, stop_time)
-
-    # Only rank 0 creates dirs; others barrier inside @root and proceed once
-    # the dirs exist. mkpath is idempotent so a race-free retry would also
-    # work, but @root keeps the pattern symmetric with the staging code.
-    @root for dir in [forcing_dir, restoring_dir, output_dir]
-        if !isdir(dir)
-            mkdir(dir)
-        end
-    end
 
     # Stage JRA55 data from slow disk to fast scratch
     if !isnothing(staging_dir)
