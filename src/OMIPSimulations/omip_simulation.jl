@@ -12,7 +12,6 @@ using SeawaterPolynomials.TEOS10: Sᴬ_from_Sᴾ, Θ_from_T
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity,
                                        ConvectiveAdjustmentVerticalDiffusivity
 using Oceananigans.Utils: NormalDivision
-using ConstructionBase: constructorof
 using NumericalEarth.EarthSystemModels.InterfaceComputations: COARELogarithmicSimilarityProfile,
                                                               WindDependentWaveFormulation,
                                                               MomentumRoughnessLength,
@@ -535,25 +534,48 @@ end
       z >= -100 ? 1e-2 :
                   1e-5
 
-# Apply a (possibly nested) NamedTuple of field overrides on top of a default
-# struct, by rebuilding the struct via its `constructorof`. If an override value
-# is itself a NamedTuple and the corresponding field is a struct, recurse into
-# that field so nested objects (e.g., `slope_limiter` on an
-# `IsopycnalSkewSymmetricDiffusivity`) can be partially updated without having
-# to enumerate their fields here.
-function _apply_overrides(default, overrides::NamedTuple)
+# Convert a small parameter object into keyword defaults. This lets override
+# paths call the same public constructors used during initial construction,
+# rather than replaying struct field order for top-level closures.
+function _property_kwargs(default)
+    names = propertynames(default)
+    values = map(name -> getproperty(default, name), names)
+    return (; (names .=> values)...)
+end
+
+function _constructor_override(default, overrides::NamedTuple)
     isempty(overrides) && return default
-    fnames = propertynames(default)
-    new_field_vals = map(fnames) do fname
-        current = getproperty(default, fname)
-        if haskey(overrides, fname)
-            v = overrides[fname]
-            (v isa NamedTuple) ? _apply_overrides(current, v) : v
-        else
-            current
+    kwargs = merge(_property_kwargs(default), overrides)
+
+    try
+        return typeof(default)(; kwargs...)
+    catch err
+        err isa MethodError || rethrow()
+
+        # Some Oceananigans nested parameter structs, for example FluxTapering,
+        # expose a positional constructor but no keyword constructor.
+        names = propertynames(default)
+        values = map(name -> kwargs[name], names)
+        return typeof(default)(values...)
+    end
+end
+
+function _with_nested_constructor_overrides(default, overrides::NamedTuple, nested_keys::Tuple)
+    isempty(overrides) && return (;)
+
+    replaced = NamedTuple()
+    for key in nested_keys
+        if haskey(overrides, key)
+            value = overrides[key]
+            if value isa NamedTuple
+                current = getproperty(default, key)
+                value = _constructor_override(current, value)
+            end
+            replaced = merge(replaced, (; key => value))
         end
     end
-    return constructorof(typeof(default))(new_field_vals...)
+
+    return replaced
 end
 
 # Split a flat NamedTuple `nt` so any keys in `nested_keys` keep their
@@ -616,17 +638,19 @@ function omip_closure(vertical_closure::Symbol;
         # Baseline matches upstream OMIPSimulations exactly: Cᵇ = 0.28 is set
         # explicitly (not via the Oceananigans default), CATKEEquation() uses
         # all Oceananigans defaults. Overrides are layered on top.
-        mixing_length = _apply_overrides(CATKEMixingLength(; Cᵇ = 0.28), ml_overrides)
-        tke_eq        = _apply_overrides(CATKEEquation(), tke_overrides)
+        ml_kwargs = merge((; Cᵇ = 0.28), ml_overrides)
+        mixing_length = CATKEMixingLength(; ml_kwargs...)
+        tke_eq        = CATKEEquation(; tke_overrides...)
 
-        catke = CATKEVerticalDiffusivity(VerticallyImplicitTimeDiscretization();
-                                         mixing_length,
-                                         maximum_viscosity = 3,
-                                         maximum_tracer_diffusivity = 3,
-                                         maximum_tke_diffusivity = 3,
-                                         negative_tke_damping_time_scale = 10, # seconds
-                                         turbulent_kinetic_energy_equation = tke_eq)
-        catke = _apply_overrides(catke, catke_top)
+        catke_kwargs = merge((; mixing_length,
+                                maximum_viscosity = 3,
+                                maximum_tracer_diffusivity = 3,
+                                maximum_tke_diffusivity = 3,
+                                negative_tke_damping_time_scale = 10, # seconds
+                                turbulent_kinetic_energy_equation = tke_eq),
+                             catke_top)
+
+        catke = CATKEVerticalDiffusivity(VerticallyImplicitTimeDiscretization(); catke_kwargs...)
         catke, VerticalScalarDiffusivity(κ=henyey_diffusivity, ν=3e-5)
     elseif vertical_closure == :simple
         convective = ConvectiveAdjustmentVerticalDiffusivity(VerticallyImplicitTimeDiscretization();
@@ -658,8 +682,12 @@ function omip_closure(vertical_closure::Symbol;
             nothing
         else
             default_gm = IsopycnalSkewSymmetricDiffusivity(; κ_skew = κ_sk, κ_symmetric = κ_sy)
-            gm_top = _split_overrides(gm_parameters, ())  # keep all keys for full recursive override
-            _apply_overrides(default_gm, gm_top)
+            gm_nested_keys = (:isopycnal_tensor, :slope_limiter)
+            gm_top = _split_overrides(gm_parameters, gm_nested_keys)
+            gm_nested = _with_nested_constructor_overrides(default_gm, gm_parameters, gm_nested_keys)
+            gm_kwargs = merge(gm_top, gm_nested)
+
+            IsopycnalSkewSymmetricDiffusivity(; gm_kwargs...)
         end
     end
 
