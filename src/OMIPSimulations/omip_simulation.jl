@@ -773,11 +773,24 @@ end
 ##### ORCA builder
 #####
 
-using Oceananigans.Advection: AdaptiveVerticallyImplicitDiscretization
+# Note: Can be turned on in the future.
+# using Oceananigans.TimeSteppers: AdaptiveVerticallyImplicitDiscretization
 
-config_momentum_advection(::Val{:orca})        = WENOVectorInvariant(order=5, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
-config_momentum_advection(::Val{:halfdegree})  = WENOVectorInvariant(order=5, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
-config_momentum_advection(::Val{:tenthdegree}) = WENOVectorInvariant(time_discretization = AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+# config_momentum_advection(::Val{:orca})        = WENOVectorInvariant(order=5, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+# config_momentum_advection(::Val{:halfdegree})  = WENOVectorInvariant(order=5, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+# config_momentum_advection(::Val{:tenthdegree}) = WENOVectorInvariant(time_discretization = AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+
+# config_tracer_advection(::Val{:orca})        = WENO(order=7, minimum_buffer_upwind_order=3, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+# config_tracer_advection(::Val{:halfdegree})  = WENO(order=7, minimum_buffer_upwind_order=3, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+# config_tracer_advection(::Val{:tenthdegree}) = WENO(order=7, minimum_buffer_upwind_order=3, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+
+config_momentum_advection(::Val{:orca})        = WENOVectorInvariant(order=5)
+config_momentum_advection(::Val{:halfdegree})  = WENOVectorInvariant(order=5)
+config_momentum_advection(::Val{:tenthdegree}) = WENOVectorInvariant()
+
+config_tracer_advection(::Val{:orca})        = WENO(order=7, minimum_buffer_upwind_order=3)
+config_tracer_advection(::Val{:halfdegree})  = WENO(order=7, minimum_buffer_upwind_order=3)
+config_tracer_advection(::Val{:tenthdegree}) = WENO(order=7, minimum_buffer_upwind_order=3)
 
 function build_ocean(config, grid;
                      catke_parameters::NamedTuple = (;),
@@ -796,11 +809,12 @@ function build_ocean(config, grid;
                            biharmonic_timescale, biharmonic_viscosity)
     coriolis = HydrostaticSphericalCoriolis(scheme = Oceananigans.Coriolis.EnstrophyConserving())
     momentum_advection = config_momentum_advection(config)
+    tracer_advection = config_tracer_advection(config)
 
     ocean = ocean_simulation(grid;
                              Δt = 1minutes,
                              momentum_advection,
-                             tracer_advection = WENO(order=7; minimum_buffer_upwind_order=3, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6)),
+                             tracer_advection,
                              coriolis,
                              timestepper = :SplitRungeKutta3,
                              materialize_buoyancy_gradients = !(config == Val(:tenthdegree)),

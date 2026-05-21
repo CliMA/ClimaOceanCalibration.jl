@@ -42,7 +42,7 @@ import Oceananigans.TurbulenceClosures: viscosity, diffusivity,
                                         viscosity_location, diffusivity_location,
                                         with_tracers
 using Oceananigans.Utils: KernelParameters, launch!, prettysummary, time_difference_seconds
-using Oceananigans.Advection: Advection, time_discretization
+using Oceananigans.TimeSteppers: TimeSteppers, time_discretization
 
 using Adapt
 using KernelAbstractions: @index, @kernel
@@ -261,7 +261,7 @@ end
 ##### Show
 #####
 
-@inline Advection.time_discretization(::NORiBaseVerticalDiffusivity{TD}) where TD = TD()
+@inline TimeSteppers.time_discretization(::NORiBaseVerticalDiffusivity{TD}) where TD = TD()
 
 function Base.summary(closure::NBVD)
     TD = nameof(typeof(time_discretization(closure)))
