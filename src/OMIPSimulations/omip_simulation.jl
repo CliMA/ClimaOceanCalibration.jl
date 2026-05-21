@@ -120,51 +120,24 @@ ncar_atmosphere_sea_ice_fluxes(FT = Float64) =
                            water_vapor_roughness_length = FT(5e-4))
 
 """
-    corrected_radiation(sea_ice)
-
-Radiation with OMIP-2 standard ocean parameters (emissivity = 1.0, albedo = 0.06)
-and CCSM3 temperature/snow/thickness-dependent sea ice albedo.
-"""
-function corrected_radiation(sea_ice)
-    hi = sea_ice.model.ice_thickness
-    hs = sea_ice.model.snow_thickness
-
-    # When snow is present, the snow layer owns the surface temperature;
-    # otherwise the ice top surface temperature is the atmosphere interface.
-    snow_thermo = sea_ice.model.snow_thermodynamics
-    Ts = if isnothing(snow_thermo)
-        sea_ice.model.ice_thermodynamics.top_surface_temperature
-    else
-        snow_thermo.top_surface_temperature
-    end
-
-    sea_ice_albedo = SeaIceAlbedo(hi, hs, Ts)
-
-    return Radiation(; ocean_emissivity  = 1.00,
-                       ocean_albedo      = 0.06,
-                       sea_ice_albedo)
-end
-
-"""
-    build_coupled_model(ocean, sea_ice, atmosphere, radiation, flux_configuration;
+    build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                         velocity_formulation = :relative)
 
 Build the `OceanSeaIceModel` with the specified flux configuration.
 Options for `flux_configuration`: `:default`, `:corrected`, `:shear_aware`, `:ncar`.
 Options for `velocity_formulation`:  `:relative`, `:wind`
 """
-function build_coupled_model(ocean, sea_ice, atmosphere, radiation, flux_configuration;
+function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                              velocity_formulation::Symbol = :relative,
                              ocean_minimum_salinity = 1)
     FT = eltype(ocean.model.grid)
     if flux_configuration == :default
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
+                                         land,
                                          ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
-        return OceanSeaIceModel(ocean, sea_ice; atmosphere, interfaces)
+        return OceanSeaIceModel(sea_ice, ocean; atmosphere, radiation, land, interfaces)
     end
-
-    radiation = corrected_radiation(sea_ice)
 
     velocity_difference_obj = velocity_formulation == :relative ? RelativeVelocity() :
                               velocity_formulation == :wind     ? WindVelocity()     :
@@ -176,6 +149,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, flux_configu
                     ConstantGustiness(FT;   minimum_gustiness = 0.5)
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
+                                         land,
                                          atmosphere_ocean_fluxes   = corrected_atmosphere_ocean_fluxes(FT; gustiness),
                                          atmosphere_sea_ice_fluxes = corrected_atmosphere_sea_ice_fluxes(FT),
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
@@ -185,6 +159,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, flux_configu
     elseif flux_configuration == :ncar
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
+                                         land,
                                          atmosphere_ocean_fluxes   = ncar_atmosphere_ocean_fluxes(FT),
                                          atmosphere_sea_ice_fluxes = ncar_atmosphere_sea_ice_fluxes(FT),
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
@@ -195,7 +170,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, flux_configu
         error("Unknown flux_configuration: $flux_configuration. Options: :default, :corrected, :shear_aware, :ncar")
     end
 
-    return OceanSeaIceModel(ocean, sea_ice; atmosphere, interfaces)
+    return OceanSeaIceModel(sea_ice, ocean; atmosphere, radiation, land, interfaces)
 end
 
 #####
@@ -404,13 +379,13 @@ function omip_simulation(config::Symbol = :halfdegree;
         atmosphere_dir = forcing_dir
     end
 
-    atmosphere, radiation = omip_atmosphere(arch;
-                                            forcing_dir = atmosphere_dir,
-                                            start_date,
-                                            end_date,
-                                            backend_size)
+    atmosphere, radiation, land = omip_forcing(arch, sea_ice;
+                                               forcing_dir = atmosphere_dir,
+                                               start_date,
+                                               end_date,
+                                               backend_size)
 
-    coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, flux_configuration;
+    coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                                   velocity_formulation,
                                   ocean_minimum_salinity)
 
@@ -644,6 +619,10 @@ function omip_closure(vertical_closure::Symbol;
 
         catke = CATKEVerticalDiffusivity(VerticallyImplicitTimeDiscretization();
                                          mixing_length,
+                                         maximum_viscosity = 3,
+                                         maximum_tracer_diffusivity = 3,
+                                         maximum_tke_diffusivity = 3,
+                                         negative_tke_damping_time_scale = 10, # seconds
                                          turbulent_kinetic_energy_equation = tke_eq)
         catke = _apply_overrides(catke, catke_top)
         catke, VerticalScalarDiffusivity(κ=henyey_diffusivity, ν=3e-5)
@@ -792,9 +771,11 @@ end
 ##### ORCA builder
 #####
 
-config_momentum_advection(::Val{:orca})        = WENOVectorInvariant(order=5, weight_computation=NormalDivision)
-config_momentum_advection(::Val{:halfdegree})  = WENOVectorInvariant(order=5, weight_computation=NormalDivision)
-config_momentum_advection(::Val{:tenthdegree}) = WENOVectorInvariant(weight_computation=NormalDivision)
+using Oceananigans.Advection: AdaptiveVerticallyImplicitDiscretization
+
+config_momentum_advection(::Val{:orca})        = WENOVectorInvariant(order=5, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+config_momentum_advection(::Val{:halfdegree})  = WENOVectorInvariant(order=5, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
+config_momentum_advection(::Val{:tenthdegree}) = WENOVectorInvariant(time_discretization = AdaptiveVerticallyImplicitDiscretization(cfl=0.6))
 
 function build_ocean(config, grid;
                      catke_parameters::NamedTuple = (;),
@@ -817,7 +798,7 @@ function build_ocean(config, grid;
     ocean = ocean_simulation(grid;
                              Δt = 1minutes,
                              momentum_advection,
-                             tracer_advection = WENO(order=7; minimum_buffer_upwind_order=3, weight_computation=NormalDivision),
+                             tracer_advection = WENO(order=7; minimum_buffer_upwind_order=3, time_discretization=AdaptiveVerticallyImplicitDiscretization(cfl=0.6)),
                              coriolis,
                              timestepper = :SplitRungeKutta3,
                              materialize_buoyancy_gradients = !(config == Val(:tenthdegree)),
