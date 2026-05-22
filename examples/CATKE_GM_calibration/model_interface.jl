@@ -28,7 +28,7 @@ metadata_file = joinpath(output_dir, "calibration_metadata.jld2")
 
 macro _load_or_default(name)
     quote
-        if !@isdefined($(esc(name)))
+        if !isdefined(@__MODULE__, $(QuoteNode(name)))
             $(esc(name)) = jldopen(metadata_file, "r") do file
                 file[$(string(name))]
             end
