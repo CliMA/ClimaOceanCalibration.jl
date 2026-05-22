@@ -190,6 +190,7 @@ function batched_job_body(
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
+        output_dir = \\\\\\\"$output_dir\\\\\\\"
         model_interface_filepath = \\\\\\\"$model_interface_filepath\\\\\\\"
         include(model_interface_filepath)
         interface = CAL._load(\\\\\\\"$interface_jld2\\\\\\\")
