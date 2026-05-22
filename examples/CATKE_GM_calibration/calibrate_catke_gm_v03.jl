@@ -20,6 +20,21 @@ using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 using LinearAlgebra
 using JLD2
+using ArgParse
+
+function parse_commandline()
+    s = ArgParseSettings()
+    @add_arg_table! s begin
+        "--GM"
+            help = "Enable the GM (IsopycnalSkewSymmetric) eddy closure in the forward model"
+            arg_type = Bool
+            default = true
+    end
+    return parse_args(s)
+end
+
+const args   = parse_commandline()
+const use_gm = args["GM"]
 
 # ============================================
 # Configuration
@@ -95,7 +110,7 @@ isfile(woa_file) || error("""
 # legacy model_interface.jl that it loads requires `output_dir` to be a global.)
 output_dir = joinpath(pwd(), "calibration_runs",
     "catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)_Tstd_$(T_std)_Sstd_$(S_std)" *
-    "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)_v03")
+    "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)_gm$(use_gm)_v03")
 
 mkpath(output_dir)
 
@@ -166,6 +181,7 @@ jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["woa_file"]           = woa_file
     file["catke_param_names"]  = collect(catke_param_names)
     file["gm_param_names"]     = collect(gm_param_names)
+    file["use_gm"]             = use_gm
 end
 
 # v0.3.0 backend + interface
@@ -177,6 +193,7 @@ interface = CATKEGMInterface()
 @info "Experiment dir:  $(ClimaCalibrate.experiment_dir(interface))"
 
 @info "Calibration configuration:"
+@info "  use_gm:       $use_gm"
 @info "  CATKE params: $(catke_param_names)"
 @info "  GM params:    $(gm_param_names)"
 @info "  Ensemble size: $ensemble_size  ($n_batches a3mega nodes per iteration)"

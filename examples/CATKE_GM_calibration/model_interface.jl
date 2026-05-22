@@ -53,6 +53,7 @@ end
 @_load_or_default woa_file
 @_load_or_default catke_param_names
 @_load_or_default gm_param_names
+@_load_or_default use_gm
 
 """
     forward_model(iteration, member)
@@ -84,6 +85,7 @@ function ClimaCalibrate.forward_model(iteration, member)
         "simulation_length" => simulation_length,
         "sampling_length"   => sampling_length,
         "staging_dir"       => staging_dir,
+        "use_gm"            => use_gm,
     )
 
     @info "iter=$iteration member=$member CATKE scalings=$catke_scalings GM scalings=$gm_scalings"

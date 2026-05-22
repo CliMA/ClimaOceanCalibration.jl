@@ -248,7 +248,15 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
         catke_parameters = build_catke_parameters(catke_scalings)
         gm_parameters    = build_gm_parameters(gm_scalings)
 
+        use_gm = get(config_dict, "use_gm", true)
+        if !use_gm
+            # Sentinel in omip_closure: κ_skew or κ_symmetric == 0 disables the
+            # IsopycnalSkewSymmetricDiffusivity entirely.
+            gm_parameters = (; κ_skew = 0, κ_symmetric = 0)
+        end
+
         @info "Member $member, iter $iter: starting ORCA calibration run"
+        @info "  use_gm           = $use_gm"
         @info "  catke_parameters = $catke_parameters"
         @info "  gm_parameters    = $gm_parameters"
         @info "  simulation_length = $(simulation_length) years, sampling_length = $(sampling_length) years"
