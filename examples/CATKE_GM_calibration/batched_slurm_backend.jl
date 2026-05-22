@@ -220,7 +220,7 @@ echo "  NVHPC Version: 25.7"
 echo "  CUDA Version: 12.9"
 echo "  CUDA_HOME: \$CUDA_HOME"
 echo "  MPI_HOME: \$MPI_HOME"
-echo "  Julia: \$(~/julia-1.12.2/bin/julia --version)"
+echo "  Julia: \$(julia +1.12.3 --version)"
 """
 end
 
@@ -430,7 +430,7 @@ function generate_batched_sbatch_script(
     mkdir -p "$member_path"
     export CUDA_VISIBLE_DEVICES=$gpu_id
     echo "[Member $member] Starting on GPU $gpu_id at \$(date)"
-    script -q -c "~/julia-1.12.2/bin/julia $exeflags --project=$experiment_dir -e \\\"
+    script -q -c "julia +1.12.3 $exeflags --project=$experiment_dir -e \\\"
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
