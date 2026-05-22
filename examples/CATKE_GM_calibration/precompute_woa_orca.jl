@@ -19,7 +19,7 @@ using JLD2
 
 const NZ            = 70
 const DEPTH         = 5500
-const RESTORING_DIR = get(ENV, "RESTORING_DIR", joinpath(homedir(), "ECCO_data"))
+const RESTORING_DIR = joinpath(homedir(), "ECCO_data")
 
 output_dir = joinpath(@__DIR__, "calibration_data")
 mkpath(output_dir)
