@@ -11,6 +11,10 @@
 # (-20°..20°), upper 200 m, [T..., S...] concatenated.
 
 using ClimaCalibrate
+isdefined(ClimaCalibrate, :Backend) || error(
+    "calibrate_catke_gm_v03.jl requires ClimaCalibrate v0.3.x; " *
+    "the active project appears to resolve an older ClimaCalibrate."
+)
 using ClimaCalibrate.Backend: SlurmConfig
 using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
@@ -20,29 +24,63 @@ using JLD2
 # ============================================
 # Configuration
 # ============================================
-const n_iterations      = 10
-const prior_std         = 0.2
-const T_std             = 0.2
-const S_std             = T_std / 4
-const simulation_length = 10
-const sampling_length   = 5
-const latitude_range    = (-20.0, 20.0)
-const z_min             = -200.0
-const filename_prefix   = "orca_catke_gm_calibration"
+const n_iterations      = 10                 # number of EKI iterations
+const prior_std         = 0.2                # stddev of each scaling prior (mean = 1, bounded > 0)
+const T_std             = 0.2                # observation noise stddev for T (°C); sets diagonal cov entry T_std^2
+const S_std             = T_std / 4          # observation noise stddev for S (PSU); ratio 1:4 matches typical T,S scale
+const simulation_length = 5                  # forward-model run length in years
+const sampling_length   = 3                  # years averaged at the end (the calibration target window: years simulation_length-sampling_length .. simulation_length)
+const latitude_range    = (-20.0, 20.0)      # tropical band compared against WOA (degrees latitude)
+const z_min             = -200.0             # upper-ocean depth cutoff in metres; only cells with z ≥ z_min are in the loss
+const filename_prefix = "orca_catke_gm_calibration"  # prefix for forward model output files
+const staging_dir = nothing                 # Disable per-member JRA55 staging by default.
 
+# Calibrated parameter names. These keys must match those produced by
+# CATKE_SCALING_SPEC / GM_SCALING_SPEC in forward_model_orca.jl. Comment
+# out a name to drop it from the calibration (then it stays fixed at 1).
+# All 18 CATKEMixingLength + 7 CATKEEquation non-zero coefficients are
+# included by default. Cᵉu, Cᵉe, CᵉD are omitted because they default to 0
+# (scaling is degenerate).
 const catke_param_names = (
-    "Cˢ_scaling",
-    "CRiᵟ_scaling",
-    "CRi⁰_scaling",
-    "Cʰⁱu_scaling",
-    "Cˡᵒu_scaling",
-    "Cʰⁱc_scaling",
-    "Cˡᵒc_scaling",
-    "Cʰⁱe_scaling",
-    "Cˡᵒe_scaling",
-    "CʰⁱD_scaling",
-    "CˡᵒD_scaling",
+    # CATKEMixingLength
+    "Cˢ_scaling",    # Surface distance coefficient for shear length scale
+    # "Cᵇ_scaling",    # Bottom distance coefficient for shear length scale
+    # "Cˢᵖ_scaling",   # Sheared convective plume coefficient
+
+    "CRiᵟ_scaling",  # Stability function width
+    "CRi⁰_scaling",  # Stability function lower Ri
+
+    "Cʰⁱu_scaling",  # Shear mixing length coefficient for momentum at high Ri
+    "Cˡᵒu_scaling",  # Shear mixing length coefficient for momentum at low Ri
+    # "Cᵘⁿu_scaling",  # Shear mixing length coefficient for momentum at negative Ri
+    # "Cᶜu_scaling",   # Convective mixing length coefficient for momentum
+
+    "Cʰⁱc_scaling",  # Shear mixing length coefficient for tracers at high Ri
+    "Cˡᵒc_scaling",  # Shear mixing length coefficient for tracers at low Ri
+    # "Cᵘⁿc_scaling",  # Shear mixing length coefficient for tracers at negative Ri
+    # "Cᶜc_scaling",   # Convective mixing length coefficient for tracers
+    # "Cᵉc_scaling",   # Convective penetration mixing length coefficient for tracers
+
+    "Cʰⁱe_scaling",  # Shear mixing length coefficient for TKE at high Ri
+    "Cˡᵒe_scaling",  # Shear mixing length coefficient for TKE at low Ri
+    # "Cᵘⁿe_scaling",  # Shear mixing length coefficient for TKE at negative Ri
+    # "Cᶜe_scaling",   # Convective mixing length coefficient for TKE
+
+    # CATKEEquation
+    "CʰⁱD_scaling",  # Dissipation length scale shear coefficient for high Ri
+    "CˡᵒD_scaling",  # Dissipation length scale shear coefficient for low Ri
+    # "CᵘⁿD_scaling",  # Dissipation length scale shear coefficient for negative Ri
+    # "CᶜD_scaling",   # Dissipation length scale convecting layer coefficient
+    # "Cᵂu★_scaling",  # Surface shear-driven TKE flux coefficient
+    # "CᵂwΔ_scaling",  # Surface convective TKE flux coefficient
+    # "Cᵂϵ_scaling",   # Dissipative near-bottom TKE flux coefficient
 )
+
+# const gm_param_names = (
+#     "κ_skew_scaling",       # GM skew diffusivity
+#     "κ_symmetric_scaling",  # Redi symmetric diffusivity
+#     "max_slope_scaling",    # FluxTapering slope limiter max slope
+# )
 
 const gm_param_names = ()
 
@@ -106,7 +144,8 @@ Y_obs = Observation(Dict(
 scheduler = DataMisfitController(on_terminate = "continue")
 @info "Creating EnsembleKalmanProcess..."
 ekp = EnsembleKalmanProcess(Y_obs,
-                            TransformUnscented(priors, sigma_points = "simplex");
+                            # TransformUnscented(priors, sigma_points = "simplex");
+                            TransformUnscented(priors);
                             scheduler)
 
 const ensemble_size = EnsembleKalmanProcesses.get_N_ens(ekp)
@@ -123,6 +162,7 @@ jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["simulation_length"]  = simulation_length
     file["sampling_length"]    = sampling_length
     file["filename_prefix"]    = filename_prefix
+    file["staging_dir"]        = staging_dir
     file["woa_file"]           = woa_file
     file["catke_param_names"]  = collect(catke_param_names)
     file["gm_param_names"]     = collect(gm_param_names)

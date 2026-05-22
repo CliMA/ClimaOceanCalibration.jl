@@ -44,6 +44,12 @@ end
 @_load_or_default sampling_length
 @_load_or_default simulation_length
 @_load_or_default filename_prefix
+if !isdefined(@__MODULE__, :staging_dir)
+    staging_dir = jldopen(metadata_file, "r") do file
+        haskey(file, "staging_dir") ? file["staging_dir"] : nothing
+    end
+    @info "Loaded staging_dir=$staging_dir from metadata"
+end
 @_load_or_default woa_file
 @_load_or_default catke_param_names
 @_load_or_default gm_param_names
@@ -77,6 +83,7 @@ function ClimaCalibrate.forward_model(iteration, member)
         "member"            => member,
         "simulation_length" => simulation_length,
         "sampling_length"   => sampling_length,
+        "staging_dir"       => staging_dir,
     )
 
     @info "iter=$iteration member=$member CATKE scalings=$catke_scalings GM scalings=$gm_scalings"
@@ -155,7 +162,8 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, calib_output_d
         @info "iter=$iteration member $m: " * join(parts, ", ")
     end
 
-    iter_fig_root = joinpath(calib_output_dir, "iteration_$(iteration)", "figures")
+    iter_fig_root = joinpath(ClimaCalibrate.path_to_iteration(calib_output_dir, iteration),
+                             "figures")
     mkpath(iter_fig_root)
     for m in 1:ensemble_size
         member_path = ClimaCalibrate.path_to_ensemble_member(calib_output_dir, iteration, m)

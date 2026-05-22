@@ -12,6 +12,10 @@
 #   * ClimaCalibrate.Calibration.run_iteration(backend::BatchedSlurmGCPBackendV03, ...)
 
 import ClimaCalibrate
+isdefined(ClimaCalibrate, :Backend) || error(
+    "batched_slurm_backend_v03.jl requires ClimaCalibrate v0.3.x; " *
+    "the active project appears to resolve an older ClimaCalibrate."
+)
 import ClimaCalibrate: Backend, Calibration
 import ClimaCalibrate.Backend:
     HPCBackend, SlurmBackend, SlurmConfig, JobInfo,

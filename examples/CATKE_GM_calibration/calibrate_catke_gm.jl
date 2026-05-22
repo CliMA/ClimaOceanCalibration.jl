@@ -30,11 +30,12 @@ const n_iterations      = 10                 # number of EKI iterations
 const prior_std         = 0.2                # stddev of each scaling prior (mean = 1, bounded > 0)
 const T_std             = 0.2                # observation noise stddev for T (°C); sets diagonal cov entry T_std^2
 const S_std             = T_std / 4          # observation noise stddev for S (PSU); ratio 1:4 matches typical T,S scale
-const simulation_length = 10                 # forward-model run length in years
-const sampling_length   = 5                  # years averaged at the end (the calibration target window: years simulation_length-sampling_length .. simulation_length)
+const simulation_length = 5                  # forward-model run length in years
+const sampling_length   = 3                  # years averaged at the end (the calibration target window: years simulation_length-sampling_length .. simulation_length)
 const latitude_range    = (-20.0, 20.0)      # tropical band compared against WOA (degrees latitude)
 const z_min             = -200.0             # upper-ocean depth cutoff in metres; only cells with z ≥ z_min are in the loss
 const filename_prefix = "orca_catke_gm_calibration"  # prefix for forward model output files
+const staging_dir = nothing                 # Disable per-member JRA55 staging by default.
 
 # Calibrated parameter names. These keys must match those produced by
 # CATKE_SCALING_SPEC / GM_SCALING_SPEC in forward_model_orca.jl. Comment
@@ -140,7 +141,8 @@ Y_obs = Observation(Dict(
 scheduler = DataMisfitController(on_terminate = "continue")
 @info "Creating EnsembleKalmanProcess..."
 ekp = EnsembleKalmanProcess(Y_obs,
-                            TransformUnscented(priors, sigma_points = "simplex");
+                            # TransformUnscented(priors, sigma_points = "simplex");
+                            TransformUnscented(priors);
                             scheduler)
 
 const ensemble_size = EnsembleKalmanProcesses.get_N_ens(ekp)
@@ -157,6 +159,7 @@ jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["simulation_length"]  = simulation_length
     file["sampling_length"]    = sampling_length
     file["filename_prefix"]    = filename_prefix
+    file["staging_dir"]        = staging_dir
     file["woa_file"]           = woa_file
     file["catke_param_names"]  = collect(catke_param_names)
     file["gm_param_names"]     = collect(gm_param_names)
