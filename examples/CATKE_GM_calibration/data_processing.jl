@@ -45,15 +45,27 @@ function extract_tropics_top(field::Field; lat_range = DEFAULT_LAT_RANGE, z_min 
     LX, LY, LZ = location(f)
     grid = f.grid
 
+    # φnodes is 1D on LatitudeLongitudeGrid but 2D (Nx, Ny) on the ORCA
+    # OrthogonalSphericalShellGrid (Tripolar). znodes is 1D either way.
     φ = φnodes(grid, LX(), LY(), LZ())
     z = znodes(grid, LX(), LY(), LZ())
 
-    lat_indices = findall(φᵢ -> lat_range[1] <= φᵢ <= lat_range[2], φ)
-    z_indices   = findall(zᵢ -> zᵢ >= z_min, z)
+    Nx, Ny, _ = size(interior(f))
+    if ndims(φ) == 1
+        @assert length(φ) == Ny
+        horiz_mask = reshape([lat_range[1] <= φ[j] <= lat_range[2] for j in 1:Ny], 1, Ny) .& trues(Nx, 1)
+    else
+        @assert size(φ) == (Nx, Ny)
+        horiz_mask = lat_range[1] .<= φ .<= lat_range[2]
+    end
+
+    z_indices = findall(zᵢ -> zᵢ >= z_min, z)
 
     mask_immersed_field!(f, NaN)
-    data = interior(f, :, lat_indices, z_indices)
-    return Vector{Float64}(data[.!isnan.(data)])
+    data  = interior(f)[:, :, z_indices]
+    mask3 = repeat(horiz_mask, 1, 1, length(z_indices))
+    selected = data[mask3]
+    return Vector{Float64}(selected[.!isnan.(selected)])
 end
 
 """

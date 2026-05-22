@@ -15,7 +15,8 @@ using ClimaOceanCalibration
 using ClimaOceanCalibration.OMIPSimulations
 using Oceananigans
 using Oceananigans.Units
-using Oceananigans.Fields: Field, Average
+using Oceananigans.Fields: Field
+using Oceananigans.AbstractOperations: Average
 using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
 using Dates
 
