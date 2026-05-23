@@ -187,11 +187,16 @@ function plot_tropical_target_bias(member_dir, filename_prefix,
 
     Tm, Tw, φ, λ = vmean_top(T, woa_T)
     Sm, Sw, _, _ = vmean_top(S, woa_S)
-    jkeep = findall(φᵢ -> lat_range[1] <= φᵢ <= lat_range[2], φ)
+
+    # φ is 1D on LatitudeLongitudeGrid and 2D (Nx, Ny) on the ORCA
+    # Tripolar grid. Collapse to a per-j representative latitude so
+    # the heatmap still has a 1D y-axis.
+    φ1d = ndims(φ) == 1 ? collect(φ) : vec(nanmean(φ; dims = 1))
+    jkeep = findall(φᵢ -> lat_range[1] <= φᵢ <= lat_range[2], φ1d)
 
     Tbias = (Tm .- Tw)[:, jkeep]
     Sbias = (Sm .- Sw)[:, jkeep]
-    φsub  = φ[jkeep]
+    φsub  = φ1d[jkeep]
 
     Tmax = max(maximum(abs, filter(isfinite, Tbias)), 1e-6)
     Smax = max(maximum(abs, filter(isfinite, Sbias)), 1e-6)
