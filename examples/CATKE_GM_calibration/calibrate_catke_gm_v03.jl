@@ -49,6 +49,7 @@ const latitude_range    = (-20.0, 20.0)      # tropical band compared against WO
 const z_min             = -200.0             # upper-ocean depth cutoff in metres; only cells with z ≥ z_min are in the loss
 const filename_prefix = "orca_catke_gm_calibration"  # prefix for forward model output files
 const staging_dir = nothing                 # Disable per-member JRA55 staging by default.
+const with_ice_dynamics = false             # disable sea-ice dynamics in the OMIP forward model
 
 # Calibrated parameter names. These keys must match those produced by
 # CATKE_SCALING_SPEC / GM_SCALING_SPEC in forward_model_orca.jl. Comment
@@ -182,6 +183,7 @@ jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["catke_param_names"]  = collect(catke_param_names)
     file["gm_param_names"]     = collect(gm_param_names)
     file["use_gm"]             = use_gm
+    file["with_ice_dynamics"]  = with_ice_dynamics
 end
 
 # v0.3.0 backend + interface
@@ -193,7 +195,8 @@ interface = CATKEGMInterface()
 @info "Experiment dir:  $(ClimaCalibrate.experiment_dir(interface))"
 
 @info "Calibration configuration:"
-@info "  use_gm:       $use_gm"
+@info "  use_gm:            $use_gm"
+@info "  with_ice_dynamics: $with_ice_dynamics"
 @info "  CATKE params: $(catke_param_names)"
 @info "  GM params:    $(gm_param_names)"
 @info "  Ensemble size: $ensemble_size  ($n_batches a3mega nodes per iteration)"

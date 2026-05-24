@@ -255,8 +255,11 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
             gm_parameters = (; κ_skew = 0, κ_symmetric = 0)
         end
 
+        with_ice_dynamics = get(config_dict, "with_ice_dynamics", true)
+
         @info "Member $member, iter $iter: starting ORCA calibration run"
-        @info "  use_gm           = $use_gm"
+        @info "  use_gm            = $use_gm"
+        @info "  with_ice_dynamics = $with_ice_dynamics"
         @info "  catke_parameters = $catke_parameters"
         @info "  gm_parameters    = $gm_parameters"
         @info "  simulation_length = $(simulation_length) years, sampling_length = $(sampling_length) years"
@@ -273,6 +276,7 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
                               biharmonic_timescale = 50days,
                               flux_configuration   = :corrected,
                               with_snow            = true,
+                              with_ice_dynamics,
                               diagnostics          = false,
                               Δt              = 30minutes,
                               forcing_dir,
