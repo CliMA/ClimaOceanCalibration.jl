@@ -1,40 +1,30 @@
-# calibrate_catke_gm_v03.jl
+# calibrate_catke_gm_v01.jl
+# Legacy (ClimaCalibrate v0.1.x) calibration driver for CATKE + GM scaling
+# parameters against WOA on the ORCA grid, using BatchedSlurmGCPBackend
+# (v0.1 implementation in batched_slurm_backend_v01.jl).
 #
-# v0.3.0-compatible driver for the ORCA CATKE+GM calibration.
-# Parallels calibrate_catke_gm.jl but uses the new ClimaCalibrate v0.3.0
-# AbstractModelInterface + HPCBackend instance APIs.
+# Kept for historical reproducibility; the active driver is calibrate_catke_gm.jl.
 #
 # Forward model: 10-year orca OMIP run with the omip_simulation(:orca; ...)
-# physics from examples/OMIP_GCP/orca_corrected_snow_kskew1000_ksymm1000_bih50days_10yr.jl.
+# physics from examples/OMIP_GCP/orca_corrected_snow_kskew1000_ksymm1000_bih50days_10yr.jl
+# but with built-in diagnostics off and three lightweight calibration writers.
 #
 # Observation target: WOA annual T,S on the ORCA grid, tropical band
-# (-20°..20°), upper 200 m, [T..., S...] concatenated.
+# (-20°..20°), upper 200 m, [T..., S...] concatenated. Diagonal covariance
+# with user-specified T_std, S_std.
 
 using ClimaCalibrate
-isdefined(ClimaCalibrate, :Backend) || error(
-    "calibrate_catke_gm_v03.jl requires ClimaCalibrate v0.3.x; " *
-    "the active project appears to resolve an older ClimaCalibrate."
-)
-using ClimaCalibrate.Backend: SlurmConfig
 using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 using LinearAlgebra
 using JLD2
-using ArgParse
 
-function parse_commandline()
-    s = ArgParseSettings()
-    @add_arg_table! s begin
-        "--GM"
-            help = "Enable the GM (IsopycnalSkewSymmetric) eddy closure in the forward model"
-            arg_type = Bool
-            default = true
-    end
-    return parse_args(s)
-end
+# Batched Slurm backend (legacy v0.1)
+include(joinpath(@__DIR__, "batched_slurm_backend_v01.jl"))
 
-const args   = parse_commandline()
-const use_gm = args["GM"]
+# Local utilities (must be loaded before model_interface)
+include(joinpath(@__DIR__, "data_processing.jl"))
+include(joinpath(@__DIR__, "forward_model_orca.jl"))
 
 # ============================================
 # Configuration
@@ -49,7 +39,6 @@ const latitude_range    = (-20.0, 20.0)      # tropical band compared against WO
 const z_min             = -200.0             # upper-ocean depth cutoff in metres; only cells with z ≥ z_min are in the loss
 const filename_prefix = "orca_catke_gm_calibration"  # prefix for forward model output files
 const staging_dir = nothing                 # Disable per-member JRA55 staging by default.
-const with_ice_dynamics = false             # disable sea-ice dynamics in the OMIP forward model
 
 # Calibrated parameter names. These keys must match those produced by
 # CATKE_SCALING_SPEC / GM_SCALING_SPEC in forward_model_orca.jl. Comment
@@ -100,6 +89,7 @@ const catke_param_names = (
 
 const gm_param_names = ()
 
+# Where the precomputed WOA-on-ORCA file lives (see precompute_woa_orca.jl)
 const woa_file = abspath(joinpath(@__DIR__, "calibration_data", "woa_orca_grid.jld2"))
 isfile(woa_file) || error("""
     WOA-on-ORCA cache not found at:
@@ -107,16 +97,15 @@ isfile(woa_file) || error("""
     Run precompute_woa_orca.jl first.
 """)
 
-# Output directory (defined BEFORE model_interface_v03.jl is included, since the
-# legacy model_interface.jl that it loads requires `output_dir` to be a global.)
+# Output directory
 output_dir = joinpath(pwd(), "calibration_runs",
-    "catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)_Tstd_$(T_std)_Sstd_$(S_std)" *
-    "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)_gm$(use_gm)_v03")
+    "catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)_Tstd_$(T_std)_Sstd_$(S_std)" * 
+    "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)")
 
 mkpath(output_dir)
 
 # ============================================
-# Priors
+# Priors (log-normal-like; mean 1, stddev prior_std, bounded > 0)
 # ============================================
 function make_prior(name)
     return constrained_gaussian(name, 1.0, prior_std, 0, Inf)
@@ -132,11 +121,6 @@ priors = combine_distributions(
 # ============================================
 # Observation target + covariance
 # ============================================
-# data_processing.jl is included transitively via model_interface.jl below, but
-# we need process_woa_target / build_diagonal_covariance now (before the
-# include), so pull it in directly.
-include(joinpath(@__DIR__, "data_processing.jl"))
-
 @info "Building WOA target from $woa_file (lat $latitude_range, z ≥ $z_min)..."
 Y_target = process_woa_target(woa_file; lat_range = latitude_range, z_min)
 
@@ -182,21 +166,12 @@ jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["woa_file"]           = woa_file
     file["catke_param_names"]  = collect(catke_param_names)
     file["gm_param_names"]     = collect(gm_param_names)
-    file["use_gm"]             = use_gm
-    file["with_ice_dynamics"]  = with_ice_dynamics
 end
 
-# v0.3.0 backend + interface
-include(joinpath(@__DIR__, "batched_slurm_backend_v03.jl"))
-include(joinpath(@__DIR__, "model_interface_v03.jl"))
-
-interface = CATKEGMInterface()
-@info "Model interface: $(ClimaCalibrate.model_interface_filepath(interface))"
-@info "Experiment dir:  $(ClimaCalibrate.experiment_dir(interface))"
+model_interface = joinpath(@__DIR__, "model_interface_v01.jl")
+include(model_interface)
 
 @info "Calibration configuration:"
-@info "  use_gm:            $use_gm"
-@info "  with_ice_dynamics: $with_ice_dynamics"
 @info "  CATKE params: $(catke_param_names)"
 @info "  GM params:    $(gm_param_names)"
 @info "  Ensemble size: $ensemble_size  ($n_batches a3mega nodes per iteration)"
@@ -207,26 +182,24 @@ interface = CATKEGMInterface()
 @info "  Output dir:    $output_dir"
 
 # ============================================
-# HPC config (GCP a3mega, 8 H100s per node)
+# HPC (GCP a3mega, 8 H100s per node)
 # ============================================
-slurm_cfg = SlurmConfig(
-    directives = [
-        :time      => 5 * 24 * 60,    # minutes; SlurmConfig formats to DD-HH:MM:SS
-        :partition => "a3mega",
-        :exclusive => "user",          # `--exclusive=user` is the documented form
-    ],
+hpc_kwargs = Dict(
+    :time      => 5 * 24 * 60,   # minutes
+    :partition => "a3mega",
+    :exclusive => true,
 )
 
-backend = BatchedSlurmGCPBackendV03(slurm_cfg)
-
-@info "Starting calibration with BatchedSlurmGCPBackendV03..."
+@info "Starting calibration with BatchedSlurmGCPBackend..."
 ClimaCalibrate.calibrate(
-    backend,
+    BatchedSlurmGCPBackend,
     ekp,
-    interface,
     n_iterations,
     priors,
-    output_dir,
+    output_dir;
+    model_interface = model_interface,
+    hpc_kwargs      = hpc_kwargs,
+    verbose         = true,
 )
 
 @info "Calibration completed. Results: $output_dir"
