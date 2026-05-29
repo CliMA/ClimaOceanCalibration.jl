@@ -135,7 +135,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
                                          radiation,
                                          land,
                                          ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
-        return OceanSeaIceModel(sea_ice, ocean; atmosphere, radiation, land, interfaces)
+        return OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, land, interfaces)
     end
 
     velocity_difference_obj = velocity_formulation == :relative ? RelativeVelocity() :
@@ -876,8 +876,8 @@ function build_sea_ice(config, grid, ocean; restoring_dir, snow_thermodynamics =
                                  snow_thermodynamics)
 
     set!(sea_ice.model,
-         h = Metadatum(:sea_ice_thickness;     dir=restoring_dir, dataset=ECCO4Monthly()),
-         ℵ = Metadatum(:sea_ice_concentration; dir=restoring_dir, dataset=ECCO4Monthly()))
+         h = Metadatum(:sea_ice_thickness;     dir=restoring_dir, dataset=ECCO4Monthly(), date = DateTime(1993, 1, 1)),
+         ℵ = Metadatum(:sea_ice_concentration; dir=restoring_dir, dataset=ECCO4Monthly(), date = DateTime(1993, 1, 1)))
 
     return sea_ice
 end
