@@ -13,6 +13,7 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ClimaCalibrate = "4347a170-ebd6-470c-89d3-5c705c0cacc2"
 ClimaSeaIce = "6ba0ff68-24e6-4315-936c-2e99227c95a4"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
+ConservativeRegridding = "8e50ac2c-eb48-49bc-a402-07c87b949343"
 ConstructionBase = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
 CopernicusMarine = "cd43e856-93a3-40c8-bc9e-6146cdce14fa"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -46,11 +47,13 @@ XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 [sources]
 NumericalEarth = {rev = "ss/omip-prototype", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
 Oceananigans = {rev = "ss/for-omip", url = "https://github.com/CliMA/Oceananigans.jl.git"}
-SeawaterPolynomials = {rev = "xk/fix-panama", url = "https://github.com/CliMA/SeawaterPolynomials.jl.git"}
+SeawaterPolynomials = {rev = "ss/conversion-functions", url = "https://github.com/CliMA/SeawaterPolynomials.jl.git"}
 
 [compat]
 CFTime = "0.2"
-ClimaCalibrate = "0.1.4"
+ClimaCalibrate = "0.3"
+ClimaSeaIce = "0.5.4"
+ConservativeRegridding = "0.2.2"
 ConstructionBase = "1"
 Dates = "1.11.0"
 Glob = "1.4.0"
