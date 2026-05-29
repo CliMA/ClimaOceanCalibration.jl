@@ -14,8 +14,7 @@ using Oceananigans.Solvers
 using Oceananigans.Solvers: ZDirection
 using Oceananigans.Utils: worksize
 using Oceananigans.Architectures: architecture
-using Oceananigans.OutputReaders: SplitFilePath, InMemoryFTS, InMemory, time_indices, file_and_local_index
-import Oceananigans.Fields: set!
+using Oceananigans.OutputReaders: SplitFilePath, InMemory
 
 #####
 ##### BatchedTridiagonalSolver: fix size -> worksize
@@ -240,23 +239,9 @@ function rebuild_fts_with_path(fts, new_path)
         fts.time_indexing, fts.reader_kw)
 end
 
-# Patch 1: iterate per-part files when an InMemory FTS is `set!` from a
-# `SplitFilePath` (Oceananigans does this only for `OnDisk` in 0.107.x).
-function set!(fts::InMemoryFTS, sfp::SplitFilePath, name::String = fts.name;
-              warn_missing_data = false, kwargs...)
-    idxs = time_indices(fts)
-    Ntot = last(sfp.cumulative_length)
-    needed = String[]
-    for n in idxs
-        (n < 1 || n > Ntot) && continue
-        file_path, _ = file_and_local_index(sfp, n)
-        file_path ∉ needed && push!(needed, file_path)
-    end
-    for p in needed
-        set!(fts, p, name; warn_missing_data, kwargs...)
-    end
-    return nothing
-end
+# Patch 1 (removed): upstream Oceananigans now provides
+# `set!(::InMemoryFTS, ::SplitFilePath)` natively in
+# `OutputReaders/set_field_time_series.jl`.
 
 # Patch 2: detect split sets when the user passes a single stem path with an
 # `InMemory` backend, and rewrap the FTS so its `path` is a `SplitFilePath`.
