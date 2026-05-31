@@ -275,6 +275,11 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
 - `piston_velocity`: surface salinity restoring piston velocity in m/day. Default: `1/6`.
   Restoring is automatically masked by sea ice concentration (no restoring under ice).
 - `start_date`, `end_date`: bracket for forcing/restoring metadata. Defaults: 1958-01-01 .. 2018-01-01.
+- `backend_size`: number of JRA55 time slices kept in memory at once. Default: `50`.
+- `repeat_year_forcing`: use `RepeatYearJRA55` (single repeating year) instead of the
+  full `MultiYearJRA55` time series. Diagnostic knob for isolating whether a blowup
+  is tied to specific multi-year data/year-file transitions vs. pure time arithmetic.
+  Default: `false`.
 - `Δt`: simulation time step. Default: `30minutes`.
 - `stop_time`: stop time for the wrapping `Simulation`. Default: `Inf`.
 - `flux_configuration`: surface flux formulation. Options:
@@ -330,6 +335,7 @@ function omip_simulation(config::Symbol = :halfdegree;
                          forcing_dir = joinpath(get(ENV, "DATA", ""), "forcing_data"),
                          staging_dir = nothing,
                          backend_size = 50,
+                         repeat_year_forcing = false,
                          restoring_dir = "climatology",
                          piston_velocity = 1 / 6, # m / day
                          start_date = DateTime(1958, 1, 1),
@@ -393,7 +399,8 @@ function omip_simulation(config::Symbol = :halfdegree;
                                                forcing_dir = atmosphere_dir,
                                                start_date,
                                                end_date,
-                                               backend_size)
+                                               backend_size,
+                                               repeat_year_forcing)
 
     coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                                   velocity_formulation,
