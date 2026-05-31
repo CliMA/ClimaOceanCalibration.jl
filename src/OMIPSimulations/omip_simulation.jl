@@ -280,6 +280,10 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
   full `MultiYearJRA55` time series. Diagnostic knob for isolating whether a blowup
   is tied to specific multi-year data/year-file transitions vs. pure time arithmetic.
   Default: `false`.
+- `prefetch`: load each JRA55 variable's next sliding window on a background task
+  (`PrefetchingBackend`). Set `false` to load windows synchronously. Diagnostic knob:
+  the prefetch path is the suspected cause of the ~1600-day reload-boundary NaN.
+  Default: `true`.
 - `Δt`: simulation time step. Default: `30minutes`.
 - `stop_time`: stop time for the wrapping `Simulation`. Default: `Inf`.
 - `flux_configuration`: surface flux formulation. Options:
@@ -336,6 +340,7 @@ function omip_simulation(config::Symbol = :halfdegree;
                          staging_dir = nothing,
                          backend_size = 50,
                          repeat_year_forcing = false,
+                         prefetch = true,
                          restoring_dir = "climatology",
                          piston_velocity = 1 / 6, # m / day
                          start_date = DateTime(1958, 1, 1),
@@ -400,7 +405,8 @@ function omip_simulation(config::Symbol = :halfdegree;
                                                start_date,
                                                end_date,
                                                backend_size,
-                                               repeat_year_forcing)
+                                               repeat_year_forcing,
+                                               prefetch)
 
     coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                                   velocity_formulation,
