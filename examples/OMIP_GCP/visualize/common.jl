@@ -482,6 +482,25 @@ end
 # ECCO4 free-surface climatology
 # ══════════════════════════════════════════════════════════════
 
+# Load one ECCO4 monthly free-surface field, retrying on transient network
+# failures. The per-month NASA JPL ECCO download has a hard 30s timeout, and a
+# single timed-out month would otherwise abort the whole 252-month climatology.
+function ecco_free_surface_field(date; retries = 5)
+    last_err = nothing
+    for attempt in 1:retries
+        try
+            return Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date, restoring_kw()...), CPU())
+        catch e
+            last_err = e
+            attempt < retries || break
+            delay = 5 * attempt
+            @warn "ECCO free_surface load failed for $date (attempt $attempt/$retries) — retrying in $(delay)s" error=sprint(showerror, e)
+            sleep(delay)
+        end
+    end
+    throw(last_err)
+end
+
 function ecco_ssh_climatology_native(; start_date = DateTime(1992, 1, 1),
                                        end_date   = DateTime(2012, 12, 1),
                                        cache_dir  = obs_cache_dir)
@@ -491,10 +510,10 @@ function ecco_ssh_climatology_native(; start_date = DateTime(1992, 1, 1),
         return JLD2.load(cache_file, "ssh_mean")
     end
     @info "  Computing ECCO4 SSH climatology over $(length(dates)) months (one-time)..."
-    first_field = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date = first(dates), restoring_kw()...), CPU())
+    first_field = ecco_free_surface_field(first(dates))
     ssh_mean    = copy(Array(interior(first_field)))
     for date in dates[2:end]
-        f = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date, restoring_kw()...), CPU())
+        f = ecco_free_surface_field(date)
         ssh_mean .+= Array(interior(f))
     end
     ssh_mean ./= length(dates)
@@ -508,7 +527,7 @@ function ecco_ssh_on_grid(grid; reference_date = DateTime(1992, 1, 1))
     if isnothing(ECCO_SSH_NATIVE_MEAN_REF[])
         ECCO_SSH_NATIVE_MEAN_REF[] = ecco_ssh_climatology_native()
     end
-    template = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date = reference_date, restoring_kw()...), CPU())
+    template = ecco_free_surface_field(reference_date)
     interior(template) .= ECCO_SSH_NATIVE_MEAN_REF[]
     dst = Field{Center, Center, Nothing}(grid)
     interpolate!(dst, template)
