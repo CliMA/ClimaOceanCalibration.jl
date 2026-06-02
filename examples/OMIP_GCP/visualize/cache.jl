@@ -1251,8 +1251,13 @@ LOADERS[:amoc] = disk_cached(:amoc; source_fts_syms = :vvol_fts) do c
                                    stop_time  = c.stop_time)
     atl = get_field(c, :atlantic_mask_2d)
     Nx, Ny, Nz = size(vvol_mean)
+    # `vvol` is at Face-y, so on RightFaceFolded tripolar/ORCA it has Ny+1
+    # interior rows; the center-based Atlantic mask has only Ny rows. The
+    # extra top face is the fold line (north of the 65°N Atlantic cap) and
+    # carries no Atlantic transport, so we bound the loop by the mask.
+    Natl = size(atl, 2)
     transport_per_layer = zeros(Ny, Nz)
-    for k in 1:Nz, j in 1:Ny, i in 1:Nx
+    for k in 1:Nz, j in 1:min(Ny, Natl), i in 1:Nx
         atl[i, j] || continue
         transport_per_layer[j, k] += vvol_mean[i, j, k]
     end
