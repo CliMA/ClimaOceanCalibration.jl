@@ -838,6 +838,58 @@ LOADERS[:salinity_drift] = disk_cached(:salinity_drift; source_fts_syms = :so_h_
     profile_drift(c, :so_h_fts)
 end
 
+# Tropical-band (|lat| <= TROPICAL_LAT_DEG) counterpart of `profile_drift`.
+# The global `to_h`/`so_h` profiles in the averages file are already
+# horizontally averaged over the whole domain, so a tropical profile can't
+# be recovered from them — it must be recomputed from the full 3-D field
+# series (`to_fts`/`so_fts`). For each snapshot we take an ocean-masked mean
+# over cells with |φ| <= TROPICAL_LAT_DEG at every depth, then reference to
+# the first snapshot. Like `profile_drift`, it ignores the case averaging
+# window so the full record (spinup included) is plotted.
+const TROPICAL_LAT_DEG = 20
+
+function tropical_profile_drift(c, fts_sym)
+    fts    = get_field(c, fts_sym)
+    grid   = get_field(c, :grid)
+    mask3d = get_field(c, :ocean_mask_3d)
+    Nx, Ny, Nz = size(grid)
+
+    # Horizontal tropical-band mask (Nx, Ny). φ may be 1-D (lat-lon) or
+    # 2-D (tripolar/ORCA); `φnode` handles both index patterns.
+    inband = falses(Nx, Ny)
+    for j in 1:Ny, i in 1:Nx
+        abs(φnode(i, j, 1, grid, Center(), Center(), Center())) <= TROPICAL_LAT_DEG &&
+            (inband[i, j] = true)
+    end
+
+    Nt = length(fts.times)
+    Δ  = fill(NaN, Nt, Nz)
+    for n in 1:Nt
+        data = interior(fts[n])   # (Nx, Ny, Nz)
+        for k in 1:Nz
+            num = 0.0; den = 0.0
+            for j in 1:Ny, i in 1:Nx
+                (inband[i, j] && mask3d[i, j, k] > 0) || continue
+                v = data[i, j, k]
+                isfinite(v) || continue
+                num += v; den += 1
+            end
+            den > 0 && (Δ[n, k] = num / den)
+        end
+    end
+    Δ .-= reshape(Δ[1, :], 1, :)
+    return Δ
+end
+
+LOADERS[:tropical_temperature_drift] =
+    disk_cached(:tropical_temperature_drift; source_fts_syms = :to_fts) do c
+    tropical_profile_drift(c, :to_fts)
+end
+LOADERS[:tropical_salinity_drift] =
+    disk_cached(:tropical_salinity_drift; source_fts_syms = :so_fts) do c
+    tropical_profile_drift(c, :so_fts)
+end
+
 #####
 ##### Global-mean kinetic energy from u, v snapshots
 #####
