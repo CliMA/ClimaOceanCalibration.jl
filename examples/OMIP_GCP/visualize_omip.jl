@@ -107,9 +107,9 @@ const FIG_REGISTRY = [
     (n = 24, file = "fig24_near_surface_currents.jl",     fn = :fig24),
     (n = 25, file = "fig25_equatorial_undercurrent.jl",   fn = :fig25),
     (n = 26, file = "fig26_amoc_rapid.jl",                fn = :fig26),
-    (n = 27, file = "fig27_TS_drift_heatmap.jl",          fn = :fig27),
+    (n = 27, file = "fig21_TS_drift_heatmap.jl",          fn = :fig27),
     (n = 28, file = "fig28_tropical_TS_drift_heatmap.jl", fn = :fig28),
-    (n = 29, file = "fig29_tropical_TS_drift_heatmap.jl", fn = :fig29),
+    (n = 29, file = "fig28_tropical_TS_drift_heatmap.jl", fn = :fig29),
 ]
 
 # ══════════════════════════════════════════════════════════════
