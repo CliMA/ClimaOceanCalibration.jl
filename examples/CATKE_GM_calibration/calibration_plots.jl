@@ -258,8 +258,8 @@ function plot_tropical_target_bias(member_dir, filename_prefix,
     Sbias = (Sm .- Sw)[:, jkeep]
     φsub  = φ1d[jkeep]
 
-    Tmax = max(maximum(abs, filter(isfinite, Tbias)), 1e-6)
-    Smax = max(maximum(abs, filter(isfinite, Sbias)), 1e-6)
+    Tmax = 3.5
+    Smax = 1.5
 
     fig = Figure(size = (1300, 600), fontsize = 14)
     axT = Axis(fig[1, 1]; xlabel = "Longitude index", ylabel = "Latitude",
