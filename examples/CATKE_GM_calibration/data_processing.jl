@@ -24,10 +24,21 @@ const DEFAULT_Z_MIN     = -200.0
 """
     load_orca_5yr_average(member_dir, filename_prefix) -> (T, S, u)
 
-Load the per-member 5-year time-mean T, S, u as Oceananigans `Field`s.
+Load the per-member final time-mean T, S, u as Oceananigans `Field`s.
+
+The forward model encodes the averaging window in the filename
+(`<prefix>_<N>year_average.jld2`, e.g. `_3year_average.jld2`), so this
+globs for that pattern rather than assuming a fixed "5".
 """
 function load_orca_5yr_average(member_dir::AbstractString, filename_prefix::AbstractString = "orca_calib")
-    path = joinpath(member_dir, "$(filename_prefix)_5year_average.jld2")
+    matches = filter(readdir(member_dir)) do f
+        startswith(f, filename_prefix) && occursin(r"_\d+(\.\d+)?year_average\.jld2$", f)
+    end
+    isempty(matches) &&
+        error("load_orca_5yr_average: no '$(filename_prefix)_<N>year_average.jld2' in $member_dir")
+    length(matches) > 1 &&
+        @warn "load_orca_5yr_average: multiple averaging windows in $member_dir, using $(first(sort(matches)))" matches
+    path = joinpath(member_dir, first(sort(matches)))
     T = FieldTimeSeries(path, "T")[end]
     S = FieldTimeSeries(path, "S")[end]
     u = FieldTimeSeries(path, "u")[end]

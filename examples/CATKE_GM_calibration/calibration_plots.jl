@@ -2,9 +2,11 @@
 # Per-member diagnostic figures rendered from each iteration's outputs.
 #
 # Each member directory carries three calibration files:
-#   <prefix>_5year_average.jld2      — final 5-year mean of T, S, u
+#   <prefix>_<N>year_average.jld2    — final mean of T, S, u over the sampling
+#                                      window (N = window length in years)
 #   <prefix>_global_means.jld2       — 30-day-averaged global mean T, S vs time
 #   <prefix>_horizontal_means.jld2   — 30-day-averaged horizontal mean T(z), S(z) vs time
+#   <prefix>_tropical_horizontal_means.jld2 — as above, tropics (|lat| <= 20°) only
 #
 # That's enough to plot drift time series (fig16-style), final horizontal-mean
 # profiles vs WOA (fig17-style), the time×depth drift heatmap (fig21-style),
@@ -13,7 +15,7 @@
 # Zonal-mean sections (fig18/19) and equatorial undercurrent (fig25) require
 # a ConservativeRegridding regridder on the ORCA grid, which is too expensive
 # to build inside the calibration loop. Run examples/OMIP_GCP/visualize_omip.jl
-# against a member's 5year_average.jld2 to render those post-hoc.
+# against a member's <N>year_average.jld2 to render those post-hoc.
 
 using CairoMakie
 using JLD2
@@ -116,13 +118,20 @@ function plot_horizontal_mean_profile(member_dir, filename_prefix, woa_T::Field,
 end
 
 """
-    plot_TS_drift_heatmap(member_dir, filename_prefix, out_path)
+    plot_TS_drift_heatmap(member_dir, filename_prefix, out_path;
+                          means_stem = "horizontal_means", region_label = "")
 
 fig21-style: horizontal-mean T,S drift relative to the first record, as
 a time × depth heatmap.
+
+`means_stem` selects which `<prefix>_<means_stem>.jld2` profile file to read,
+so the same renderer serves the global mean (`"horizontal_means"`) and the
+tropical mean (`"tropical_horizontal_means"`). `region_label` is appended to
+each panel title (e.g. `", tropics |lat|<=20°"`).
 """
-function plot_TS_drift_heatmap(member_dir, filename_prefix, out_path)
-    path = joinpath(member_dir, "$(filename_prefix)_horizontal_means.jld2")
+function plot_TS_drift_heatmap(member_dir, filename_prefix, out_path;
+                               means_stem = "horizontal_means", region_label = "")
+    path = joinpath(member_dir, "$(filename_prefix)_$(means_stem).jld2")
     isfile(path) || (@warn "missing $path"; return)
 
     T_fts = FieldTimeSeries(path, "T")
@@ -140,14 +149,14 @@ function plot_TS_drift_heatmap(member_dir, filename_prefix, out_path)
 
     fig = Figure(size = (1100, 700), fontsize = 14)
     axT = Axis(fig[1, 1]; xlabel = "Time (years)", ylabel = "Depth (m)",
-               title = "ΔT (°C)")
+               title = "ΔT (°C)$region_label")
     hmT = heatmap!(axT, t, z, transpose(ΔT);
                    colormap = :balance, colorrange = (-Tmax, Tmax))
     Colorbar(fig[1, 2], hmT; label = "°C")
     ylims!(axT, (-5500, 0))
 
     axS = Axis(fig[2, 1]; xlabel = "Time (years)", ylabel = "Depth (m)",
-               title = "ΔS (PSU)")
+               title = "ΔS (PSU)$region_label")
     hmS = heatmap!(axS, t, z, transpose(ΔS);
                    colormap = :balance, colorrange = (-Smax, Smax))
     Colorbar(fig[2, 2], hmS; label = "PSU")
@@ -158,14 +167,19 @@ function plot_TS_drift_heatmap(member_dir, filename_prefix, out_path)
 end
 
 """
-    plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path; z_min = -500)
+    plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path;
+                                z_min = -500, means_stem = "horizontal_means",
+                                region_label = "")
 
 Same as `plot_TS_drift_heatmap` but restricted to the upper ocean (z ≥ `z_min`,
 default -500 m). The color range is derived from the displayed depth range only,
 so contrast reflects upper-ocean drift rather than being scaled by deep drift.
+`means_stem` / `region_label` work as in `plot_TS_drift_heatmap`.
 """
-function plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path; z_min = -500)
-    path = joinpath(member_dir, "$(filename_prefix)_horizontal_means.jld2")
+function plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path;
+                                     z_min = -500, means_stem = "horizontal_means",
+                                     region_label = "")
+    path = joinpath(member_dir, "$(filename_prefix)_$(means_stem).jld2")
     isfile(path) || (@warn "missing $path"; return)
 
     T_fts = FieldTimeSeries(path, "T")
@@ -186,14 +200,14 @@ function plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path; z_mi
 
     fig = Figure(size = (1100, 700), fontsize = 14)
     axT = Axis(fig[1, 1]; xlabel = "Time (years)", ylabel = "Depth (m)",
-               title = "ΔT (°C), upper $(abs(z_min)) m")
+               title = "ΔT (°C), upper $(abs(z_min)) m$region_label")
     hmT = heatmap!(axT, t, z, transpose(ΔT);
                    colormap = :balance, colorrange = (-Tmax, Tmax))
     Colorbar(fig[1, 2], hmT; label = "°C")
     ylims!(axT, (z_min, 0))
 
     axS = Axis(fig[2, 1]; xlabel = "Time (years)", ylabel = "Depth (m)",
-               title = "ΔS (PSU), upper $(abs(z_min)) m")
+               title = "ΔS (PSU), upper $(abs(z_min)) m$region_label")
     hmS = heatmap!(axS, t, z, transpose(ΔS);
                    colormap = :balance, colorrange = (-Smax, Smax))
     Colorbar(fig[2, 2], hmS; label = "PSU")
@@ -308,6 +322,28 @@ function plot_member_vs_woa(member_dir::AbstractString,
                               joinpath(fig_dir, "fig21_TS_drift_heatmap_upper500m.png"))
     catch e
         @warn "plot_TS_drift_heatmap_upper failed" exception=e
+    end
+
+    # Tropical-band (|lat| <= 20°) counterparts of the two drift heatmaps,
+    # reading the tropical horizontal-mean profile file written by the
+    # forward model. Skipped (warn-and-return) for members run before that
+    # writer was added.
+    try
+        plot_TS_drift_heatmap(member_dir, filename_prefix,
+                              joinpath(fig_dir, "fig21_TS_drift_heatmap_tropics.png");
+                              means_stem = "tropical_horizontal_means",
+                              region_label = ", tropics |lat|<=20°")
+    catch e
+        @warn "plot_TS_drift_heatmap (tropics) failed" exception=e
+    end
+
+    try
+        plot_TS_drift_heatmap_upper(member_dir, filename_prefix,
+                              joinpath(fig_dir, "fig21_TS_drift_heatmap_tropics_upper500m.png");
+                              means_stem = "tropical_horizontal_means",
+                              region_label = ", tropics |lat|<=20°")
+    catch e
+        @warn "plot_TS_drift_heatmap_upper (tropics) failed" exception=e
     end
 
     try

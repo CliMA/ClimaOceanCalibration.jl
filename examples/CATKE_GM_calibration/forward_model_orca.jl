@@ -4,21 +4,34 @@
 # built-in diagnostics disabled and a small set of custom output writers
 # attached:
 #
-#   - 5year_average.jld2     : single end-of-run 5-year mean of T, S, u on
-#                              the full ORCA grid (years 5-10 of a 10-year run).
+#   - <N>year_average.jld2   : single end-of-run mean of T, S, u on the full
+#                              ORCA grid, over the final `sampling_window`
+#                              (N = window in years, e.g. 5year_average.jld2).
 #   - global_means.jld2      : 30-day averaged global-mean T and S (scalars).
 #   - horizontal_means.jld2  : 30-day averaged horizontal-mean T and S (1D in z).
+#   - tropical_horizontal_means.jld2 : as above, but the horizontal mean is
+#                              restricted to the tropical band (|lat| <= 20°).
 #
-# These three files are all `analyze_iteration` needs for the figures we plot.
+# These files are all `analyze_iteration` needs for the figures we plot.
 
 using ClimaOceanCalibration
 using ClimaOceanCalibration.OMIPSimulations
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.Fields: Field
+using Oceananigans.Grids: φnode
 using Oceananigans.AbstractOperations: Average
 using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
 using Dates
+
+# Tropical band (|latitude| <= 20°) condition for a horizontally-conditional
+# `Average`. Signature matches Oceananigans' `condition` kernels:
+# (i, j, k, grid, args...) -> Bool. Used so a horizontal mean restricted to
+# the tropics can be written cheaply during the run (the global horizontal
+# means carry no latitude axis, so a tropical profile can't be recovered
+# post-hoc from them).
+tropical_condition(i, j, k, grid, args...) =
+    abs(φnode(i, j, k, grid, Center(), Center(), Center())) <= 20
 
 # Default CATKE / GM physics. Defaults match Oceananigans `CATKEMixingLength` /
 # `CATKEEquation` (which is what `omip_simulation` builds from when no override
@@ -176,11 +189,16 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
     S = ocean.model.tracers.S
     u = ocean.model.velocities.u
 
-    # 1. Single 5-year time mean at the end of the run (years 5-10 for a 10-year run).
-    ocean.output_writers[:calibration_5yr_mean] = JLD2Writer(
+    # 1. Single time mean over the final `sampling_window` of the run. The
+    #    filename encodes the actual window length (in years) rather than a
+    #    hardcoded "5", so a 3-year window writes `..._3year_average.jld2`.
+    sampling_years = sampling_window / (365days)
+    year_tag = isinteger(sampling_years) ? string(Int(sampling_years)) :
+                                           string(round(sampling_years; digits = 2))
+    ocean.output_writers[:calibration_final_mean] = JLD2Writer(
         ocean.model, (; T, S, u);
         schedule = AveragedTimeInterval(stop_time, window = sampling_window),
-        filename = joinpath(output_dir, "$(filename_prefix)_5year_average.jld2"),
+        filename = joinpath(output_dir, "$(filename_prefix)_$(year_tag)year_average.jld2"),
         overwrite_existing = true,
     )
 
@@ -201,6 +219,18 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
         ocean.model, (T = T_h, S = S_h);
         schedule = AveragedTimeInterval(scalar_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_horizontal_means.jld2"),
+        overwrite_existing = true,
+    )
+
+    # 4. Tropical (|lat| <= 20°) horizontal-mean 1-D profiles vs time
+    #    (for the tropics-only fig21 variants). Same as (3) but the
+    #    horizontal average is conditioned to the tropical band.
+    T_h_trop = Field(Average(T; dims = (1, 2), condition = tropical_condition))
+    S_h_trop = Field(Average(S; dims = (1, 2), condition = tropical_condition))
+    ocean.output_writers[:calibration_tropical_horizontal_means] = JLD2Writer(
+        ocean.model, (T = T_h_trop, S = S_h_trop);
+        schedule = AveragedTimeInterval(scalar_interval),
+        filename = joinpath(output_dir, "$(filename_prefix)_tropical_horizontal_means.jld2"),
         overwrite_existing = true,
     )
 
