@@ -158,6 +158,52 @@ function plot_TS_drift_heatmap(member_dir, filename_prefix, out_path)
 end
 
 """
+    plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path; z_min = -500)
+
+Same as `plot_TS_drift_heatmap` but restricted to the upper ocean (z ≥ `z_min`,
+default -500 m). The color range is derived from the displayed depth range only,
+so contrast reflects upper-ocean drift rather than being scaled by deep drift.
+"""
+function plot_TS_drift_heatmap_upper(member_dir, filename_prefix, out_path; z_min = -500)
+    path = joinpath(member_dir, "$(filename_prefix)_horizontal_means.jld2")
+    isfile(path) || (@warn "missing $path"; return)
+
+    T_fts = FieldTimeSeries(path, "T")
+    S_fts = FieldTimeSeries(path, "S")
+    t = T_fts.times ./ SECONDS_PER_YEAR
+    z = _z_centers(T_fts[1])
+
+    Nt = length(t)
+    T_mat = hcat([vec(interior(T_fts[i])) for i in 1:Nt]...) # z × t
+    S_mat = hcat([vec(interior(S_fts[i])) for i in 1:Nt]...)
+    ΔT = T_mat .- T_mat[:, 1]
+    ΔS = S_mat .- S_mat[:, 1]
+
+    # Color range from the displayed (upper-ocean) depths only.
+    kkeep = findall(zᵢ -> zᵢ >= z_min, z)
+    Tmax = max(maximum(abs, filter(isfinite, @view ΔT[kkeep, :])), 1e-6)
+    Smax = max(maximum(abs, filter(isfinite, @view ΔS[kkeep, :])), 1e-6)
+
+    fig = Figure(size = (1100, 700), fontsize = 14)
+    axT = Axis(fig[1, 1]; xlabel = "Time (years)", ylabel = "Depth (m)",
+               title = "ΔT (°C), upper $(abs(z_min)) m")
+    hmT = heatmap!(axT, t, z, transpose(ΔT);
+                   colormap = :balance, colorrange = (-Tmax, Tmax))
+    Colorbar(fig[1, 2], hmT; label = "°C")
+    ylims!(axT, (z_min, 0))
+
+    axS = Axis(fig[2, 1]; xlabel = "Time (years)", ylabel = "Depth (m)",
+               title = "ΔS (PSU), upper $(abs(z_min)) m")
+    hmS = heatmap!(axS, t, z, transpose(ΔS);
+                   colormap = :balance, colorrange = (-Smax, Smax))
+    Colorbar(fig[2, 2], hmS; label = "PSU")
+    ylims!(axS, (z_min, 0))
+
+    save(out_path, fig)
+    return out_path
+end
+
+"""
     plot_tropical_target_bias(member_dir, filename_prefix, woa_T, woa_S, lat_range, z_min, out_path)
 
 Plot the calibration target itself: 5-year-mean T,S bias vs WOA, vertically
@@ -209,12 +255,12 @@ function plot_tropical_target_bias(member_dir, filename_prefix,
                    nan_color = :lightgray)
     Colorbar(fig[1, 2], hmT; label = "°C")
 
-    axS = Axis(fig[1, 3]; xlabel = "Longitude index", ylabel = "Latitude",
+    axS = Axis(fig[2, 1]; xlabel = "Longitude index", ylabel = "Latitude",
                title = "S bias (model − WOA), upper $(abs(z_min)) m")
     hmS = heatmap!(axS, 1:size(Sbias, 1), φsub, Sbias;
                    colormap = :balance, colorrange = (-Smax, Smax),
                    nan_color = :lightgray)
-    Colorbar(fig[1, 4], hmS; label = "PSU")
+    Colorbar(fig[2, 2], hmS; label = "PSU")
 
     save(out_path, fig)
     return out_path
@@ -255,6 +301,13 @@ function plot_member_vs_woa(member_dir::AbstractString,
                               joinpath(fig_dir, "fig21_TS_drift_heatmap.png"))
     catch e
         @warn "plot_TS_drift_heatmap failed" exception=e
+    end
+
+    try
+        plot_TS_drift_heatmap_upper(member_dir, filename_prefix,
+                              joinpath(fig_dir, "fig21_TS_drift_heatmap_upper500m.png"))
+    catch e
+        @warn "plot_TS_drift_heatmap_upper failed" exception=e
     end
 
     try

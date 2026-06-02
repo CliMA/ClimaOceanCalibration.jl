@@ -76,7 +76,7 @@ mkpath(obs_cache_dir)
 # so each one gets its own independent buffer state. `prefetch = false`
 # because multiple FTS share the same JLD2 file and `Prefetched` assumes
 # sole-reader access.
-const FTS_BACKEND = InMemory(10; prefetch = false)
+const FTS_BACKEND = InMemory(10)
 
 savefig(fig, name) = save(joinpath(output_dir, name), fig)
 
@@ -150,7 +150,7 @@ run_dir_for(prefix) = "$(prefix)_run"
 # ══════════════════════════════════════════════════════════════
 
 function find_first_file(run_dir, prefix, group)
-    tag = "$(prefix)_$(group)"
+    tag = "$(basename(prefix))_$(group)"
     candidates = filter(f -> startswith(f, tag) && endswith(f, ".jld2") &&
                              !contains(f, "checkpoint"), readdir(run_dir))
     isempty(candidates) && error("No $group files for prefix '$prefix' in $run_dir")

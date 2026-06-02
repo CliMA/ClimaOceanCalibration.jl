@@ -52,3 +52,45 @@ function fig21(caches, labels, cases)
 
     savefig(fig, "fig21_TS_drift_heatmap.png")
 end
+
+# Figure 27: upper-ocean (z ≥ z_min, default -500 m) counterpart to fig21.
+# Same T (row 1) / S (row 2) horizontal-mean drift, but a single contour
+# panel per case spanning the surface down to `z_min` only — no deep
+# sub-axis. Intended as a focused upper-ocean view for calibration where
+# only the near-surface drift matters.
+function fig27(caches, labels, cases; z_min = -500)
+    ncases = length(labels)
+    temperature_drift_levels = range(-1.6, 1.6; length = 17)
+    salinity_drift_levels    = range(-0.1, 0.1; length = 21)
+    fig = Figure(size = (900 * ncases, 800), fontsize = 14)
+
+    function upper_panel!(fig, row, col, t, z, data, levels, title_str)
+        ax = Axis(fig[row, col]; title = title_str,
+                   xlabel = "Time (years)", ylabel = "Depth (m)")
+        hm = contourf!(ax, t, z, data; levels = levels, colormap = :balance,
+                        extendlow = :auto, extendhigh = :auto)
+        ylims!(ax, (z_min, 0))
+        return hm
+    end
+
+    for (i, lab) in enumerate(labels)
+        c  = caches[lab]
+        z  = get_field(c, :depth)
+        ΔT = get_field(c, :temperature_drift)
+        ΔS = get_field(c, :salinity_drift)
+        tT = get_field(c, :to_h_fts).times ./ (365.25 * 24 * 3600)
+        tS = get_field(c, :so_h_fts).times ./ (365.25 * 24 * 3600)
+
+        hm_T = upper_panel!(fig, 1, 2i-1, tT, z, ΔT,
+                            temperature_drift_levels,
+                            "$lab: ΔT (deg C), upper $(abs(z_min)) m")
+        Colorbar(fig[1, 2i], hm_T; label = "deg C")
+
+        hm_S = upper_panel!(fig, 2, 2i-1, tS, z, ΔS,
+                            salinity_drift_levels,
+                            "$lab: ΔS (PSU), upper $(abs(z_min)) m")
+        Colorbar(fig[2, 2i], hm_S; label = "PSU")
+    end
+
+    savefig(fig, "fig27_TS_drift_heatmap_upper$(abs(z_min))m.png")
+end

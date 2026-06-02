@@ -3,7 +3,7 @@
 # Rows: NH March, SH March, NH September, SH September. Columns: cases.
 function fig05(caches, labels, cases)
     ncases = length(labels)
-    fig = Figure(size = (500 * ncases, 500 * 4), fontsize = 14)
+    fig = Figure(size = (600 * ncases + 200, 500 * 4), fontsize = 14)
 
     function maybe_plot(row_idx, lab_idx, lab, sym, hemisphere, season)
         data = get_field(caches[lab], sym)
