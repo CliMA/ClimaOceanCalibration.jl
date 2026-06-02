@@ -72,6 +72,27 @@ mkpath(output_dir)
 const obs_cache_dir = joinpath(output_dir, "obs_cache")
 mkpath(obs_cache_dir)
 
+# Directory holding the WOA / ECCO climatology that the OMIP simulation already
+# downloaded and inpainted (the `restoring_dir` passed to `omip_simulation`, see
+# examples/OMIP_GCP/launch_inrepo.sh — default /home/ext_xinkai_caltech_edu/ECCO_data).
+# Threading this `dir` into the WOA/ECCO `Metadatum` calls below reuses both the
+# raw downloads and the cached `*_inpainted.jld2` files, skipping the multi-second
+# re-download + re-inpaint on every figure run. Override with RESTORING_DIR=...
+# Falls back to ClimaOcean's scratchspace (downloads on demand) if the dir is absent.
+const RESTORING_DIR = let d = get(ENV, "RESTORING_DIR", "/home/ext_xinkai_caltech_edu/ECCO_data")
+    if isdir(d)
+        @info "Reusing WOA/ECCO climatology from RESTORING_DIR: $d"
+        d
+    else
+        @warn "RESTORING_DIR '$d' not found — WOA/ECCO data will download to the default scratchspace. Set RESTORING_DIR to the simulation's restoring_dir to reuse it."
+        nothing
+    end
+end
+
+# Build the `dir = …` kwarg for Metadatum only when RESTORING_DIR exists, so a
+# `nothing` falls back to ClimaOcean's default location instead of erroring.
+restoring_kw() = isnothing(RESTORING_DIR) ? (;) : (; dir = RESTORING_DIR)
+
 # Shared backend template — `deepcopy(FTS_BACKEND)` for every FieldTimeSeries
 # so each one gets its own independent buffer state. `prefetch = false`
 # because multiple FTS share the same JLD2 file and `Prefetched` assumes
@@ -470,10 +491,10 @@ function ecco_ssh_climatology_native(; start_date = DateTime(1992, 1, 1),
         return JLD2.load(cache_file, "ssh_mean")
     end
     @info "  Computing ECCO4 SSH climatology over $(length(dates)) months (one-time)..."
-    first_field = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date = first(dates)), CPU())
+    first_field = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date = first(dates), restoring_kw()...), CPU())
     ssh_mean    = copy(Array(interior(first_field)))
     for date in dates[2:end]
-        f = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date), CPU())
+        f = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date, restoring_kw()...), CPU())
         ssh_mean .+= Array(interior(f))
     end
     ssh_mean ./= length(dates)
@@ -487,7 +508,7 @@ function ecco_ssh_on_grid(grid; reference_date = DateTime(1992, 1, 1))
     if isnothing(ECCO_SSH_NATIVE_MEAN_REF[])
         ECCO_SSH_NATIVE_MEAN_REF[] = ecco_ssh_climatology_native()
     end
-    template = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date = reference_date), CPU())
+    template = Field(Metadatum(:free_surface; dataset = ECCO4Monthly(), date = reference_date, restoring_kw()...), CPU())
     interior(template) .= ECCO_SSH_NATIVE_MEAN_REF[]
     dst = Field{Center, Center, Nothing}(grid)
     interpolate!(dst, template)
