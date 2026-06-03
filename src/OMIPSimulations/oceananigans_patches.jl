@@ -115,6 +115,26 @@ memoize_jld2_part(fn, memo, path::AbstractString; reader_kw = NamedTuple()) =
     end
 
 """
+    jld2_timeseries_iterations(jf, name = "t")
+
+Sorted integer iteration keys of `timeseries/<name>` in the open JLD2 file
+`jf`, or an empty vector if that group does not exist.
+
+With `file_splitting`, Oceananigans creates each `..._partN.jld2` file at a
+split boundary but only materializes the `timeseries/<name>` group on the
+first actual write to that part. A run that stops right at/after a split
+leaves a trailing part with no `timeseries/t` group at all, so a naive
+`jf["timeseries/t"]` throws `KeyError: key "t" not found`. Treat such a part
+as empty instead.
+"""
+function jld2_timeseries_iterations(jf, name::AbstractString = "t")
+    haskey(jf, "timeseries") || return Int[]
+    haskey(jf["timeseries"], name) || return Int[]
+    ks = keys(jf["timeseries/$name"])
+    return sort!([parse(Int, k) for k in ks if !isnothing(tryparse(Int, k))])
+end
+
+"""
     total_jld2_timeseries_snapshot_count(path; reader_kw = NamedTuple())
 
 Total number of time indices for an Oceananigans JLD2 output stem `path`
@@ -126,7 +146,7 @@ function total_jld2_timeseries_snapshot_count(path::AbstractString; reader_kw = 
     n = 0
     for p in jld2_parts(path)
         n += memoize_jld2_part(JLD2_NT_PER_PART, p; reader_kw) do jf
-            length(keys(jf["timeseries/t"]))
+            length(jld2_timeseries_iterations(jf))
         end
     end
     return n
@@ -144,7 +164,7 @@ function total_jld2_timeseries_times(path::AbstractString; reader_kw = NamedTupl
     times = Float64[]
     for p in jld2_parts(path)
         ts = memoize_jld2_part(JLD2_TIMES_PER_PART, p; reader_kw) do jf
-            iterations = sort!(parse.(Int, collect(keys(jf["timeseries/t"]))))
+            iterations = jld2_timeseries_iterations(jf)
             return Float64[jf["timeseries/t/$it"] for it in iterations]
         end
         append!(times, ts)
@@ -162,12 +182,18 @@ only the last part file and reads only the highest-iteration entry of
 network filesystems.
 """
 function last_jld2_timeseries_time(path::AbstractString; reader_kw = NamedTuple())
-    last_part = last(jld2_parts(path))
-    return with_jld2(last_part; reader_kw) do jf
-        ks = keys(jf["timeseries/t"])
-        max_iter = maximum(parse(Int, k) for k in ks if !isnothing(tryparse(Int, k)))
-        return Float64(jf["timeseries/t/$max_iter"])
+    # Scan parts from last to first: a run that stopped at a split boundary
+    # can leave a trailing part with no snapshots, so the latest time lives
+    # in the last *non-empty* part.
+    for part in Iterators.reverse(jld2_parts(path))
+        t = with_jld2(part; reader_kw) do jf
+            iterations = jld2_timeseries_iterations(jf)
+            isempty(iterations) && return nothing
+            return Float64(jf["timeseries/t/$(maximum(iterations))"])
+        end
+        t === nothing || return t
     end
+    error("No JLD2 timeseries snapshots at path '$path' (all parts empty).")
 end
 
 """
@@ -199,8 +225,7 @@ function total_jld2_scalar_timeseries(path::AbstractString, name::AbstractString
     values = Float64[]
     for p in jld2_parts(path)
         chunk = with_jld2(p; reader_kw) do jf
-            ks = collect(keys(jf["timeseries/$name"]))
-            iterations = sort!([parse(Int, k) for k in ks if !isnothing(tryparse(Int, k))])
+            iterations = jld2_timeseries_iterations(jf, name)
             return Float64[jf["timeseries/$name/$it"][1] for it in iterations]
         end
         append!(values, chunk)
