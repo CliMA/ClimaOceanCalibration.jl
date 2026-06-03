@@ -40,7 +40,7 @@ const use_gm = args["GM"]
 # Configuration
 # ============================================
 const n_iterations      = 10                 # number of EKI iterations
-const prior_std         = 0.2                # stddev of each scaling prior (mean = 1, bounded > 0)
+const prior_std         = 0.5                # stddev of each scaling prior (mean = 1, bounded > 0)
 const T_std             = 0.2                # observation noise stddev for T (°C); sets diagonal cov entry T_std^2
 const S_std             = T_std / 4          # observation noise stddev for S (PSU); ratio 1:4 matches typical T,S scale
 const simulation_length = 5                  # forward-model run length in years
