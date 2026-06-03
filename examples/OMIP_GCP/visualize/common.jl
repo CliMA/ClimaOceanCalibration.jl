@@ -434,19 +434,22 @@ function geo_panel!(fig, pos, data;
     # it the title text in polar-stereographic panels can overlap the
     # longitude labels (e.g. "30°") at the top.
     ga = GeoAxis(fig[pos...]; dest = projection, title, titlegap = 24)
+    # GeoMakie's xlims!/ylims! take longitude/latitude in degrees, NOT
+    # projected coordinates. Used to clip polar caps so the data fills
+    # the panel instead of being squashed into a whole-globe view.
+    isnothing(lonlims) || xlims!(ga, lonlims...)
+    isnothing(latlims) || ylims!(ga, latlims...)
     # GeoMakie's automatic graticule (`geoticks`) misbehaves on the clipped
     # polar panels: for a 45°-wide latitude band it picks a 3.75° step
     # (a cloud of latitude rings with colliding edge labels), and its
     # longitude ticks span -180:30:180 — labelling the ±180 seam meridian
     # twice, which renders as a doubled "-180°". Callers (polar panels)
     # pass explicit ticks to override this; global maps leave it automatic.
+    # Must be set AFTER xlims!/ylims!: overriding the ticks rebuilds the
+    # graticule, and doing so before valid limits exist corrupts the scene
+    # bounding box that the limit-setters then read (inverted-limits error).
     isnothing(xticks) || (ga.xticks = xticks)
     isnothing(yticks) || (ga.yticks = yticks)
-    # GeoMakie's xlims!/ylims! take longitude/latitude in degrees, NOT
-    # projected coordinates. Used to clip polar caps so the data fills
-    # the panel instead of being squashed into a whole-globe view.
-    isnothing(lonlims) || xlims!(ga, lonlims...)
-    isnothing(latlims) || ylims!(ga, latlims...)
     # Land polygon is drawn UNDER the contourf so NaN cells (regridded
     # land) show the polygon. Data is drawn on top — it should be
     # NaN-masked at land cells; if it isn't, the bleed is a regridder
