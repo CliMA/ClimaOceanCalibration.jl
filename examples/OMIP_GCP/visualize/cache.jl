@@ -1148,6 +1148,13 @@ function polar_panel!(fig, pos, data;
     data_sub    = data[:, j_keep]
     obs_sub     = isnothing(obs_contour) ? nothing : obs_contour[:, j_keep]
     latlims     = hemisphere == :north ? (lat_cutoff, 90.0) : (-90.0, -lat_cutoff)
+    # Explicit graticule to override GeoMakie's automatic ticks on the
+    # clipped polar band. Latitude rings every 10° (instead of the auto
+    # ~3.75° cloud). Longitude meridians every 30° but excluding +180, so
+    # the ±180 seam meridian / label is drawn once rather than doubled.
+    lat0      = ceil(Int, lat_cutoff / 10) * 10
+    lat_ticks = hemisphere == :north ? collect(lat0:10:80) : collect(-80:10:-lat0)
+    lon_ticks = collect(-180:30:150)
     return geo_panel!(fig, pos, data_sub;
                       x = LATLON_LON_CENTERS,
                       y = lat_sub,
@@ -1155,6 +1162,8 @@ function polar_panel!(fig, pos, data;
                       latlims = latlims,
                       lonlims = (-180.0, 180.0),
                       obs_contour = obs_sub,
+                      xticks = lon_ticks,
+                      yticks = lat_ticks,
                       kwargs...)
 end
 
