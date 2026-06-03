@@ -233,9 +233,22 @@ function total_jld2_scalar_timeseries(path::AbstractString, name::AbstractString
     return values
 end
 
+"""
+    nonempty_jld2_parts(path; reader_kw = NamedTuple())
+
+On-disk part files for `path` that actually carry timeseries snapshots.
+A run that stops at a `file_splitting` boundary leaves a trailing
+`..._partN.jld2` with no `timeseries/t` group; such empty parts are dropped
+so neither our readers nor upstream Oceananigans `KeyError` on them. Per-part
+counts are memoized via `total_jld2_timeseries_snapshot_count`.
+"""
+nonempty_jld2_parts(path::AbstractString; reader_kw = NamedTuple()) =
+    filter(p -> total_jld2_timeseries_snapshot_count(p; reader_kw) > 0,
+           jld2_output_part_paths(path))
+
 function detect_split_file_path(path::AbstractString, reader_kw)
     isfile(path) && return nothing
-    parts = jld2_output_part_paths(path)
+    parts = nonempty_jld2_parts(path; reader_kw)
     isempty(parts) && return nothing
     nper = Int[total_jld2_timeseries_snapshot_count(p; reader_kw) for p in parts]
     return SplitFilePath(parts, cumsum(nper))
@@ -268,18 +281,39 @@ end
 # `set!(::InMemoryFTS, ::SplitFilePath)` natively in
 # `OutputReaders/set_field_time_series.jl`.
 
-# Patch 2: detect split sets when the user passes a single stem path with an
-# `InMemory` backend, and rewrap the FTS so its `path` is a `SplitFilePath`.
+# Patch 2: build the FTS from the *non-empty* part files only.
+#
+# Upstream `FieldTimeSeries(path, name)` globs every `..._partN.jld2` and reads
+# `timeseries/t` from each (field_time_series.jl ~897). A run that stops at a
+# `file_splitting` boundary leaves a trailing part with no `timeseries/t` group,
+# so that glob `KeyError`s. We resolve the parts ourselves, drop the empty ones,
+# and call the lower-level `FieldTimeSeries(::JLDFile, …; part_paths, Nparts, …)`
+# constructor directly — which also builds the `SplitFilePath` (so this subsumes
+# the old InMemory split-rewrap that Patch 2 used to do after the fact).
 function Oceananigans.OutputReaders.FieldTimeSeries(path::String, name::String;
                                                     backend = InMemory(),
                                                     reader_kw = NamedTuple(),
                                                     kwargs...)
-    fts = invoke(Oceananigans.OutputReaders.FieldTimeSeries,
-                 Tuple{String, Vararg{Any}},
-                 path, name; backend, reader_kw, kwargs...)
-    if backend isa InMemory && !(fts.path isa SplitFilePath)
-        sfp = detect_split_file_path(path, reader_kw)
-        sfp === nothing || (fts = rebuild_fts_with_path(fts, sfp))
+    parts = nonempty_jld2_parts(path; reader_kw)
+
+    # Single file, single non-empty part, or nothing resolved → let upstream
+    # handle it (it errors informatively when no data exists).
+    if length(parts) <= 1
+        resolved = isempty(parts) ? path : first(parts)
+        return invoke(Oceananigans.OutputReaders.FieldTimeSeries,
+                      Tuple{String, Vararg{Any}},
+                      resolved, name; backend, reader_kw, kwargs...)
     end
-    return fts
+
+    # Genuine multi-part split: bypass upstream's glob and pass the filtered
+    # part list explicitly. The JLDFile-level constructor reads + closes the
+    # handle and stitches the parts into a SplitFilePath.
+    file = JLD2.jldopen(first(parts); reader_kw...)
+    return Oceananigans.OutputReaders.FieldTimeSeries(file, name;
+                                                      backend,
+                                                      part_paths = parts,
+                                                      Nparts = length(parts),
+                                                      path = first(parts),
+                                                      reader_kw,
+                                                      kwargs...)
 end
