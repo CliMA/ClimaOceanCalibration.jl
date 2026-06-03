@@ -35,6 +35,7 @@ NumericalEarth = "904d977b-046a-4731-8b86-9235c0d1ef02"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 OpenMPI_jll = "fe0851c0-eecd-5654-98d4-656369965a5c"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 PkgDev = "149e707d-584d-56d3-88ec-740c18e106ff"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -45,11 +46,11 @@ WorldOceanAtlasTools = "04f20302-f1b9-11e8-29d9-7d841cb0a64a"
 XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 
 [sources]
-ClimaSeaIce = {url = "https://github.com/CliMA/ClimaSeaIce.jl.git", rev = "xk/free-oceananigans-108-compat"}
-ConservativeRegridding = {url = "https://github.com/JuliaGeo/ConservativeRegridding.jl.git", rev = "main"}
-NumericalEarth = {url = "https://github.com/NumericalEarth/NumericalEarth.jl.git", rev = "ss/omip-prototype"}
-Oceananigans = {url = "https://github.com/CliMA/Oceananigans.jl.git", rev = "xk/for-omip-merge"}
-SeawaterPolynomials = {url = "https://github.com/CliMA/SeawaterPolynomials.jl.git", rev = "ss/conversion-functions"}
+ClimaSeaIce = {rev = "xk/free-oceananigans-108-compat", url = "https://github.com/CliMA/ClimaSeaIce.jl.git"}
+ConservativeRegridding = {rev = "main", url = "https://github.com/JuliaGeo/ConservativeRegridding.jl.git"}
+NumericalEarth = {rev = "ss/omip-prototype", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
+Oceananigans = {rev = "xk/for-omip-merge", url = "https://github.com/CliMA/Oceananigans.jl.git"}
+SeawaterPolynomials = {rev = "ss/conversion-functions", url = "https://github.com/CliMA/SeawaterPolynomials.jl.git"}
 
 [compat]
 CFTime = "0.2"
@@ -63,6 +64,7 @@ NumericalEarth = "0.5.4"
 Oceananigans = "0.109.2"
 OpenMPI_jll = "5.0.11"
 OrderedCollections = "1"
+PackageCompiler = "2.3.0"
 PkgDev = "1.7"
 PrecompileTools = "1.3.3"
 SeawaterPolynomials = "0.4.0"
