@@ -33,6 +33,12 @@ import Dates
 const GPUS_PER_NODE = 8
 const THREADS_PER_MEMBER = 12
 
+# Optional PackageCompiler sysimage for the per-member forward-model processes.
+# Set by the launch scripts (run_CATKE_GM_calibration_orca[_nogm].slurm) via the
+# CALIBRATION_SYSIMAGE env var to a path on the shared filesystem. When unset or
+# missing, member launches run without --sysimage (current behavior).
+const SYSIMAGE = get(ENV, "CALIBRATION_SYSIMAGE", "")
+
 # ----------------------------------------------------------------------
 # Pre-emption-safe state: persistent per-iteration ledger of submitted
 # Slurm job IDs + sacct-based liveness check + extended checkpoint states.
@@ -290,6 +296,10 @@ function batched_job_body(
     n_gpus = length(members)
     interface_jld2 = joinpath(output_dir, "interface.jld2")
 
+    # Bake the sysimage flag (resolved in the driver process) into each member
+    # command, so member subshells need no env propagation.
+    sysimage_flag = (!isempty(SYSIMAGE) && isfile(SYSIMAGE)) ? "--sysimage=$SYSIMAGE" : ""
+
     launch_blocks = String[]
     for (gpu_idx, member) in enumerate(members)
         gpu_id          = gpu_idx - 1
@@ -315,7 +325,7 @@ function batched_job_body(
     mkdir -p "\$(dirname "$member_ckpt")"
     echo "in_progress" > "$member_ckpt"
     echo "[Member $member] Starting on GPU $gpu_id at \$(date)"
-    script -q -c "julia +1.12.3 --threads=$(THREADS_PER_MEMBER) $exeflags --project=$experiment_dir -e \\\"
+    script -q -c "julia +1.12.3 --threads=$(THREADS_PER_MEMBER) $sysimage_flag $exeflags --project=$experiment_dir -e \\\"
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
