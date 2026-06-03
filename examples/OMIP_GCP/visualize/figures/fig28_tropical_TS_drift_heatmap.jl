@@ -57,7 +57,7 @@ end
 function fig29(caches, labels, cases; z_min = -500)
     ncases = length(labels)
     temperature_drift_levels = range(-1.6, 1.6; length = 17)
-    salinity_drift_levels    = range(-0.1, 0.1; length = 21)
+    salinity_drift_levels    = range(-0.2, 0.2; length = 21)
     fig = Figure(size = (900 * ncases, 800), fontsize = 14)
 
     function upper_panel!(fig, row, col, t, z, data, levels, title_str)
