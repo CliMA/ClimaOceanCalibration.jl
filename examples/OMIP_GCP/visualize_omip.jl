@@ -61,10 +61,24 @@
 #     # (prefix = "orca_corrected_snow_kskew1000_ksymm1000_bih50days", label = "ORCA GM1000",         years_from_end = 5),
 # ]
 
-cases = [
-    (prefix = "/home/ext_xinkai_caltech_edu/CES_oceananigans/ClimaOceanCalibration.jl/examples/OMIP_GCP/orca_corrected_snow_kskew1000_ksymm1000_bih50days_5yr",
-     label = "ORCA CATKE GM1000", years_from_end = 2),
-]
+# When RUN_PREFIX is set in the environment (e.g. by launch_inrepo.sh with
+# VISUALIZE=true), build the single case from it so the figures describe the
+# run that was just produced. Otherwise fall back to the hardcoded case below.
+#   RUN_PREFIX      run name / path (without the `_run` suffix), e.g. "orca_ncar"
+#   RUN_LABEL       legend label (default: basename(RUN_PREFIX))
+#   YEARS_FROM_END  averaging window in years from the last snapshot (default: 2)
+if haskey(ENV, "RUN_PREFIX")
+    cases = [(
+        prefix         = ENV["RUN_PREFIX"],
+        label          = get(ENV, "RUN_LABEL", basename(ENV["RUN_PREFIX"])),
+        years_from_end = parse(Int, get(ENV, "YEARS_FROM_END", "2")),
+    )]
+else
+    cases = [
+        (prefix = "/home/ext_xinkai_caltech_edu/CES_oceananigans/ClimaOceanCalibration.jl/examples/OMIP_GCP/orca_corrected_snow_kskew1000_ksymm1000_bih50days_5yr",
+         label = "ORCA CATKE GM1000", years_from_end = 2),
+    ]
+end
 
 output_dir = length(ARGS) >= 1 ? ARGS[1] : "figures"
 
