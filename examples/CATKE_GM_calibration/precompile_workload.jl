@@ -31,7 +31,7 @@ using Dates
 # and the same `using` set as the real forward model.
 include(joinpath(@__DIR__, "forward_model_orca.jl"))
 
-function _precompile_workload()
+function _precompile_workload(use_gm::Bool)
     forcing_dir   = get(ENV, "FORCING_DIR",   joinpath(homedir(), "JRA55_data"))
     restoring_dir = get(ENV, "RESTORING_DIR", joinpath(homedir(), "ECCO_data"))
     output_dir    = mktempdir(; prefix = "sysimage_trace_")
@@ -39,9 +39,17 @@ function _precompile_workload()
     # Default (scaling = 1) physics — exercises the same construction path as a
     # real member with no parameter overrides.
     catke_parameters = build_catke_parameters(Dict{String,Float64}())
-    gm_parameters    = build_gm_parameters(Dict{String,Float64}())
 
-    @info "precompile_workload: building omip_simulation(:orca; GPU()) for a 2-step trace"
+    # GM on vs off are DIFFERENT model types: with use_gm = false,
+    # forward_model_orca.jl passes the (κ_skew = 0, κ_symmetric = 0) sentinel,
+    # which omip_closure uses to drop the IsopycnalSkewSymmetricDiffusivity
+    # closure entirely → a different OceanSeaIceModel type → different run!
+    # specializations. We trace BOTH into the one sysimage so the GM and no-GM
+    # calibration campaigns both start hot.
+    gm_parameters = use_gm ? build_gm_parameters(Dict{String,Float64}()) :
+                             (; κ_skew = 0, κ_symmetric = 0)
+
+    @info "precompile_workload: building omip_simulation(:orca; GPU(), use_gm=$use_gm) for a 10-step trace"
     @info "  forcing_dir   = $forcing_dir"
     @info "  restoring_dir = $restoring_dir"
     @info "  output_dir    = $output_dir"
@@ -76,12 +84,15 @@ function _precompile_workload()
     sim.stop_time      = Inf
     run!(sim)
 
-    @info "precompile_workload: run! returned cleanly after 2 steps"
+    @info "precompile_workload: run! returned cleanly (use_gm=$use_gm)"
     return nothing
 end
 
 try
-    _precompile_workload()
+    # Trace both calibration configurations into the one sysimage.
+    for use_gm in (true, false)
+        _precompile_workload(use_gm)
+    end
 catch e
     @warn "precompile_workload failed; sysimage will still bake everything compiled so far" exception = (e, catch_backtrace())
 end
