@@ -29,12 +29,17 @@ function parse_commandline()
             help = "Enable the GM (IsopycnalSkewSymmetric) eddy closure in the forward model"
             arg_type = Bool
             default = true
+        "--calibrate_gm"
+            help = "Also calibrate the three GM scaling parameters (κ_skew, κ_symmetric, max_slope)"
+            arg_type = Bool
+            default = false
     end
     return parse_args(s)
 end
 
-const args   = parse_commandline()
-const use_gm = args["GM"]
+const args         = parse_commandline()
+const use_gm       = args["GM"]
+const calibrate_gm = args["calibrate_gm"]
 
 # ============================================
 # Configuration
@@ -92,13 +97,12 @@ const catke_param_names = (
     # "Cᵂϵ_scaling",   # Dissipative near-bottom TKE flux coefficient
 )
 
-# const gm_param_names = (
-#     "κ_skew_scaling",       # GM skew diffusivity
-#     "κ_symmetric_scaling",  # Redi symmetric diffusivity
-#     "max_slope_scaling",    # FluxTapering slope limiter max slope
-# )
-
-const gm_param_names = ()
+# GM scaling parameters, only calibrated when --calibrate_gm is true.
+const gm_param_names = calibrate_gm ? (
+    "κ_skew_scaling",       # GM skew diffusivity
+    "κ_symmetric_scaling",  # Redi symmetric diffusivity
+    "max_slope_scaling",    # FluxTapering slope limiter max slope
+) : ()
 
 const woa_file = abspath(joinpath(@__DIR__, "calibration_data", "woa_orca_grid.jld2"))
 isfile(woa_file) || error("""
