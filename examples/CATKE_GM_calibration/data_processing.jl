@@ -22,7 +22,23 @@ const DEFAULT_LAT_RANGE = (-20.0, 20.0)
 const DEFAULT_Z_MIN     = -200.0
 
 """
-    load_orca_5yr_average(member_dir, filename_prefix) -> (T, S, u)
+    member_has_output(member_dir, filename_prefix) -> Bool
+
+True if `member_dir` exists and contains at least one forward-model output
+file (the `<prefix>_<years>year_average.jld2` mean or any `<prefix>_*means.jld2`
+diagnostic). False when the run failed or the batch job died before writing
+anything, so callers can skip the member instead of warning per missing file.
+"""
+function member_has_output(member_dir::AbstractString, filename_prefix::AbstractString = "orca_calib")
+    isdir(member_dir) || return false
+    return any(readdir(member_dir)) do f
+        startswith(f, filename_prefix) &&
+            (occursin(r"_\d+(\.\d+)?year_average\.jld2$", f) || occursin(r"means\.jld2$", f))
+    end
+end
+
+"""
+    load_orca_averaged(member_dir, filename_prefix) -> (T, S, u)
 
 Load the per-member final time-mean T, S, u as Oceananigans `Field`s.
 
@@ -30,14 +46,16 @@ The forward model encodes the averaging window in the filename
 (`<prefix>_<N>year_average.jld2`, e.g. `_3year_average.jld2`), so this
 globs for that pattern rather than assuming a fixed "5".
 """
-function load_orca_5yr_average(member_dir::AbstractString, filename_prefix::AbstractString = "orca_calib")
+function load_orca_averaged(member_dir::AbstractString, filename_prefix::AbstractString = "orca_calib")
     matches = filter(readdir(member_dir)) do f
         startswith(f, filename_prefix) && occursin(r"_\d+(\.\d+)?year_average\.jld2$", f)
     end
     isempty(matches) &&
-        error("load_orca_5yr_average: no '$(filename_prefix)_<N>year_average.jld2' in $member_dir")
+        error("load_orca_averaged: no file matching '$(filename_prefix)_<years>year_average.jld2' " *
+              "(where <years> is the sampling window, e.g. 3) in $member_dir — " *
+              "the member produced no averaged output, usually because its run failed")
     length(matches) > 1 &&
-        @warn "load_orca_5yr_average: multiple averaging windows in $member_dir, using $(first(sort(matches)))" matches
+        @warn "load_orca_averaged: multiple averaging windows in $member_dir, using $(first(sort(matches)))" matches
     path = joinpath(member_dir, first(sort(matches)))
     T = FieldTimeSeries(path, "T")[end]
     S = FieldTimeSeries(path, "S")[end]
@@ -89,7 +107,7 @@ function process_member_data(member_dir::AbstractString,
                              filename_prefix::AbstractString = "orca_calib";
                              lat_range = DEFAULT_LAT_RANGE,
                              z_min     = DEFAULT_Z_MIN)
-    T, S, _ = load_orca_5yr_average(member_dir, filename_prefix)
+    T, S, _ = load_orca_averaged(member_dir, filename_prefix)
     T_vec = extract_tropics_top(T; lat_range, z_min)
     S_vec = extract_tropics_top(S; lat_range, z_min)
     return vcat(T_vec, S_vec)

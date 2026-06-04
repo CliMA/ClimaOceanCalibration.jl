@@ -227,7 +227,7 @@ heatmap of (T_model - T_woa) and (S_model - S_woa).
 function plot_tropical_target_bias(member_dir, filename_prefix,
                                    woa_T::Field, woa_S::Field,
                                    lat_range, z_min, out_path)
-    T, S, _ = load_orca_5yr_average(member_dir, filename_prefix)
+    T, S, _ = load_orca_averaged(member_dir, filename_prefix)
 
     function vmean_top(field::Field, ref::Field)
         f = on_architecture(CPU(), field)

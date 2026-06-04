@@ -171,6 +171,16 @@ function ClimaCalibrate.analyze_iteration(ekp, g_ensemble, prior, calib_output_d
     mkpath(iter_fig_root)
     for m in 1:ensemble_size
         member_path = ClimaCalibrate.path_to_ensemble_member(calib_output_dir, iteration, m)
+        # Skip members that produced no output to plot. Two cases:
+        #  - the forward model caught an error and wrote RUN_FAILED.err, or
+        #  - the whole batch job died outside Julia (node/GPU/sbatch failure),
+        #    leaving the member dir empty with no marker at all.
+        # Either way there are no *_means.jld2 / *_average.jld2 files, so every
+        # sub-plot would warn; skip with one line instead.
+        if isfile(joinpath(member_path, "RUN_FAILED.err")) || !member_has_output(member_path, filename_prefix)
+            @info "Skipping figures for member $m (iter $iteration): no output (failed or never ran)"
+            continue
+        end
         fig_dir = joinpath(iter_fig_root, "member_$(m)")
         try
             plot_member_vs_woa(member_path, filename_prefix, woa_file,
