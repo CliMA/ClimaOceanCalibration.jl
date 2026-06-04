@@ -73,10 +73,14 @@ function _precompile_workload(use_gm::Bool)
                           filename_prefix = "sysimage_trace")
 
     # Same output writers as the real run so their (de)serialization paths are
-    # traced too. sampling_window is irrelevant for a 10-step run.
+    # traced too. The averaged-final writer uses AveragedTimeInterval(stop_time,
+    # window = sampling_window), so the window must not exceed the interval —
+    # for the short trace we set sampling_window = stop_time (the real run uses
+    # a multi-year window where stop_time ≫ window).
+    trace_stop_time = 10 * 30minutes
     attach_calibration_output_writers!(sim, output_dir, "sysimage_trace";
-                                       stop_time       = 10 * 30minutes,
-                                       sampling_window = 1 * 365days)
+                                       stop_time       = trace_stop_time,
+                                       sampling_window = trace_stop_time)
 
     # Step a couple of times to compile the time-stepping + closure kernels
     # (the expensive GPU compilation), then stop.
