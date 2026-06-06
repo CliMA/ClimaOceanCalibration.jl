@@ -31,8 +31,13 @@ using NumericalEarth.EarthSystemModels.InterfaceComputations: COARELogarithmicSi
 ##### Flux configurations
 #####
 
+# Canonical von Kármán constant for wall-bounded turbulence. The COARE 3.6
+# roughness/stability fits were calibrated at this value; `von_karman_scaling`
+# perturbs it for sensitivity studies only (scaling = 1 ⇒ unchanged physics).
+const VON_KARMAN_CONSTANT = 0.4
+
 """
-    corrected_atmosphere_ocean_fluxes(FT = Float64)
+    corrected_atmosphere_ocean_fluxes(FT = Float64; von_karman_scaling = 1)
 
 COARE 3.6-consistent atmosphere-ocean flux formulation with:
 - Wind-dependent Charnock parameter (Edson et al. 2013, eq. 13)
@@ -41,11 +46,20 @@ COARE 3.6-consistent atmosphere-ocean flux formulation with:
 - `gustiness` kwarg accepts either a `ConstantGustiness(min_gust, β)` (default; constant floor)
   or a `ShearAwareGustiness(c, min_gust, β)` (Mahrt-Sun 1995 / Edson 2013 form)
 - Temperature-dependent air viscosity
+
+`von_karman_scaling` multiplies the canonical von Kármán constant
+(`VON_KARMAN_CONSTANT = 0.4`); the effective constant is `0.4 * von_karman_scaling`.
+This is a numerical sensitivity knob — the COARE empirical fits assume κ = 0.4, so
+scaling ≠ 1 makes the parameterization internally inconsistent with the data it was
+tuned to. Default `1` reproduces the unmodified physics.
 """
 function corrected_atmosphere_ocean_fluxes(FT = Float64;
-                                           gustiness = ConstantGustiness(FT; minimum_gustiness = 0.5))
+                                           gustiness = ConstantGustiness(FT; minimum_gustiness = 0.5),
+                                           von_karman_scaling = 1)
     air_kinematic_viscosity = TemperatureDependentAirViscosity(FT)
+    von_karman_constant = convert(FT, VON_KARMAN_CONSTANT * von_karman_scaling)
     return SimilarityTheoryFluxes(FT;
+                                  von_karman_constant          = von_karman_constant,
                                   similarity_form              = COARELogarithmicSimilarityProfile(),
                                   gustiness                    = gustiness,
                                   momentum_roughness_length    = MomentumRoughnessLength(FT;
@@ -128,6 +142,7 @@ Options for `velocity_formulation`:  `:relative`, `:wind`
 """
 function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                              velocity_formulation::Symbol = :relative,
+                             von_karman_scaling = 1,
                              ocean_minimum_salinity = 1)
     FT = eltype(ocean.model.grid)
     if flux_configuration == :default
@@ -149,7 +164,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
                                          land,
-                                         atmosphere_ocean_fluxes   = corrected_atmosphere_ocean_fluxes(FT; gustiness),
+                                         atmosphere_ocean_fluxes   = corrected_atmosphere_ocean_fluxes(FT; gustiness, von_karman_scaling),
                                          atmosphere_sea_ice_fluxes = corrected_atmosphere_sea_ice_fluxes(FT),
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
                                          atmosphere_ocean_velocity_difference   = velocity_difference_obj,
@@ -316,6 +331,10 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
    * `:relative` — `Δu = u_atm − u_ocean` (OMIP-2 α=1, default).
    * `:wind` — `Δu = u_atm` (ignores ocean current). For isolating bulk-formula
      response from current feedback (e.g. when an over-strong ACC self-reinforces).
+- `von_karman_scaling`: multiplier on the canonical von Kármán constant (0.4) in the
+   atmosphere–ocean bulk fluxes. Effective κ = `0.4 * von_karman_scaling`. Numerical
+   sensitivity knob; only affects `flux_configuration ∈ (:corrected, :shear_aware)`
+   (the COARE/`SimilarityTheoryFluxes` path). Default `1` ⇒ unmodified physics.
 - `diagnostics::Bool`: whether to attach OMIP diagnostics. Default: `true`.
 - `surface_averaging_interval`, `field_averaging_interval`: averaging windows.
 - `checkpoint_interval`: interval between checkpoint writes.
@@ -350,6 +369,7 @@ function omip_simulation(config::Symbol = :halfdegree;
                          flux_configuration = :default,
                          vertical_closure = :catke,
                          velocity_formulation = :relative,
+                         von_karman_scaling = 1,
                          ocean_minimum_salinity = 4,
                          Cᵂu★ = nothing,
                          with_snow = false,
@@ -410,6 +430,7 @@ function omip_simulation(config::Symbol = :halfdegree;
 
     coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                                   velocity_formulation,
+                                  von_karman_scaling,
                                   ocean_minimum_salinity)
 
     simulation = Simulation(coupled; Δt, stop_time)
