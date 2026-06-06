@@ -890,6 +890,61 @@ LOADERS[:tropical_salinity_drift] =
     tropical_profile_drift(c, :so_fts)
 end
 
+# Tropical-band horizontal-mean profiles (time-averaged over the case
+# window) and the matching WOA reference, both restricted to
+# |lat| <= TROPICAL_LAT_DEG. Used by fig32. The model profile is
+# recomputed from the 3-D field series (`:time_mean_*_3d`) since the
+# averages-file profiles (`to_h`/`so_h`) are global, and the WOA profile
+# reduces the on-grid WOA field the same way so the two are comparable.
+
+# Horizontal tropical-band mask (Nx, Ny). φ may be 1-D (lat-lon) or 2-D
+# (tripolar/ORCA); `φnode` handles both index patterns.
+function tropical_band_mask(grid)
+    Nx, Ny, _ = size(grid)
+    inband = falses(Nx, Ny)
+    for j in 1:Ny, i in 1:Nx
+        abs(φnode(i, j, 1, grid, Center(), Center(), Center())) <= TROPICAL_LAT_DEG &&
+            (inband[i, j] = true)
+    end
+    return inband
+end
+
+# Ocean-masked horizontal mean over the tropical band at every depth.
+function tropical_horizontal_mean(data_3d, inband, mask3d)
+    Nx, Ny, Nz = size(data_3d)
+    prof = fill(NaN, Nz)
+    for k in 1:Nz
+        num = 0.0; den = 0
+        for j in 1:Ny, i in 1:Nx
+            (inband[i, j] && mask3d[i, j, k] > 0) || continue
+            v = data_3d[i, j, k]
+            isfinite(v) || continue
+            num += v; den += 1
+        end
+        den > 0 && (prof[k] = num / den)
+    end
+    return prof
+end
+
+LOADERS[:tropical_band_mask] = c -> tropical_band_mask(get_field(c, :grid))
+
+LOADERS[:tropical_horizontal_mean_temperature_profile] = c ->
+    tropical_horizontal_mean(get_field(c, :time_mean_temperature_3d),
+                             get_field(c, :tropical_band_mask),
+                             get_field(c, :ocean_mask_3d))
+LOADERS[:tropical_horizontal_mean_salinity_profile] = c ->
+    tropical_horizontal_mean(get_field(c, :time_mean_salinity_3d),
+                             get_field(c, :tropical_band_mask),
+                             get_field(c, :ocean_mask_3d))
+LOADERS[:tropical_woa_temperature_profile] = c ->
+    tropical_horizontal_mean(get_field(c, :woa_temperature),
+                             get_field(c, :tropical_band_mask),
+                             get_field(c, :ocean_mask_3d))
+LOADERS[:tropical_woa_salinity_profile] = c ->
+    tropical_horizontal_mean(get_field(c, :woa_salinity),
+                             get_field(c, :tropical_band_mask),
+                             get_field(c, :ocean_mask_3d))
+
 #####
 ##### Global-mean kinetic energy from u, v snapshots
 #####

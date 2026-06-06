@@ -124,6 +124,10 @@ const FIG_REGISTRY = [
     (n = 27, file = "fig21_TS_drift_heatmap.jl",          fn = :fig27),
     (n = 28, file = "fig28_tropical_TS_drift_heatmap.jl", fn = :fig28),
     (n = 29, file = "fig28_tropical_TS_drift_heatmap.jl", fn = :fig29),
+    (n = 30, file = "fig30_tropical_drift_upper.jl",      fn = :fig30),
+    (n = 31, file = "fig31_tropical_surface_fluxes.jl",   fn = :fig31),
+    (n = 32, file = "fig32_tropical_profiles.jl",         fn = :fig32),
+    (n = 33, file = "fig33_tropical_target_bias.jl",      fn = :fig33),
 ]
 
 # ══════════════════════════════════════════════════════════════
