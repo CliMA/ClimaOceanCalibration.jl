@@ -134,14 +134,6 @@ ncar_atmosphere_sea_ice_fluxes(FT = Float64) =
                            water_vapor_roughness_length = FT(5e-4))
 
 """
-    build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
-                        velocity_formulation = :relative)
-
-Build the `OceanSeaIceModel` with the specified flux configuration.
-Options for `flux_configuration`: `:default`, `:corrected`, `:shear_aware`, `:ncar`.
-Options for `velocity_formulation`:  `:relative`, `:wind`
-"""
-"""
     skin_temperature_kwarg(ocean, skin_temperature::Bool)
 
 Build the `atmosphere_ocean_interface_temperature` kwarg for `ComponentInterfaces`.
@@ -165,6 +157,14 @@ function skin_temperature_kwarg(ocean, skin_temperature::Bool)
     return (; atmosphere_ocean_interface_temperature = SkinTemperature(internal_flux))
 end
 
+"""
+    build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
+                        velocity_formulation = :relative)
+
+Build the `OceanSeaIceModel` with the specified flux configuration.
+Options for `flux_configuration`: `:default`, `:corrected`, `:shear_aware`, `:ncar`.
+Options for `velocity_formulation`:  `:relative`, `:wind`
+"""
 function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                              velocity_formulation::Symbol = :relative,
                              von_karman_scaling = 1,
