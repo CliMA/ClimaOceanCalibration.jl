@@ -25,7 +25,8 @@ using NumericalEarth.EarthSystemModels.InterfaceComputations: COARELogarithmicSi
                                                               RelativeVelocity,
                                                               WindVelocity,
                                                               ConstantGustiness,
-                                                              ShearAwareGustiness
+                                                              ShearAwareGustiness,
+                                                              SkinTemperature
 
 #####
 ##### Flux configurations
@@ -140,15 +141,43 @@ Build the `OceanSeaIceModel` with the specified flux configuration.
 Options for `flux_configuration`: `:default`, `:corrected`, `:shear_aware`, `:ncar`.
 Options for `velocity_formulation`:  `:relative`, `:wind`
 """
+"""
+    skin_temperature_kwarg(ocean, skin_temperature::Bool)
+
+Build the `atmosphere_ocean_interface_temperature` kwarg for `ComponentInterfaces`.
+When `skin_temperature` is `true`, the interface temperature is computed as a
+flux-balance "skin" temperature (`SkinTemperature(DiffusiveFlux(δ, κ))`), with
+`δ` set to half the top (surface) grid cell's thickness and `κ = 1e-2 m² s⁻¹`.
+When `false`, the kwarg is omitted and ClimaOcean's default `BulkTemperature()`
+(the top ocean cell's temperature) is used.
+"""
+function skin_temperature_kwarg(ocean, skin_temperature::Bool)
+    skin_temperature || return NamedTuple()
+
+    FT = eltype(ocean.model.grid)
+    grid = ocean.model.grid
+    Nz = size(grid, 3)
+    Δz_surface = CUDA.@allowscalar Δzᶜᶜᶜ(1, 1, Nz, grid)
+    δ = convert(FT, Δz_surface / 2)
+    κ = convert(FT, 1e-2)
+    internal_flux = NumericalEarth.EarthSystemModels.InterfaceComputations.DiffusiveFlux(δ, κ)
+
+    return (; atmosphere_ocean_interface_temperature = SkinTemperature(internal_flux))
+end
+
 function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                              velocity_formulation::Symbol = :relative,
                              von_karman_scaling = 1,
-                             ocean_minimum_salinity = 1)
+                             ocean_minimum_salinity = 1,
+                             skin_temperature::Bool = false)
     FT = eltype(ocean.model.grid)
+    interface_temperature_kwarg = skin_temperature_kwarg(ocean, skin_temperature)
+
     if flux_configuration == :default
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
                                          land,
+                                         interface_temperature_kwarg...,
                                          ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
         return OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, land, interfaces)
     end
@@ -169,6 +198,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
                                          atmosphere_ocean_velocity_difference   = velocity_difference_obj,
                                          atmosphere_sea_ice_velocity_difference = velocity_difference_obj,
+                                         interface_temperature_kwarg...,
                                          ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
     elseif flux_configuration == :ncar
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
@@ -179,6 +209,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
                                          atmosphere_ocean_velocity_difference   = velocity_difference_obj,
                                          atmosphere_sea_ice_velocity_difference = velocity_difference_obj,
+                                         interface_temperature_kwarg...,
                                          ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
     else
         error("Unknown flux_configuration: $flux_configuration. Options: :default, :corrected, :shear_aware, :ncar")
@@ -335,6 +366,13 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
    atmosphere–ocean bulk fluxes. Effective κ = `0.4 * von_karman_scaling`. Numerical
    sensitivity knob; only affects `flux_configuration ∈ (:corrected, :shear_aware)`
    (the COARE/`SimilarityTheoryFluxes` path). Default `1` ⇒ unmodified physics.
+- `skin_temperature::Bool`: when `true`, computes the atmosphere–ocean interface
+   temperature as a flux-balance "skin" temperature
+   (`SkinTemperature(DiffusiveFlux(δ, 1e-2))`, with `δ` = half the top grid cell's
+   thickness) instead of using the bulk temperature of the top ocean cell
+   (`BulkTemperature()`, the default). Independent of `flux_configuration` — applies
+   uniformly across `:default`, `:corrected`, `:shear_aware`, and `:ncar`.
+   Default: `false`.
 - `diagnostics::Bool`: whether to attach OMIP diagnostics. Default: `true`.
 - `surface_averaging_interval`, `field_averaging_interval`: averaging windows.
 - `checkpoint_interval`: interval between checkpoint writes.
@@ -370,6 +408,7 @@ function omip_simulation(config::Symbol = :halfdegree;
                          vertical_closure = :catke,
                          velocity_formulation = :relative,
                          von_karman_scaling = 1,
+                         skin_temperature = false,
                          ocean_minimum_salinity = 4,
                          Cᵂu★ = nothing,
                          with_snow = false,
@@ -431,6 +470,7 @@ function omip_simulation(config::Symbol = :halfdegree;
     coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                                   velocity_formulation,
                                   von_karman_scaling,
+                                  skin_temperature,
                                   ocean_minimum_salinity)
 
     simulation = Simulation(coupled; Δt, stop_time)
