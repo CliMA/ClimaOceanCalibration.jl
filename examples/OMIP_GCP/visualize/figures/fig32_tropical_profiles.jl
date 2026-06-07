@@ -3,7 +3,7 @@
 # (also tropical horizontal-mean, on the model grid) overlaid for
 # reference. The fig17 counterpart restricted to the tropics.
 function fig32(caches, labels, cases)
-    fig = Figure(size = (600 + 200 * length(labels), 600), fontsize = 14)
+    fig = Figure(size = (900, 700), fontsize = 14)
     ax_temperature = Axis(fig[1, 1]; xlabel = "Temperature (deg C)", ylabel = "Depth (m)",
                           title = "Tropical (|lat|≤20°) horizontal-mean temperature")
     ax_salinity = Axis(fig[1, 2]; xlabel = "Salinity (PSU)", ylabel = "Depth (m)",
@@ -28,6 +28,6 @@ function fig32(caches, labels, cases)
            color = OBS_COLOR, linewidth = OBS_LINEWIDTH, linestyle = OBS_LINESTYLE, label = "WOA")
     ylims!(ax_temperature, (-5500, 0))
     ylims!(ax_salinity, (-5500, 0))
-    Legend(fig[1, 3], ax_temperature)
+    Legend(fig[2, :], ax_temperature; orientation = :horizontal, nbanks = length(labels) + 1)
     savefig(fig, "fig32_tropical_profiles.png")
 end

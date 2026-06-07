@@ -4,7 +4,7 @@
 # heatmaps (fig28/29): the (Nt, Nz) tropical drift profile is vertically
 # averaged over the upper |z_min| m to a single time series per case.
 function fig30(caches, labels, cases; z_min = -400)
-    fig = Figure(size = (600 + 200 * length(labels), 450), fontsize = 14)
+    fig = Figure(size = (900, 550), fontsize = 14)
     ax_temperature = Axis(fig[1, 1]; xlabel = "Time (years)", ylabel = "ΔT (deg C)",
                           title = "Tropical (|lat|≤20°) upper $(abs(z_min)) m temperature drift")
     ax_salinity = Axis(fig[1, 2]; xlabel = "Time (years)", ylabel = "ΔS (PSU)",
@@ -28,6 +28,6 @@ function fig30(caches, labels, cases; z_min = -400)
         lines!(ax_salinity, tS, ΔS_upper;
                color = case_colors[i], linewidth = CASE_LINEWIDTH, label = lab)
     end
-    Legend(fig[1, 3], ax_temperature)
+    Legend(fig[2, :], ax_temperature; orientation = :horizontal, nbanks = length(labels))
     savefig(fig, "fig30_tropical_drift_upper$(abs(z_min))m.png")
 end

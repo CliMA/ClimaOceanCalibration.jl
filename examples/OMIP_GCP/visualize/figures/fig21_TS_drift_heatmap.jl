@@ -42,11 +42,11 @@ function fig21(caches, labels, cases)
         tS = get_field(c, :so_h_fts).times ./ (365.25 * 24 * 3600)
 
         hm_T = split_panel!(fig, 1, 2i-1, tT, z, ΔT,
-                             temperature_drift_levels, "$lab: ΔT (deg C)")
+                             temperature_drift_levels, "$lab: ΔT = T(t) − T_WOA (deg C)")
         Colorbar(fig[1, 2i], hm_T; label = "deg C")
 
         hm_S = split_panel!(fig, 2, 2i-1, tS, z, ΔS,
-                             salinity_drift_levels, "$lab: ΔS (PSU)")
+                             salinity_drift_levels, "$lab: ΔS = S(t) − S_WOA (PSU)")
         Colorbar(fig[2, 2i], hm_S; label = "PSU")
     end
 
@@ -83,12 +83,12 @@ function fig27(caches, labels, cases; z_min = -500)
 
         hm_T = upper_panel!(fig, 1, 2i-1, tT, z, ΔT,
                             temperature_drift_levels,
-                            "$lab: ΔT (deg C), upper $(abs(z_min)) m")
+                            "$lab: ΔT = T(t) − T_WOA (deg C), upper $(abs(z_min)) m")
         Colorbar(fig[1, 2i], hm_T; label = "deg C")
 
         hm_S = upper_panel!(fig, 2, 2i-1, tS, z, ΔS,
                             salinity_drift_levels,
-                            "$lab: ΔS (PSU), upper $(abs(z_min)) m")
+                            "$lab: ΔS = S(t) − S_WOA (PSU), upper $(abs(z_min)) m")
         Colorbar(fig[2, 2i], hm_S; label = "PSU")
     end
 
