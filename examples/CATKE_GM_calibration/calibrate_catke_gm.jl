@@ -134,7 +134,9 @@ isfile(woa_file) || error("""
 # legacy model_interface.jl that it loads requires `output_dir` to be a global.)
 output_dir = joinpath(pwd(), "calibration_runs",
     "catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)_Tstd_$(T_std)_Sstd_$(S_std)" *
-    "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)_gm$(use_gm)")
+    "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)_gm$(use_gm)" *
+    "_dz$(Δz_top === nothing ? "default" : Δz_top)" *
+    (skin_temperature ? "_skintemp" : ""))
 
 mkpath(output_dir)
 
@@ -190,8 +192,39 @@ ekp = EnsembleKalmanProcess(Y_obs,
 const ensemble_size = EnsembleKalmanProcesses.get_N_ens(ekp)
 n_batches = ceil(Int, ensemble_size / 8)
 
+# Guard against resuming into a directory whose stored config is incompatible
+# with the current one. ClimaCalibrate.calibrate reconstructs the EKP from the
+# on-disk iteration files when resuming, so a mismatch in output_dim (e.g. a
+# different Δz_top → different number of WOA cells) silently survives until
+# update_ensemble! tries to broadcast the new G against the stale observation
+# and dies with a DimensionMismatch. Catch it here, before any jobs are submitted.
+metadata_path = joinpath(output_dir, "calibration_metadata.jld2")
+if isfile(metadata_path)
+    prev = jldopen(metadata_path, "r") do file
+        (output_dim = haskey(file, "output_dim") ? file["output_dim"] : nothing,
+         Δz_top     = haskey(file, "Δz_top")     ? file["Δz_top"]     : nothing,
+         woa_file   = haskey(file, "woa_file")   ? file["woa_file"]   : nothing)
+    end
+    mismatches = String[]
+    prev.output_dim === nothing || prev.output_dim == output_dim ||
+        push!(mismatches, "output_dim: stored $(prev.output_dim) ≠ current $output_dim")
+    prev.Δz_top === nothing && Δz_top === nothing || isequal(prev.Δz_top, Δz_top) ||
+        push!(mismatches, "Δz_top: stored $(prev.Δz_top) ≠ current $Δz_top")
+    prev.woa_file === nothing || prev.woa_file == woa_file ||
+        push!(mismatches, "woa_file: stored $(prev.woa_file) ≠ current $woa_file")
+    isempty(mismatches) || error("""
+        Refusing to resume: existing calibration state in
+            $output_dir
+        was created with an incompatible configuration:
+            $(join(mismatches, "\n            "))
+        Resuming would feed the new forward-model output into the stale EKP
+        observation and crash in update_ensemble!. Use a fresh output_dir, or
+        remove/rename the existing one to start from iteration 0.
+    """)
+end
+
 # Persist metadata that worker processes will read from
-jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
+jldopen(metadata_path, "w") do file
     file["ensemble_size"]      = ensemble_size
     file["output_dim"]         = output_dim
     file["latitude_range"]     = latitude_range
