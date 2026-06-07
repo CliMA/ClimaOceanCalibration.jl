@@ -60,6 +60,19 @@ end
 @_load_or_default gm_param_names
 @_load_or_default use_gm
 @_load_or_default with_ice_dynamics
+# Δz_top / skin_temperature added later; guard against older metadata files.
+if !isdefined(@__MODULE__, :Δz_top)
+    Δz_top = jldopen(metadata_file, "r") do file
+        haskey(file, "Δz_top") ? file["Δz_top"] : nothing
+    end
+    @info "Loaded Δz_top=$Δz_top from metadata"
+end
+if !isdefined(@__MODULE__, :skin_temperature)
+    skin_temperature = jldopen(metadata_file, "r") do file
+        haskey(file, "skin_temperature") ? file["skin_temperature"] : false
+    end
+    @info "Loaded skin_temperature=$skin_temperature from metadata"
+end
 
 struct CATKEGMInterface <: ClimaCalibrate.AbstractModelInterface
     model_interface_path::String
@@ -108,6 +121,8 @@ function ClimaCalibrate.forward_model(::CATKEGMInterface, iteration, member)
         "staging_dir"       => staging_dir,
         "use_gm"            => use_gm,
         "with_ice_dynamics" => with_ice_dynamics,
+        "Δz_top"            => Δz_top,
+        "skin_temperature"  => skin_temperature,
     )
 
     @info "iter=$iteration member=$member CATKE scalings=$catke_scalings GM scalings=$gm_scalings"

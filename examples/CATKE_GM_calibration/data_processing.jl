@@ -124,10 +124,12 @@ with what the model produced.
 """
 function load_woa_on_orca(woa_file::AbstractString)
     data = jldopen(woa_file, "r") do file
-        return (T = file["T"], S = file["S"], Nz = file["Nz"], depth = file["depth"])
+        # Δz_top added later; older caches default to nothing (uniform-scale grid).
+        Δz_top = haskey(file, "Δz_top") ? file["Δz_top"] : nothing
+        return (T = file["T"], S = file["S"], Nz = file["Nz"], depth = file["depth"], Δz_top = Δz_top)
     end
 
-    grid = build_grid(Val(:orca), CPU(), data.Nz, data.depth)
+    grid = build_grid(Val(:orca), CPU(), data.Nz, data.depth; Δz_top = data.Δz_top)
     T = CenterField(grid)
     S = CenterField(grid)
     interior(T) .= data.T

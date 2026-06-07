@@ -33,13 +33,28 @@ function parse_commandline()
             help = "Also calibrate the three GM scaling parameters (κ_skew, κ_symmetric, max_slope)"
             arg_type = Bool
             default = false
+        "--SKIN_TEMPERATURE"
+            help = "Compute the atmosphere-ocean interface temperature as a flux-balance skin temperature (SkinTemperature) instead of the bulk top-cell temperature"
+            arg_type = Bool
+            default = false
+        "--DZ_TOP"
+            help = "Surface-cell thickness in metres for the forward-model vertical grid. Pass `false` (the default) to use the omip_simulation default grid."
+            arg_type = String
+            default = "false"
     end
     return parse_args(s)
 end
 
-const args         = parse_commandline()
-const use_gm       = args["GM"]
-const calibrate_gm = args["calibrate_gm"]
+const args             = parse_commandline()
+const use_gm           = args["GM"]
+const calibrate_gm     = args["calibrate_gm"]
+const skin_temperature = args["SKIN_TEMPERATURE"]
+
+# DZ_TOP=false (or nothing/default) ⇒ use the omip_simulation default grid (Δz_top = nothing);
+# otherwise parse the surface-cell thickness in metres.
+const Δz_top = let v = lowercase(strip(args["DZ_TOP"]))
+    (v in ("false", "nothing", "default")) ? nothing : parse(Float64, v)
+end
 
 # ============================================
 # Configuration
@@ -104,11 +119,15 @@ const gm_param_names = calibrate_gm ? (
     "max_slope_scaling",    # FluxTapering slope limiter max slope
 ) : ()
 
-const woa_file = abspath(joinpath(@__DIR__, "calibration_data", "woa_orca_grid.jld2"))
+# The WOA target must live on the SAME vertical grid as the forward model, since
+# the comparison does no vertical regridding. Δz_top = nothing ⇒ default grid;
+# Δz_top = h ⇒ the woa_orca_grid_dztop<h>.jld2 cache built by precompute_woa_orca.jl.
+const woa_file = abspath(joinpath(@__DIR__, "calibration_data",
+    Δz_top === nothing ? "woa_orca_grid.jld2" : "woa_orca_grid_dztop$(Δz_top).jld2"))
 isfile(woa_file) || error("""
     WOA-on-ORCA cache not found at:
         $woa_file
-    Run precompute_woa_orca.jl first.
+    Run precompute_woa_orca.jl first (with ΔZ_TOP = $(Δz_top === nothing ? "nothing" : Δz_top)).
 """)
 
 # Output directory (defined BEFORE model_interface.jl is included, since the
@@ -188,6 +207,8 @@ jldopen(joinpath(output_dir, "calibration_metadata.jld2"), "w") do file
     file["gm_param_names"]     = collect(gm_param_names)
     file["use_gm"]             = use_gm
     file["with_ice_dynamics"]  = with_ice_dynamics
+    file["Δz_top"]             = Δz_top
+    file["skin_temperature"]   = skin_temperature
 end
 
 # v0.3.0 backend + interface
@@ -201,6 +222,8 @@ interface = CATKEGMInterface()
 @info "Calibration configuration:"
 @info "  use_gm:            $use_gm"
 @info "  with_ice_dynamics: $with_ice_dynamics"
+@info "  skin_temperature:  $skin_temperature"
+@info "  Δz_top:            $(Δz_top === nothing ? "default" : Δz_top)"
 @info "  CATKE params: $(catke_param_names)"
 @info "  GM params:    $(gm_param_names)"
 @info "  Ensemble size: $ensemble_size  ($n_batches a3mega nodes per iteration)"

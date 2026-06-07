@@ -286,10 +286,14 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
         end
 
         with_ice_dynamics = get(config_dict, "with_ice_dynamics", true)
+        Δz_top            = get(config_dict, "Δz_top", nothing)
+        skin_temperature  = get(config_dict, "skin_temperature", false)
 
         @info "Member $member, iter $iter: starting ORCA calibration run"
         @info "  use_gm            = $use_gm"
         @info "  with_ice_dynamics = $with_ice_dynamics"
+        @info "  Δz_top            = $(Δz_top === nothing ? "default" : Δz_top)"
+        @info "  skin_temperature  = $skin_temperature"
         @info "  catke_parameters = $catke_parameters"
         @info "  gm_parameters    = $gm_parameters"
         @info "  simulation_length = $(simulation_length) years, sampling_length = $(sampling_length) years"
@@ -301,11 +305,13 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
                               arch  = GPU(),
                               Nz    = 70,
                               depth = 5500,
+                              Δz_top,
                               catke_parameters,
                               gm_parameters,
                               biharmonic_timescale = 50days,
                               flux_configuration   = :corrected,
                               with_snow            = true,
+                              skin_temperature,
                               with_ice_dynamics,
                               diagnostics          = false,
                               Δt              = 30minutes,
