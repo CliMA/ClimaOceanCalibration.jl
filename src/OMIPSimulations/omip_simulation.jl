@@ -876,6 +876,41 @@ function build_grid(::Val{:orca}, arch, Nz, depth; Δz_top = nothing)
                     active_cells_map = true)
 end
 
+"""
+    upper_orca_grid(arch, Nz, depth, max_depth; Δz_top = nothing)
+
+ORCA grid whose vertical cells are the *top* cells of the full `(Nz, depth)`
+exponential grid built by [`build_grid`](@ref)`(Val(:orca), …)`, keeping every
+cell whose shallower face lies at or above `-max_depth`. Because the retained
+z-faces are an exact subset of the deep grid's faces, a field on this shallow
+grid coincides cell-for-cell with the deep grid in the upper ocean.
+
+Use this to build calibration targets from datasets that don't span the full
+ocean depth (e.g. WOA Monthly, which reaches only ~1525 m): set the dataset onto
+the shallow grid (no out-of-range error, no deep extrapolation), and the resulting
+upper-ocean target still matches a deep-grid member's output after the `z ≥ z_min`
+slice.
+"""
+function upper_orca_grid(arch, Nz, depth, max_depth; Δz_top = nothing)
+    # Materialize the full grid's z-faces (ascending, -depth → 0) cheaply via a
+    # 1×1×Nz RectilinearGrid with the same exponential discretization.
+    scale = exponential_scale(Nz, depth, Δz_top)
+    tmp = RectilinearGrid(CPU(); size = (1, 1, Nz), x = (0, 1), y = (0, 1),
+                          z = ExponentialDiscretization(Nz, -depth, 0; scale, mutable = true))
+    zf = Array(znodes(tmp, Face()))                      # length Nz+1
+    shallow_faces = collect(zf[zf .>= -max_depth])       # contiguous top chunk
+    Nz_shallow = length(shallow_faces) - 1
+    Nz_shallow >= 1 || error("upper_orca_grid: max_depth=$max_depth is shallower than the top cell")
+
+    return ORCAGrid(arch;
+                    dataset = ORCA1(),
+                    Nz = Nz_shallow,
+                    z = shallow_faces,
+                    halo = (8, 8, 8),
+                    with_bathymetry = true,
+                    active_cells_map = true)
+end
+
 #####
 ##### ORCA builder
 #####

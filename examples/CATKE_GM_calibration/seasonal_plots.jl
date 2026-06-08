@@ -52,31 +52,35 @@ function plot_member_seasonal_video(member_dir::AbstractString,
     # Member zonal-mean T,S,b (12 months), same regrid pipeline as the obs map.
     zTm, zSm, zBm, latitude, depth, times = member_zonal_TSB_2d(member_dir, filename_prefix)
 
-    # WOA reference 2-D zonal arrays.
+    # WOA reference 2-D zonal arrays + its own (shallow) depth axis. The WOA grid
+    # is the top cells of the model grid, so its z ≥ z_min cells coincide with the
+    # member's; slicing each by its own depth gives identical cells/shapes.
     woa = jldopen(woa_file, "r") do f
-        (zT = f["zonal_T"], zS = f["zonal_S"], zb = f["zonal_b"])
+        (zT = f["zonal_T"], zS = f["zonal_S"], zb = f["zonal_b"], depth = f["depth"])
     end
     length(woa.zT) == length(zTm) ||
         error("plot_member_seasonal_video: WOA has $(length(woa.zT)) months, member $(length(zTm))")
 
-    j = findall(φ -> lat_range[1] <= φ <= lat_range[2], latitude)
-    k = findall(z -> z >= z_min, depth)
+    j  = findall(φ -> lat_range[1] <= φ <= lat_range[2], latitude)
+    k  = findall(z -> z >= z_min, depth)          # member depth levels
+    kw = findall(z -> z >= z_min, woa.depth)      # WOA (shallow) depth levels — same cells
     lat_sub = latitude[j]
     z_sub   = depth[k]
-    sub(A)  = Array(A[j, k])
+    sub(A)  = Array(A[j, k])                       # member arrays
+    subw(A) = Array(A[j, kw])                      # WOA arrays
 
     months = [month(reference_date + Second(round(Int, t))) for t in times]
     N = length(zTm)
 
     Trange  = (-2.0, 30.0); Srange  = (33.0, 37.0)
-    Brange  = _finite_extrema((sub(woa.zb[m]) for m in 1:N)...; default = (-0.04, 0.02))
+    Brange  = _finite_extrema((subw(woa.zb[m]) for m in 1:N)...; default = (-0.04, 0.02))
     Tdrange = (-5.0, 5.0); Sdrange = (-1.5, 1.5)
-    Bdrange = _symmetric_extrema((sub(zBm[m]) .- sub(woa.zb[m]) for m in 1:N)...; default = 0.005)
+    Bdrange = _symmetric_extrema((sub(zBm[m]) .- subw(woa.zb[m]) for m in 1:N)...; default = 0.005)
 
     m  = Observable(1)
-    Tw = @lift sub(woa.zT[$m]); Tm = @lift sub(zTm[$m]); Td = @lift sub(zTm[$m]) .- sub(woa.zT[$m])
-    Sw = @lift sub(woa.zS[$m]); Sm = @lift sub(zSm[$m]); Sd = @lift sub(zSm[$m]) .- sub(woa.zS[$m])
-    Bw = @lift sub(woa.zb[$m]); Bm = @lift sub(zBm[$m]); Bd = @lift sub(zBm[$m]) .- sub(woa.zb[$m])
+    Tw = @lift subw(woa.zT[$m]); Tm = @lift sub(zTm[$m]); Td = @lift sub(zTm[$m]) .- subw(woa.zT[$m])
+    Sw = @lift subw(woa.zS[$m]); Sm = @lift sub(zSm[$m]); Sd = @lift sub(zSm[$m]) .- subw(woa.zS[$m])
+    Bw = @lift subw(woa.zb[$m]); Bm = @lift sub(zBm[$m]); Bd = @lift sub(zBm[$m]) .- subw(woa.zb[$m])
 
     fig = Figure(size = (1500, 1150), fontsize = 15)
     rows = ((Tw, Tm, Td, Trange, Tdrange, :thermal, "T (°C)"),
