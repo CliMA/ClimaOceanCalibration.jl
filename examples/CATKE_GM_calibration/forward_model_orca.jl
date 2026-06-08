@@ -238,6 +238,56 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
 end
 
 """
+    attach_seasonal_monthly_TS_writer!(sim, output_dir, filename_prefix;
+                                       monthly_interval = 365days/12)
+
+Attach a monthly-averaged 3-D T, S writer (`<prefix>_monthly_TS.jld2`) for the
+seasonal-cycle calibration. Writes monthly-averaged 3-D T, S, and buoyancy in a
+single file over the whole run; the observation map reads the final 12 monthly
+T,S snapshots (the last year's cycle) and the per-member video also reads
+buoyancy. Used in addition to `attach_calibration_output_writers!`.
+"""
+function attach_seasonal_monthly_TS_writer!(sim, output_dir, filename_prefix;
+                                            monthly_interval = 365days / 12)
+    ocean = sim.model.ocean
+    T = ocean.model.tracers.T
+    S = ocean.model.tracers.S
+    bo = Oceananigans.Models.buoyancy_operation(ocean.model)
+    ocean.output_writers[:seasonal_monthly_TS] = JLD2Writer(
+        ocean.model, (T = T, S = S, bo = bo);
+        schedule = AveragedTimeInterval(monthly_interval),
+        filename = joinpath(output_dir, "$(filename_prefix)_monthly_TS.jld2"),
+        overwrite_existing = true,
+    )
+    return sim
+end
+
+"""
+    attach_seasonal_monthly_EP_writer!(sim, output_dir, filename_prefix;
+                                       monthly_interval = 365days/12)
+
+Attach a monthly-averaged surface freshwater-flux writer (`<prefix>_monthly_EP.jld2`)
+for the seasonal calibration's per-member E/P video: evaporation (water-vapor
+mass flux), precipitation (prescribed total), and the net salinity flux. Same
+field accessors as the OMIP `_monthly_surface` diagnostics. Visualization only —
+not part of the calibration loss.
+"""
+function attach_seasonal_monthly_EP_writer!(sim, output_dir, filename_prefix;
+                                            monthly_interval = 365days / 12)
+    ocean = sim.model.ocean
+    evap   = sim.model.interfaces.atmosphere_ocean_interface.fluxes.water_vapor
+    precip = sim.model.interfaces.exchanger.atmosphere.state.Jᶜ
+    wfo    = sim.model.interfaces.net_fluxes.ocean.S
+    ocean.output_writers[:seasonal_monthly_EP] = JLD2Writer(
+        ocean.model, (evap = evap, precip = precip, wfo = wfo);
+        schedule = AveragedTimeInterval(monthly_interval),
+        filename = joinpath(output_dir, "$(filename_prefix)_monthly_EP.jld2"),
+        overwrite_existing = true,
+    )
+    return sim
+end
+
+"""
     run_CATKE_GM_calibration_orca(catke_scalings, gm_scalings, config_dict)
 
 Build and run a single ensemble member's ORCA simulation.
@@ -288,6 +338,11 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
         with_ice_dynamics = get(config_dict, "with_ice_dynamics", true)
         Δz_top            = get(config_dict, "Δz_top", nothing)
         skin_temperature  = get(config_dict, "skin_temperature", false)
+        # Initial climatology + output mode. Defaults preserve the legacy
+        # annual-mean calibration; the seasonal calibration passes
+        # initial_field=:monthly and output_mode=:seasonal.
+        initial_field     = Symbol(get(config_dict, "initial_field", "annual"))
+        output_mode       = Symbol(get(config_dict, "output_mode",   "annual_mean"))
 
         @info "Member $member, iter $iter: starting ORCA calibration run"
         @info "  use_gm            = $use_gm"
@@ -313,6 +368,7 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
                               with_snow            = true,
                               skin_temperature,
                               with_ice_dynamics,
+                              initial_field,
                               diagnostics          = false,
                               Δt              = 30minutes,
                               forcing_dir,
@@ -324,6 +380,13 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
         attach_calibration_output_writers!(sim, output_dir, filename_prefix;
                                            stop_time,
                                            sampling_window = sampling_length * 365days)
+
+        # Seasonal calibration also needs the monthly 3-D T,S,b (last-year cycle)
+        # and monthly surface E/P for the per-member diagnostic videos.
+        if output_mode === :seasonal
+            attach_seasonal_monthly_TS_writer!(sim, output_dir, filename_prefix)
+            attach_seasonal_monthly_EP_writer!(sim, output_dir, filename_prefix)
+        end
 
         sim.stop_time = stop_time
         run!(sim)
