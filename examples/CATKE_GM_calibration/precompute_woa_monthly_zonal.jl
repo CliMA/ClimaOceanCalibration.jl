@@ -7,9 +7,10 @@
 # target vector has identical length and ordering to each member's G vector.
 #
 # Run once before the first seasonal calibration, matching the forward model's
-# Δz_top:
-#   DZ_TOP=1.5   julia +1.12.3 --project=. examples/CATKE_GM_calibration/precompute_woa_monthly_zonal.jl
+# Δz_top (default `false` ⇒ the omip_simulation default grid, matching
+# calibrate_catke_gm_seasonal.jl's `--DZ_TOP false` default):
 #   DZ_TOP=false julia +1.12.3 --project=. examples/CATKE_GM_calibration/precompute_woa_monthly_zonal.jl
+#   DZ_TOP=1.5   julia +1.12.3 --project=. examples/CATKE_GM_calibration/precompute_woa_monthly_zonal.jl
 #
 # Output (matches the cache name calibrate_catke_gm_seasonal.jl looks up):
 #   Δz_top = nothing ⇒ calibration_data/woa_monthly_zonal.jld2
@@ -29,7 +30,7 @@ include(joinpath(@__DIR__, "data_processing_seasonal.jl"))
 
 const NZ            = 70
 const DEPTH         = 5500
-const ΔZ_TOP        = let v = lowercase(strip(get(ENV, "DZ_TOP", "1.5")))
+const ΔZ_TOP        = let v = lowercase(strip(get(ENV, "DZ_TOP", "false")))
     (v in ("false", "nothing", "default", "")) ? nothing : parse(Float64, v)
 end
 const RESTORING_DIR = joinpath(homedir(), "ECCO_data")

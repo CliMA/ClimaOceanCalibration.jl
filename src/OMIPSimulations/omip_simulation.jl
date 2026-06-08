@@ -556,7 +556,7 @@ function woa_to_teos10!(T_field, S_field)
         φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
         z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
         p = approx_pressure_dbar(z)
-        SA = Sᴬ_from_Sᴾ(SP, p, λ, φ)
+        SA = max(zero(SP), Sᴬ_from_Sᴾ(SP, p, λ, φ))  # guard against tiny negative Sᴬ (fresh cells) that breaks sqrt in TEOS-10
         Θ  = Θ_from_T(SA, t, p)
         T_h[i, j, k] = Θ
         S_h[i, j, k] = SA
@@ -589,7 +589,7 @@ function woa_salinity_fts_to_teos10!(fts)
             φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
             z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
             p = approx_pressure_dbar(z)
-            S_h[i, j, k] = Sᴬ_from_Sᴾ(SP, p, λ, φ)
+            S_h[i, j, k] = max(zero(SP), Sᴬ_from_Sᴾ(SP, p, λ, φ))
         end
         copyto!(S_int, S_h)
     end
