@@ -1277,6 +1277,110 @@ LOADERS[:zonal_mld_min_dbm] = c -> zonal_mld(c, :mld_min_dbm)
 LOADERS[:zonal_mld_max_dbm] = c -> zonal_mld(c, :mld_max_dbm)
 
 #####
+##### Monthly seasonal-cycle output: model FTS + WOA-monthly, zonal videos
+#####
+#
+# The forward model's `_monthly_fields` / `_monthly_surface` writers (added in
+# omip_diagnostics.jl) save monthly-averaged 3-D T/S/b and surface E/P/net. These
+# loaders expose them as FieldTimeSeries, turn the 3-D fields into a per-month
+# *time series* of zonal means (regrid → lat-row average, the same pipeline as the
+# static `:zonal_*`), and build the matching 12-month WOA climatology zonal means.
+# Used by the seasonal-cycle videos (model vs WOA-monthly vs difference).
+
+LOADERS[:monthly_fields_file]  = c -> find_first_file(c.run_dir, c.prefix, "monthly_fields")
+LOADERS[:monthly_surface_file] = c -> find_first_file(c.run_dir, c.prefix, "monthly_surface")
+
+# Raw monthly FieldTimeSeries (same registration pattern as FTS_VARS).
+const MONTHLY_FTS_VARS = (
+    monthly_fields_file  = ((:to_monthly_fts, "to"), (:so_monthly_fts, "so"),
+                            (:bo_monthly_fts, "bo")),
+    monthly_surface_file = ((:evap_monthly_fts, "evap"), (:precip_monthly_fts, "precip"),
+                            (:wfo_monthly_fts, "wfo")),
+)
+for (file_sym, mappings) in pairs(MONTHLY_FTS_VARS), (sym, var) in mappings
+    FTS_DISK_PATH_SYM[sym] = file_sym
+    LOADERS[sym] = let v = var, f = file_sym
+        c -> FieldTimeSeries(get_field(c, f), v; backend = deepcopy(FTS_BACKEND))
+    end
+end
+
+# Per-snapshot zonal means of a monthly 3-D FTS over the case window. Returns a
+# NamedTuple: `frames` (Vector of (Nlat, Nz) zonal-mean matrices, one per monthly
+# snapshot), `times` (seconds), and `months` (calendar month 1..12 of each frame,
+# used to index the cyclic WOA climatology).
+function monthly_zonal_series(c, fts_sym; reference_date = DateTime(1958, 1, 1))
+    fts  = get_field(c, fts_sym)
+    mask = get_field(c, :ocean_mask_3d)
+    rg   = get_field(c, :zonal_regridder)
+    idx  = in_window(fts; start_time = c.start_time, stop_time = c.stop_time)
+    isempty(idx) && error("monthly_zonal_series: no $fts_sym snapshots in case window")
+    frames = Vector{Matrix{Float64}}(undef, length(idx))
+    times  = Vector{Float64}(undef, length(idx))
+    months = Vector{Int}(undef, length(idx))
+    for (n, i) in enumerate(idx)
+        data3d    = Array(interior(fts[i]))
+        frames[n] = compute_zonal_mean(data3d, mask, rg, ZONAL_NLON, ZONAL_NLAT)
+        times[n]  = fts.times[i]
+        months[n] = month(reference_date + Second(round(Int, fts.times[i])))
+    end
+    return (; frames, times, months)
+end
+
+for (sym, fts) in ((:monthly_zonal_temperature_series, :to_monthly_fts),
+                   (:monthly_zonal_salinity_series,    :so_monthly_fts),
+                   (:monthly_zonal_buoyancy_series,    :bo_monthly_fts))
+    LOADERS[sym] = let f = fts, s = sym
+        disk_cached(c -> monthly_zonal_series(c, f), s; source_fts_syms = f)
+    end
+end
+
+# WOA monthly climatology (12 slices) on the case grid, TEOS-10 converted, with
+# buoyancy computed from T,S using the same SeawaterBuoyancy/TEOS-10 formulation
+# as the OMIP model's `bo` output (default gravitational acceleration + reference
+# density). Mirrors `woa_teos10_pair` but loops over the 12 months.
+function woa_monthly_teos10(c)
+    grid     = get_field(c, :grid)
+    buoyancy = SeawaterBuoyancy(equation_of_state = TEOS10EquationOfState())
+    Ts = Vector{Array{Float64, 3}}(undef, 12)
+    Ss = Vector{Array{Float64, 3}}(undef, 12)
+    Bs = Vector{Array{Float64, 3}}(undef, 12)
+    for m in 1:12
+        date = DateTime(2018, m, 1)
+        woaT = Field(Metadatum(:temperature; dataset = WOAMonthly(), date, restoring_kw()...), CPU())
+        woaS = Field(Metadatum(:salinity;    dataset = WOAMonthly(), date, restoring_kw()...), CPU())
+        T = CenterField(grid)
+        S = CenterField(grid)
+        interpolate!(T, woaT)
+        interpolate!(S, woaS)
+        woa_to_teos10!(T, S)
+        bop = KernelFunctionOperation{Center, Center, Center}(buoyancy_perturbationᶜᶜᶜ, grid, buoyancy, (T = T, S = S))
+        B = Field(bop)
+        compute!(B)
+        Ts[m] = Array(interior(T))
+        Ss[m] = Array(interior(S))
+        Bs[m] = Array(interior(B))
+    end
+    return (T = Ts, S = Ss, b = Bs)
+end
+
+LOADERS[:woa_monthly_teos10] = woa_monthly_teos10
+
+# 12-element vectors of (Nlat, Nz) WOA-monthly zonal means — the static
+# climatology the video's WOA + difference panels index via mod1(month, 12).
+for (sym, key) in ((:zonal_woa_monthly_temperature, :T),
+                   (:zonal_woa_monthly_salinity,    :S),
+                   (:zonal_woa_monthly_buoyancy,     :b))
+    LOADERS[sym] = let k = key, s = sym
+        disk_cached(s) do c
+            fields12 = get_field(c, :woa_monthly_teos10)[k]
+            mask = get_field(c, :ocean_mask_3d)
+            rg   = get_field(c, :zonal_regridder)
+            [compute_zonal_mean(fields12[m], mask, rg, ZONAL_NLON, ZONAL_NLAT) for m in 1:12]
+        end
+    end
+end
+
+#####
 ##### AMOC streamfunction (Atlantic basin, no regridding)
 #####
 #

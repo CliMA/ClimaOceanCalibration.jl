@@ -36,10 +36,13 @@ using Oceananigans.Grids: znodes, λnodes, φnodes, λnode, φnode
 using Oceananigans.Fields: interpolate!
 using Oceananigans.AbstractOperations: KernelFunctionOperation
 using Oceananigans.Operators: ℑxᶜᵃᵃ, ℑyᵃᶜᵃ, Vᶜᶜᶜ
+using Oceananigans.BuoyancyFormulations: SeawaterBuoyancy, buoyancy_perturbationᶜᶜᶜ
+using Oceananigans: compute!
+using SeawaterPolynomials.TEOS10: TEOS10EquationOfState
 using ConservativeRegridding
 using NumericalEarth
 using NumericalEarth.DataWrangling: Metadatum
-using NumericalEarth.DataWrangling.WOA: WOAAnnual
+using NumericalEarth.DataWrangling.WOA: WOAAnnual, WOAMonthly
 using NumericalEarth: ECCO4Monthly
 using ClimaOceanCalibration.OMIPSimulations: strait_transports, woa_to_teos10!
 
@@ -100,6 +103,27 @@ restoring_kw() = isnothing(RESTORING_DIR) ? (;) : (; dir = RESTORING_DIR)
 const FTS_BACKEND = InMemory(10)
 
 savefig(fig, name) = save(joinpath(output_dir, name), fig)
+
+# Render an animation into `output_dir`. `update!(m)` is called once per frame
+# with the integer frame index, and should mutate the Observable(s) the figure
+# is `@lift`-ed off of. CairoMakie encodes the `.mp4` via FFMPEG_jll; on
+# encoder failure we retry as `.gif` so the figure still lands.
+function savevideo(fig, name, frames, update!; framerate = 4)
+    path = joinpath(output_dir, name)
+    try
+        CairoMakie.record(fig, path, frames; framerate) do m
+            update!(m)
+        end
+        return path
+    catch err
+        @warn "mp4 encoding failed for $name; falling back to .gif" exception=err
+        gifpath = replace(path, r"\.mp4$" => ".gif")
+        CairoMakie.record(fig, gifpath, frames; framerate) do m
+            update!(m)
+        end
+        return gifpath
+    end
+end
 
 # ── Presentation themes ──────────────────────────────────────────────
 #
@@ -1052,6 +1076,107 @@ end
 function nanstd(v)
     finite = filter(isfinite, v)
     return length(finite) < 2 ? NaN : std(finite)
+end
+
+# Finite (min, max) over any number of arrays, falling back to `default` when no
+# finite value exists. Used to fix video colorranges across all frames.
+function finite_extrema(arrays...; default = (-1.0, 1.0))
+    lo = Inf; hi = -Inf
+    for A in arrays, x in A
+        if isfinite(x)
+            lo = min(lo, x); hi = max(hi, x)
+        end
+    end
+    return lo <= hi ? (lo, hi) : default
+end
+
+# Symmetric diverging range ±max(|finite|) over the given arrays.
+function symmetric_extrema(arrays...; default = 1.0)
+    a = 0.0
+    for A in arrays, x in A
+        isfinite(x) && (a = max(a, abs(x)))
+    end
+    a = a > 0 ? a : default
+    return (-a, a)
+end
+
+# ── Seasonal-cycle zonal-mean video (model vs WOA-monthly vs difference) ──────
+#
+# Renders one `.mp4` per case: a 3×3 grid of zonal-mean (latitude × depth)
+# panels — columns WOA | Simulation | (Model − WOA), rows T | S | buoyancy —
+# animated over every monthly snapshot in the case window. The WOA + difference
+# panels index the 12-month WOA climatology by the snapshot's calendar month
+# (`months`), so the WOA reference cycles Jan→Dec→Jan automatically.
+#
+# Built with the Observable/@lift/CairoMakie.record idiom: figure + axes +
+# heatmaps are created once; only the frame index `m` mutates per frame.
+function render_zonal_monthly_video(c, label; lat_range, z_min, filename,
+                                    framerate = 4, reference_date = DateTime(1958, 1, 1))
+    latitude = zonal_latitude_centers()
+    depth    = get_field(c, :depth)
+    lat_idx  = findall(φ -> lat_range[1] <= φ <= lat_range[2], latitude)
+    z_idx    = findall(z -> z >= z_min, depth)
+    lat_sub  = latitude[lat_idx]
+    z_sub    = depth[z_idx]
+    sub(A)   = Array(A[lat_idx, z_idx])
+
+    Tser = get_field(c, :monthly_zonal_temperature_series)
+    Sser = get_field(c, :monthly_zonal_salinity_series)
+    Bser = get_field(c, :monthly_zonal_buoyancy_series)
+    woaT = get_field(c, :zonal_woa_monthly_temperature)
+    woaS = get_field(c, :zonal_woa_monthly_salinity)
+    woaB = get_field(c, :zonal_woa_monthly_buoyancy)
+
+    months = Tser.months
+    times  = Tser.times
+    Nf     = length(Tser.frames)
+    Nf == 0 && (@warn "render_zonal_monthly_video: no frames for $label"; return nothing)
+
+    # Fixed colorranges across all frames.
+    Trange = (-2.0, 30.0)
+    Srange = (33.0, 37.0)
+    Brange = finite_extrema((sub(woaB[m]) for m in 1:12)...; default = (-0.04, 0.02))
+    Tdrange = (-5.0, 5.0)
+    Sdrange = (-1.5, 1.5)
+    Bdrange = symmetric_extrema((sub(Bser.frames[n]) .- sub(woaB[mod1(months[n], 12)]) for n in 1:Nf)...;
+                                default = 0.005)
+
+    m  = Observable(1)
+    wi = @lift mod1(months[$m], 12)
+
+    Tw = @lift sub(woaT[$wi]);              Sw = @lift sub(woaS[$wi]);              Bw = @lift sub(woaB[$wi])
+    Tm = @lift sub(Tser.frames[$m]);        Sm = @lift sub(Sser.frames[$m]);        Bm = @lift sub(Bser.frames[$m])
+    Td = @lift sub(Tser.frames[$m]) .- sub(woaT[mod1(months[$m], 12)])
+    Sd = @lift sub(Sser.frames[$m]) .- sub(woaS[mod1(months[$m], 12)])
+    Bd = @lift sub(Bser.frames[$m]) .- sub(woaB[mod1(months[$m], 12)])
+
+    fig = Figure(size = (1600, 1200), fontsize = 15)
+
+    rows = ((Tw, Tm, Td, Trange, Tdrange, :thermal, "T (°C)"),
+            (Sw, Sm, Sd, Srange, Sdrange, :haline,  "S (psu)"),
+            (Bw, Bm, Bd, Brange, Bdrange, :balance, "b (m/s²)"))
+
+    coltitle(r, txt) = r == 1 ? txt : ""
+    for (r, (w, s, d, rng, drng, cmap, unit)) in enumerate(rows)
+        axw = Axis(fig[r, 1]; xlabel = "Latitude", ylabel = "Depth (m)", title = coltitle(r, "WOA"))
+        axs = Axis(fig[r, 2]; xlabel = "Latitude", title = coltitle(r, "Simulation"))
+        hm  = heatmap!(axw, lat_sub, z_sub, w; colormap = cmap, colorrange = rng, nan_color = :lightgray)
+              heatmap!(axs, lat_sub, z_sub, s; colormap = cmap, colorrange = rng, nan_color = :lightgray)
+        Colorbar(fig[r, 3], hm; label = unit)
+
+        axd = Axis(fig[r, 4]; xlabel = "Latitude", title = coltitle(r, "Model − WOA"))
+        hmd = heatmap!(axd, lat_sub, z_sub, d; colormap = :balance, colorrange = drng, nan_color = :lightgray)
+        Colorbar(fig[r, 5], hmd; label = "Δ$unit")
+
+        for ax in (axw, axs, axd)
+            ylims!(ax, (z_min, 0))
+        end
+    end
+
+    title = @lift "$label  zonal-mean seasonal cycle — $(Dates.format(reference_date + Second(round(Int, times[$m])), "yyyy-mm"))"
+    Label(fig[0, :], title; fontsize = 20)
+
+    return savevideo(fig, filename, 1:Nf, m_idx -> (m[] = m_idx); framerate)
 end
 
 # Climatological ψ(z) at 26.5°N: time-mean and standard deviation of

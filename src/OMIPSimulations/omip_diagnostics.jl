@@ -32,7 +32,7 @@ using Oceananigans.Operators: Axᶠᶜᶜ, Ayᶜᶠᶜ, ℑxᶜᵃᵃ, ℑyᵃ�
 Attach OMIP-protocol output writers to a coupled ocean--sea-ice
 simulation built by [`omip_simulation`](@ref).
 
-Creates four output writers:
+Creates six output writers:
 
 1. **Surface diagnostics** (`<prefix>_surface.nc`): 2-D fields averaged
    over `surface_averaging_interval` -- SST, SSS, SSH, surface velocities,
@@ -44,7 +44,11 @@ Creates four output writers:
 3. **Averages** (`<prefix>_averages.nc`): global means of T, S, buoyancy
    and horizontal-mean (dims=(1,2)) depth profiles of the same, on the
    same `field_averaging_interval` schedule.
-4. **Checkpointer** (`<prefix>_checkpoint`): JLD2 checkpoint of the
+4. **Monthly 3-D fields** (`<prefix>_monthly_fields.jld2`): monthly-averaged
+   T, S, buoyancy for seasonal-cycle diagnostics, on `monthly_averaging_interval`.
+5. **Monthly surface fluxes** (`<prefix>_monthly_surface.jld2`): monthly-averaged
+   evaporation, precipitation, and net freshwater flux, on `monthly_averaging_interval`.
+6. **Checkpointer** (`<prefix>_checkpoint`): JLD2 checkpoint of the
    coupled model at `checkpoint_interval`. Use `run!(sim; pickup=true)`
    to restart from the latest checkpoint.
 
@@ -52,6 +56,7 @@ Creates four output writers:
 
 - `surface_averaging_interval`: averaging window for surface output. Default: `5days`.
 - `field_averaging_interval`: averaging window for 3-D / averages output. Default: `15days`.
+- `monthly_averaging_interval`: window for the monthly 3-D and surface writers. Default: `365days/12`.
 - `checkpoint_interval`: interval between checkpoints. Default: `90days`.
 - `output_dir`: directory for all output files. Default: `"."`.
 - `filename_prefix`: prefix for output filenames. Default: `"omip"`.
@@ -61,6 +66,7 @@ function add_omip_diagnostics!(simulation;
                                field_mean_interval = 5days,
                                surface_averaging_interval = 5days,
                                field_averaging_interval = 15days,
+                               monthly_averaging_interval = 365days / 12,
                                checkpoint_interval = 720days,
                                output_dir = ".",
                                filename_prefix = "omip",
@@ -82,6 +88,14 @@ function add_omip_diagnostics!(simulation;
     Js = model.interfaces.net_fluxes.ocean.S
     Qc = model.interfaces.atmosphere_ocean_interface.fluxes.sensible_heat
     Qv = model.interfaces.atmosphere_ocean_interface.fluxes.latent_heat
+
+    # Freshwater components for the monthly E/P diagnostics:
+    #   evap   — water-vapor mass flux (evaporation, kg/m²/s; the `Jᵛ` of
+    #            assemble_net_ocean_fluxes.jl, positive leaving the ocean).
+    #   precip — prescribed total precipitation (rain + snow, positive down),
+    #            the interpolated atmosphere freshwater `Jᶜ` on the exchange grid.
+    evap   = model.interfaces.atmosphere_ocean_interface.fluxes.water_vapor
+    precip = model.interfaces.exchanger.atmosphere.state.Jᶜ
 
     JTf  = NumericalEarth.Diagnostics.frazil_temperature_flux(model)
     JTn  = NumericalEarth.Diagnostics.net_ocean_temperature_flux(model)
@@ -219,6 +233,39 @@ function add_omip_diagnostics!(simulation;
                                                       file_splitting = TimeInterval(file_splitting_interval),
                                                       overwrite_existing = true)
 
+    # Monthly-averaged 3-D T, S, b for seasonal-cycle diagnostics (zonal-mean
+    # videos vs WOA monthly). One climatological month = 365days/12; this is
+    # *coarser* in time than the 15-day `_fields` writer, so it adds little I/O.
+    monthly_field_outputs = Dict{Symbol, Any}(
+        :to => T,
+        :so => S,
+        :bo => bop,
+    )
+
+    simulation.output_writers[:monthly_fields] = JLD2Writer(ocean.model, monthly_field_outputs;
+                                                            schedule = AveragedTimeInterval(monthly_averaging_interval),
+                                                            dir = output_dir,
+                                                            filename = filename_prefix * "_monthly_fields",
+                                                            file_splitting = TimeInterval(file_splitting_interval),
+                                                            overwrite_existing = true,
+                                                            jld2_kw = Dict(:compress => ZstdFilter()))
+
+    # Monthly-averaged surface freshwater fluxes: evaporation, precipitation,
+    # and the net salinity flux (`wfo`, same field as the surface writer's net).
+    monthly_surface_outputs = Dict{Symbol, Any}(
+        :evap   => evap,
+        :precip => precip,
+        :wfo    => Js,
+    )
+
+    simulation.output_writers[:monthly_surface] = JLD2Writer(ocean.model, monthly_surface_outputs;
+                                                             schedule = AveragedTimeInterval(monthly_averaging_interval),
+                                                             dir = output_dir,
+                                                             filename = filename_prefix * "_monthly_surface",
+                                                             file_splitting = TimeInterval(file_splitting_interval),
+                                                             overwrite_existing = true,
+                                                             jld2_kw = Dict(:compress => ZstdFilter()))
+
     # Checkpointer (drives `run!(sim; pickup=true)`)
     simulation.output_writers[:checkpointer] = Checkpointer(simulation.model;
                                                             schedule = TimeInterval(checkpoint_interval),
@@ -230,6 +277,7 @@ function add_omip_diagnostics!(simulation;
           " surface ($(length(surface_outputs)) fields, every $(prettytime(surface_averaging_interval)))," *
           " 3-D ($(length(field_outputs)) fields, every $(prettytime(field_averaging_interval)))," *
           " averages ($(length(average_outputs)) fields, every $(prettytime(field_averaging_interval)))," *
+          " monthly 3-D ($(length(monthly_field_outputs)) fields) + monthly surface ($(length(monthly_surface_outputs)) fields, every $(prettytime(monthly_averaging_interval)))," *
           " checkpointer (every $(prettytime(checkpoint_interval)))"
 
     return nothing

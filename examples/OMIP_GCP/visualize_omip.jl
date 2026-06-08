@@ -133,6 +133,9 @@ const FIG_REGISTRY = [
     (n = 31, file = "fig31_tropical_surface_fluxes.jl",   fn = :fig31),
     (n = 32, file = "fig32_tropical_profiles.jl",         fn = :fig32),
     (n = 33, file = "fig33_tropical_target_bias.jl",      fn = :fig33),
+    (n = 34, file = "fig34_zonal_monthly_video_tropical.jl", fn = :fig34),
+    (n = 35, file = "fig35_zonal_monthly_video_global.jl",   fn = :fig35),
+    (n = 36, file = "fig36_evap_precip_monthly_video.jl",    fn = :fig36),
 ]
 
 # ══════════════════════════════════════════════════════════════
