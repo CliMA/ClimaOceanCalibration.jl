@@ -338,11 +338,11 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
         with_ice_dynamics = get(config_dict, "with_ice_dynamics", true)
         Δz_top            = get(config_dict, "Δz_top", nothing)
         skin_temperature  = get(config_dict, "skin_temperature", false)
-        # Initial climatology + output mode. Defaults preserve the legacy
-        # annual-mean calibration; the seasonal calibration passes
-        # initial_field=:monthly and output_mode=:seasonal.
-        initial_field     = Symbol(get(config_dict, "initial_field", "annual"))
-        output_mode       = Symbol(get(config_dict, "output_mode",   "annual_mean"))
+        # Output mode. Default preserves the legacy annual-mean calibration; the
+        # seasonal calibration passes output_mode=:seasonal. The model is always
+        # initialized from WOA Annual (WOA Monthly only reaches ~1525 m and cannot
+        # fill the deep grid).
+        output_mode       = Symbol(get(config_dict, "output_mode", "annual_mean"))
 
         @info "Member $member, iter $iter: starting ORCA calibration run"
         @info "  use_gm            = $use_gm"
@@ -368,7 +368,6 @@ function run_CATKE_GM_calibration_orca(catke_scalings::AbstractDict,
                               with_snow            = true,
                               skin_temperature,
                               with_ice_dynamics,
-                              initial_field,
                               diagnostics          = false,
                               Δt              = 30minutes,
                               forcing_dir,

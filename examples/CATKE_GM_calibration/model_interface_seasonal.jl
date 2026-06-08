@@ -1,8 +1,8 @@
 # model_interface_seasonal.jl
 # ClimaCalibrate hook-up for the SEASONAL-CYCLE ORCA CATKE+GM calibration.
 # Mirrors model_interface.jl but:
-#   - the forward model runs with initial_field=:monthly and output_mode=:seasonal
-#     (so it writes the monthly 3-D T,S file), and
+#   - the forward model runs with output_mode=:seasonal (so it writes the monthly
+#     3-D T,S,b and surface E/P files; init stays WOA Annual), and
 #   - the observation map builds the zonal-mean seasonal-cycle vector (last 12
 #     months, regridded to 1° lat-lon, tropics/upper-200 m) via
 #     data_processing_seasonal.jl.
@@ -121,8 +121,7 @@ function ClimaCalibrate.forward_model(::CATKEGMSeasonalInterface, iteration, mem
         "with_ice_dynamics" => with_ice_dynamics,
         "Δz_top"            => Δz_top,
         "skin_temperature"  => skin_temperature,
-        # Seasonal-cycle specifics:
-        "initial_field"     => "monthly",
+        # Seasonal-cycle specific (model still initializes from WOA Annual).
         "output_mode"       => "seasonal",
     )
 

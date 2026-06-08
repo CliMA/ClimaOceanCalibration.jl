@@ -192,7 +192,7 @@ jldopen(metadata_path, "w") do file
     file["Δz_top"]             = Δz_top
     file["skin_temperature"]   = skin_temperature
     file["output_mode"]        = "seasonal"
-    file["initial_field"]      = "monthly"
+    file["initial_field"]      = "annual"
     file["n_months"]           = SEASONAL_N_MONTHS
 end
 

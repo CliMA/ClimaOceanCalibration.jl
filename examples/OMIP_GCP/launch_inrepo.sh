@@ -80,10 +80,6 @@ Environment variables (physics):
   SNOW          Set to "true" to enable snow thermodynamics
   ICE_DYNAMICS  Set to "false" to disable sea-ice dynamics (thermo-only ice).
                 Default: true.
-  INITIALIZED_FIELD  Initial ocean T/S climatology: "monthly" (start-month
-                WOAMonthly, the seasonal-cycle default) or "annual" (WOAAnnual,
-                the historical behavior). Default: monthly. Monthly runs are
-                tagged "_initmonthly" so they don't collide with annual runs.
   SKIN_TEMPERATURE  Set to "true" to compute the atmosphere-ocean interface
                 temperature as a flux-balance "skin" temperature
                 (SkinTemperature(DiffusiveFlux(δ, 1e-2)), with δ = half the
@@ -274,9 +270,6 @@ RUN_NAME="$CONFIG"
 [[ "${NCAR:-false}" == "true" ]]               && RUN_NAME="${RUN_NAME}_ncar"
 [[ "${SNOW:-false}" == "true" ]]               && RUN_NAME="${RUN_NAME}_snow"
 [[ "${SKIN_TEMPERATURE:-false}" == "true" ]]   && RUN_NAME="${RUN_NAME}_skintemp"
-# Tag monthly init (the new default) so its output dir / checkpoint never
-# collides with a historical annual-init run of the same physics name.
-[[ "${INITIALIZED_FIELD:-monthly}" != "annual" ]] && RUN_NAME="${RUN_NAME}_init${INITIALIZED_FIELD:-monthly}"
 [[ "${ICE_DYNAMICS:-true}" == "false" ]]       && RUN_NAME="${RUN_NAME}_noicedyn"
 [[ "${CLOSURE:-catke}" == "simple"   ]]        && RUN_NAME="${RUN_NAME}_simple"
 [[ "${CLOSURE:-catke}" == "nori"     ]]        && RUN_NAME="${RUN_NAME}_nori"
@@ -340,9 +333,6 @@ ICE_DYNAMICS="${ICE_DYNAMICS:-true}"
 SKIN_TEMPERATURE="${SKIN_TEMPERATURE:-false}"
 NORMALIZE_SALINITY="${NORMALIZE_SALINITY:-false}"
 VONKARMAN_SCALING="${VONKARMAN_SCALING:-1}"
-# Initial T/S climatology: monthly (start-month WOAMonthly, the seasonal-cycle
-# default) or annual (WOAAnnual, the historical behavior). Default: monthly.
-INITIALIZED_FIELD="${INITIALIZED_FIELD:-monthly}"
 CATKE_PARAMS_EXPR="${CATKE_PARAMS_EXPR:-}"
 GM_PARAMS_EXPR="${GM_PARAMS_EXPR:-}"
 
@@ -429,10 +419,6 @@ SNOW_KWARG=""
 SKIN_TEMPERATURE_KWARG=""
 [[ "$SKIN_TEMPERATURE" == "true" ]] && SKIN_TEMPERATURE_KWARG="skin_temperature = true,"
 
-# Initial-condition climatology. Always emitted; omip_simulation's own default is
-# :annual, but the launch script defaults to :monthly for seasonal-cycle studies.
-INITIAL_FIELD_KWARG="initial_field = :${INITIALIZED_FIELD},"
-
 ICE_DYNAMICS_KWARG=""
 [[ "$ICE_DYNAMICS" == "false" ]] && ICE_DYNAMICS_KWARG="with_ice_dynamics = false,"
 
@@ -463,7 +449,6 @@ sim = omip_simulation(:${CONFIG};
                       ${VONKARMAN_KWARG}
                       ${SNOW_KWARG}
                       ${SKIN_TEMPERATURE_KWARG}
-                      ${INITIAL_FIELD_KWARG}
                       ${ICE_DYNAMICS_KWARG}
                       ${DIAGNOSTICS_KWARG}
                       ${MIN_SALINITY_KWARG}

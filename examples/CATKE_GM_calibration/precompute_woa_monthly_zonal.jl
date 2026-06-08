@@ -21,7 +21,7 @@ using NumericalEarth
 using NumericalEarth.DataWrangling: Metadatum
 using NumericalEarth.DataWrangling.WOA: WOAMonthly
 using Oceananigans
-using Oceananigans.Fields: CenterField, interior
+using Oceananigans.Fields: Field, CenterField, interior, interpolate!
 using Dates
 using JLD2
 
@@ -45,15 +45,24 @@ mkpath(RESTORING_DIR)
 grid = build_grid(Val(:orca), CPU(), NZ, DEPTH; Δz_top = ΔZ_TOP)
 
 @info "Loading 12 WOA monthly T/S slices onto the ORCA grid + TEOS-10 conversion..."
+# NOTE: WOA Monthly only reaches ~1525 m, so `set!(field_on_5500m_grid, Metadatum)`
+# errors ("vertical range ... smaller than the target grid"). Instead build the
+# field on WOA's native grid and `interpolate!` onto the (deep) model grid — the
+# same pattern the visualization cache uses. The model grid is kept (not a shallow
+# grid) so the target matches each member's observation map cell-for-cell; the
+# levels below WOA's range are extrapolated but discarded by the z ≥ z_min slice
+# (we only calibrate/visualize the upper ocean).
 Ts = Vector{Array{Float64, 3}}(undef, SEASONAL_N_MONTHS)
 Ss = Vector{Array{Float64, 3}}(undef, SEASONAL_N_MONTHS)
 Bs = Vector{Array{Float64, 3}}(undef, SEASONAL_N_MONTHS)
 for m in 1:SEASONAL_N_MONTHS
     date = DateTime(2018, m, 1)
+    woaT = Field(Metadatum(:temperature; dir = RESTORING_DIR, dataset = WOAMonthly(), date = date), CPU())
+    woaS = Field(Metadatum(:salinity;    dir = RESTORING_DIR, dataset = WOAMonthly(), date = date), CPU())
     T = CenterField(grid)
     S = CenterField(grid)
-    set!(T, Metadatum(:temperature; dir = RESTORING_DIR, dataset = WOAMonthly(), date = date))
-    set!(S, Metadatum(:salinity;    dir = RESTORING_DIR, dataset = WOAMonthly(), date = date))
+    interpolate!(T, woaT)
+    interpolate!(S, woaS)
     woa_to_teos10!(T, S)
     Ts[m] = Array(interior(T))
     Ss[m] = Array(interior(S))

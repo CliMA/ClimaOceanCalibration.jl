@@ -373,11 +373,6 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
    (`BulkTemperature()`, the default). Independent of `flux_configuration` — applies
    uniformly across `:default`, `:corrected`, `:shear_aware`, and `:ncar`.
    Default: `false`.
-- `initial_field::Symbol`: WOA climatology used to initialize the ocean T/S state.
-   * `:annual` — WOAAnnual single annual-mean climatology (default; historical behavior).
-   * `:monthly` — WOAMonthly slice for `month(start_date)` (start-month climatology),
-     the appropriate cold-start for seasonal-cycle studies.
-   Default: `:annual`.
 - `diagnostics::Bool`: whether to attach OMIP diagnostics. Default: `true`.
 - `monthly_averaging_interval`: window for the `_monthly_fields` (3-D T/S/b) and
    `_monthly_surface` (evaporation/precipitation/net-freshwater) writers. Default:
@@ -418,7 +413,6 @@ function omip_simulation(config::Symbol = :halfdegree;
                          von_karman_scaling = 1,
                          skin_temperature = false,
                          ocean_minimum_salinity = 4,
-                         initial_field = :annual,
                          Cᵂu★ = nothing,
                          with_snow = false,
                          with_ice_dynamics = true,
@@ -455,8 +449,7 @@ function omip_simulation(config::Symbol = :halfdegree;
                         biharmonic_viscosity,
                         vertical_closure,
                         restoring_dir, piston_velocity,
-                        start_date, end_date,
-                        initial_field)
+                        start_date, end_date)
 
     snow_thermodynamics = with_snow ? NumericalEarth.SeaIces.default_snow_thermodynamics(grid) : nothing
     sea_ice = build_sea_ice(cfg, grid, ocean; restoring_dir, snow_thermodynamics, with_ice_dynamics)
@@ -914,8 +907,7 @@ function build_ocean(config, grid;
                      biharmonic_timescale,
                      biharmonic_viscosity = nothing,
                      vertical_closure = :catke,
-                     start_date, end_date,
-                     initial_field = :annual)
+                     start_date, end_date)
 
     salt_restoring = salinity_surface_restoring(grid, WOAMonthly(); restoring_dir, piston_velocity)
     closure = omip_closure(vertical_closure;
@@ -937,29 +929,15 @@ function build_ocean(config, grid;
                              additional_surface_fluxes = (; S = salt_restoring),
                              closure)
 
-    # Load WOA T (in-situ, °C) and S (Practical) onto the model grid, convert to
-    # TEOS-10 Conservative T and Absolute Salinity in place, then initialize the
-    # prognostic ocean state from the converted fields.
-    #
-    # `initial_field` selects the climatology:
-    #   :annual  — WOAAnnual (single annual mean; the historical default).
-    #   :monthly — WOAMonthly slice for `month(start_date)`. Initializing from
-    #              the start-month climatology (rather than the annual mean) is
-    #              the right cold-start for seasonal-cycle studies. WOAMonthly's
-    #              climatology dates are tagged year 2018 (see `all_dates`), so
-    #              the month is selected via `date = DateTime(2018, m, 1)`.
+    # Load WOA Annual T (in-situ, °C) and S (Practical) onto the model grid,
+    # convert to TEOS-10 Conservative T and Absolute Salinity in place, then
+    # initialize the prognostic ocean state from the converted fields. WOA Annual
+    # (not Monthly) is used because it covers the full ocean depth (~5500 m),
+    # whereas WOA Monthly only reaches ~1525 m and cannot fill a deep grid.
     T_init = CenterField(grid)
     S_init = CenterField(grid)
-    if initial_field === :monthly
-        woa_date = DateTime(2018, month(start_date), 1)
-        set!(T_init, Metadatum(:temperature; dir=restoring_dir, dataset=WOAMonthly(), date=woa_date))
-        set!(S_init, Metadatum(:salinity;    dir=restoring_dir, dataset=WOAMonthly(), date=woa_date))
-    elseif initial_field === :annual
-        set!(T_init, Metadatum(:temperature; dir=restoring_dir, dataset=WOAAnnual()))
-        set!(S_init, Metadatum(:salinity;    dir=restoring_dir, dataset=WOAAnnual()))
-    else
-        throw(ArgumentError("initial_field must be :annual or :monthly, got $(repr(initial_field))"))
-    end
+    set!(T_init, Metadatum(:temperature; dir=restoring_dir, dataset=WOAAnnual()))
+    set!(S_init, Metadatum(:salinity;    dir=restoring_dir, dataset=WOAAnnual()))
     woa_to_teos10!(T_init, S_init)
     set!(ocean.model, T=T_init, S=S_init)
 
