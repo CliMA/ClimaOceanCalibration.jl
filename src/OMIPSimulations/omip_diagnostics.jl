@@ -93,9 +93,14 @@ function add_omip_diagnostics!(simulation;
     #   evap   — water-vapor mass flux (evaporation, kg/m²/s; the `Jᵛ` of
     #            assemble_net_ocean_fluxes.jl, positive leaving the ocean).
     #   precip — prescribed total precipitation (rain + snow, positive down),
-    #            the interpolated atmosphere freshwater `Jᶜ` on the exchange grid.
+    #            the interpolated atmosphere freshwater flux on the exchange grid.
+    #            Newer NumericalEarth splits the combined condensate flux `Jᶜ`
+    #            into rain (`Jʳⁿ`) and snow (`Jˢⁿ`); older versions expose a
+    #            single `Jᶜ`. Sum the components when both are present.
     evap   = model.interfaces.atmosphere_ocean_interface.fluxes.water_vapor
-    precip = model.interfaces.exchanger.atmosphere.state.Jᶜ
+    atmos_state = model.interfaces.exchanger.atmosphere.state
+    precip = hasproperty(atmos_state, :Jᶜ) ? atmos_state.Jᶜ :
+             atmos_state.Jʳⁿ + atmos_state.Jˢⁿ
 
     JTf  = NumericalEarth.Diagnostics.frazil_temperature_flux(model)
     JTn  = NumericalEarth.Diagnostics.net_ocean_temperature_flux(model)

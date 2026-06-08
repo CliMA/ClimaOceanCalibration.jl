@@ -276,7 +276,15 @@ function attach_seasonal_monthly_EP_writer!(sim, output_dir, filename_prefix;
                                             monthly_interval = 365days / 12)
     ocean = sim.model.ocean
     evap   = sim.model.interfaces.atmosphere_ocean_interface.fluxes.water_vapor
-    precip = sim.model.interfaces.exchanger.atmosphere.state.Jᶜ
+    # Total prescribed precipitation flux. Newer NumericalEarth splits the
+    # combined condensate flux `Jᶜ` into rain (`Jʳⁿ`) and snow (`Jˢⁿ`); older
+    # versions expose a single `Jᶜ`. Sum the components when both are present.
+    atmos_state = sim.model.interfaces.exchanger.atmosphere.state
+    precip = if hasproperty(atmos_state, :Jᶜ)
+        atmos_state.Jᶜ
+    else
+        atmos_state.Jʳⁿ + atmos_state.Jˢⁿ
+    end
     wfo    = sim.model.interfaces.net_fluxes.ocean.S
     ocean.output_writers[:seasonal_monthly_EP] = JLD2Writer(
         ocean.model, (evap = evap, precip = precip, wfo = wfo);
