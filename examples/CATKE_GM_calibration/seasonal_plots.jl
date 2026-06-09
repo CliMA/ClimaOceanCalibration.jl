@@ -12,7 +12,6 @@
 
 using CairoMakie
 using JLD2
-using Dates
 using Oceananigans
 using Oceananigans.Grids: φnode
 
@@ -39,53 +38,69 @@ end
 
 """
     plot_member_seasonal_video(member_dir, filename_prefix, woa_file,
-                               lat_range, z_min, out_path; framerate, reference_date)
+                               lat_range, z_min, out_path;
+                               framerate, plot_z_min)
 
-Render the member's last-year zonal-mean T/S/buoyancy seasonal cycle vs the WOA
-monthly climatology into `out_path` (.mp4). Returns the output path.
+Render the member's full-run zonal-mean T/S/buoyancy seasonal cycle vs the WOA
+monthly climatology into `out_path` (.mp4). One frame per monthly snapshot in the
+member file (all years of the run). Simulations start in January with monthly
+output, so frame `f` is calendar month `mod1(f, 12)`; its WOA reference is that
+climatological month (WOA Monthly is a 12-month climatology, indexed cyclically,
+so any number of model years is covered).
+
+`z_min` is the calibration cutoff (kept for the call signature); the video depth
+extent is set by `plot_z_min` (default −400 m). Returns the output path.
 """
 function plot_member_seasonal_video(member_dir::AbstractString,
                                     filename_prefix::AbstractString,
                                     woa_file::AbstractString,
                                     lat_range, z_min, out_path::AbstractString;
-                                    framerate = 2, reference_date = DateTime(1958, 1, 1))
-    # Member zonal-mean T,S,b (12 months), same regrid pipeline as the obs map.
-    zTm, zSm, zBm, latitude, depth, times = member_zonal_TSB_2d(member_dir, filename_prefix)
+                                    framerate = 2, plot_z_min = -400.0)
+    # Member zonal-mean T,S,b for ALL monthly snapshots, same regrid pipeline as
+    # the obs map.
+    zTm, zSm, zBm, latitude, depth, times = member_zonal_TSB_2d(member_dir, filename_prefix;
+                                                                all_months = true)
 
     # WOA reference 2-D zonal arrays + its own (shallow) depth axis. The WOA grid
-    # is the top cells of the model grid, so its z ≥ z_min cells coincide with the
-    # member's; slicing each by its own depth gives identical cells/shapes.
+    # is the top cells of the model grid, so its z ≥ plot_z_min cells coincide with
+    # the member's; slicing each by its own depth gives identical cells/shapes.
     woa = jldopen(woa_file, "r") do f
         (zT = f["zonal_T"], zS = f["zonal_S"], zb = f["zonal_b"], depth = f["depth"])
     end
-    length(woa.zT) == length(zTm) ||
-        error("plot_member_seasonal_video: WOA has $(length(woa.zT)) months, member $(length(zTm))")
+    n_woa_months = length(woa.zT)
 
     j  = findall(φ -> lat_range[1] <= φ <= lat_range[2], latitude)
-    k  = findall(z -> z >= z_min, depth)          # member depth levels
-    kw = findall(z -> z >= z_min, woa.depth)      # WOA (shallow) depth levels — same cells
+    k  = findall(z -> z >= plot_z_min, depth)          # member depth levels
+    kw = findall(z -> z >= plot_z_min, woa.depth)      # WOA (shallow) depth levels — same cells
+    length(k) == length(kw) || error("plot_member_seasonal_video: member ($(length(k))) and \
+        WOA ($(length(kw))) have different #levels above $(plot_z_min) m; grids don't coincide there")
     lat_sub = latitude[j]
     z_sub   = depth[k]
     sub(A)  = Array(A[j, k])                       # member arrays
     subw(A) = Array(A[j, kw])                      # WOA arrays
 
-    months = [month(reference_date + Second(round(Int, t))) for t in times]
     N = length(zTm)
+    # Simulations start in January with monthly output, so frame f is calendar
+    # month mod1(f, 12) of model year div(f-1, 12)+1. WOA Monthly is a 12-month
+    # climatology indexed by calendar month — this is the cyclical WOA index.
+    wmonth = [mod1(f, 12) for f in 1:N]
+    yr     = [div(f - 1, 12) + 1 for f in 1:N]
 
-    Trange  = (-2.0, 30.0); Srange  = (33.0, 37.0)
-    Brange  = _finite_extrema((subw(woa.zb[m]) for m in 1:N)...; default = (-0.04, 0.02))
+    Trange  = (15, 30); Srange = (34.5, 36.5)
+    Brange  = _finite_extrema((subw(woa.zb[mc]) for mc in 1:n_woa_months)...; default = (-0.04, 0.02))
     Tdrange = (-5.0, 5.0); Sdrange = (-1.5, 1.5)
-    Bdrange = _symmetric_extrema((sub(zBm[m]) .- subw(woa.zb[m]) for m in 1:N)...; default = 0.005)
+    Bdrange = _symmetric_extrema((sub(zBm[f]) .- subw(woa.zb[wmonth[f]]) for f in 1:N)...; default = 0.005)
 
     m  = Observable(1)
-    Tw = @lift subw(woa.zT[$m]); Tm = @lift sub(zTm[$m]); Td = @lift sub(zTm[$m]) .- subw(woa.zT[$m])
-    Sw = @lift subw(woa.zS[$m]); Sm = @lift sub(zSm[$m]); Sd = @lift sub(zSm[$m]) .- subw(woa.zS[$m])
-    Bw = @lift subw(woa.zb[$m]); Bm = @lift sub(zBm[$m]); Bd = @lift sub(zBm[$m]) .- subw(woa.zb[$m])
+    wm = @lift wmonth[$m]   # WOA climatological month for the current frame
+    Tw = @lift subw(woa.zT[$wm]); Tm = @lift sub(zTm[$m]); Td = @lift sub(zTm[$m]) .- subw(woa.zT[$wm])
+    Sw = @lift subw(woa.zS[$wm]); Sm = @lift sub(zSm[$m]); Sd = @lift sub(zSm[$m]) .- subw(woa.zS[$wm])
+    Bw = @lift subw(woa.zb[$wm]); Bm = @lift sub(zBm[$m]); Bd = @lift sub(zBm[$m]) .- subw(woa.zb[$wm])
 
     fig = Figure(size = (1500, 1150), fontsize = 15)
-    rows = ((Tw, Tm, Td, Trange, Tdrange, :thermal, "T (°C)"),
-            (Sw, Sm, Sd, Srange, Sdrange, :haline,  "S (psu)"),
-            (Bw, Bm, Bd, Brange, Bdrange, :balance, "b (m/s²)"))
+    rows = ((Tw, Tm, Td, Trange, Tdrange, :turbo, "T (°C)"),
+            (Sw, Sm, Sd, Srange, Sdrange, :turbo, "S (psu)"),
+            (Bw, Bm, Bd, Brange, Bdrange, :turbo, "b (m/s²)"))
     coltitle(r, txt) = r == 1 ? txt : ""
     for (r, (w, s, d, rng, drng, cmap, unit)) in enumerate(rows)
         axw = Axis(fig[r, 1]; xlabel = "Latitude", ylabel = "Depth (m)", title = coltitle(r, "WOA"))
@@ -97,11 +112,11 @@ function plot_member_seasonal_video(member_dir::AbstractString,
         hmd = heatmap!(axd, lat_sub, z_sub, d; colormap = :balance, colorrange = drng, nan_color = :lightgray)
         Colorbar(fig[r, 5], hmd; label = "Δ$unit")
         for ax in (axw, axs, axd)
-            ylims!(ax, (z_min, 0))
+            ylims!(ax, (plot_z_min, 0))
         end
     end
 
-    title = @lift "Zonal-mean seasonal cycle (last year) — month $(months[$m])"
+    title = @lift "Zonal-mean seasonal cycle — model year $(yr[$m]), month $(wmonth[$m])"
     Label(fig[0, :], title; fontsize = 20)
 
     CairoMakie.record(fig, out_path, 1:N; framerate) do mm
@@ -112,24 +127,24 @@ end
 
 """
     plot_member_seasonal_EP_video(member_dir, filename_prefix, lat_range, out_path;
-                                  framerate, reference_date)
+                                  framerate)
 
 Render a model-only animated tropical map of monthly evaporation, precipitation,
-and net freshwater flux (3 rows), over the member's final 12 monthly snapshots.
-No observational reference (there is no WOA E/P target).
+and net freshwater flux (3 rows), over ALL of the member's monthly snapshots
+(every year of the run). No observational reference (there is no WOA E/P target).
 """
 function plot_member_seasonal_EP_video(member_dir::AbstractString,
                                        filename_prefix::AbstractString,
                                        lat_range, out_path::AbstractString;
-                                       framerate = 2, reference_date = DateTime(1958, 1, 1))
+                                       framerate = 2)
     path = joinpath(member_dir, "$(filename_prefix)_monthly_EP.jld2")
     isfile(path) || error("plot_member_seasonal_EP_video: missing $path")
     Efts = FieldTimeSeries(path, "evap")
     Pfts = FieldTimeSeries(path, "precip")
     Wfts = FieldTimeSeries(path, "wfo")
     nt = length(Efts.times)
-    nt >= SEASONAL_N_MONTHS || error("plot_member_seasonal_EP_video: only $nt monthly E/P snapshots")
-    last12 = (nt - SEASONAL_N_MONTHS + 1):nt
+    nt >= 1 || error("plot_member_seasonal_EP_video: no monthly E/P snapshots")
+    window = 1:nt
 
     grid = Efts.grid
     Nx, Ny, _ = size(grid)
@@ -142,17 +157,23 @@ function plot_member_seasonal_EP_video(member_dir::AbstractString,
             falses(Nx, Ny)
 
     function slab(fts, n)
-        A = Array(interior(fts[last12[n]])[:, :, 1])
+        A = Array(interior(fts[window[n]])[:, :, 1])
         A[land] .= NaN
         return A[:, jkeep]
     end
 
-    months = [month(reference_date + Second(round(Int, t))) for t in Efts.times[last12]]
-    N = SEASONAL_N_MONTHS
+    N = nt
+    # Simulations start in January with monthly output: frame f is calendar month
+    # mod1(f, 12) of model year div(f-1, 12)+1.
+    emonth = [mod1(f, 12) for f in 1:N]
+    yr     = [div(f - 1, 12) + 1 for f in 1:N]
 
-    eprange = _finite_extrema((slab(Efts, n) for n in 1:N)..., (slab(Pfts, n) for n in 1:N)...;
-                              default = (0.0, 1e-4))
-    nrange  = _symmetric_extrema((slab(Wfts, n) for n in 1:N)...; default = 1e-5)
+    # eprange = _finite_extrema((slab(Efts, n) for n in 1:N)..., (slab(Pfts, n) for n in 1:N)...;
+    #                           default = (0.0, 1e-4))
+    # nrange  = _symmetric_extrema((slab(Wfts, n) for n in 1:N)...; default = 1e-5)
+
+    eprange = (0, 3e-4)  # fixed range for E/P (kg/m²/s)
+    nrange  = (-1.5e-5, 1.5e-5)  # fixed range for net freshwater flux (kg/m²/s)
 
     m  = Observable(1)
     En = @lift slab(Efts, $m)
@@ -170,7 +191,7 @@ function plot_member_seasonal_EP_video(member_dir::AbstractString,
     hmW = heatmap!(axW, 1:Nx, φsub, Wn; colormap = :balance, colorrange = nrange, nan_color = :lightgray)
     Colorbar(fig[3, 2], hmW; label = "kg/m²/s")
 
-    title = @lift "Monthly surface freshwater fluxes (last year) — month $(months[$m])"
+    title = @lift "Monthly surface freshwater fluxes — model year $(yr[$m]), month $(emonth[$m])"
     Label(fig[0, :], title; fontsize = 18)
 
     CairoMakie.record(fig, out_path, 1:N; framerate) do mm

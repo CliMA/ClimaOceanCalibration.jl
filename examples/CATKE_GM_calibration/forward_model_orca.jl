@@ -242,19 +242,23 @@ end
                                        monthly_interval = 365days/12)
 
 Attach a monthly-averaged 3-D T, S writer (`<prefix>_monthly_TS.jld2`) for the
-seasonal-cycle calibration. Writes monthly-averaged 3-D T, S, and buoyancy in a
-single file over the whole run; the observation map reads the final 12 monthly
-T,S snapshots (the last year's cycle) and the per-member video also reads
-buoyancy. Used in addition to `attach_calibration_output_writers!`.
+seasonal-cycle calibration. Writes monthly-averaged 3-D T, S in a single file
+over the whole run; the observation map reads the final 12 monthly T,S snapshots
+(the last year's cycle), and the per-member video recomputes buoyancy from T,S.
+Used in addition to `attach_calibration_output_writers!`.
+
+Buoyancy is intentionally NOT written here: the OMIP ocean model carries
+buoyancy === nothing, so Oceananigans.Models.buoyancy_operation(ocean.model)
+returns a ZeroField. Buoyancy is instead recomputed from T,S downstream
+(seasonal_buoyancy_3d), matching how the WOA reference is built.
 """
 function attach_seasonal_monthly_TS_writer!(sim, output_dir, filename_prefix;
                                             monthly_interval = 365days / 12)
     ocean = sim.model.ocean
     T = ocean.model.tracers.T
     S = ocean.model.tracers.S
-    bo = Oceananigans.Models.buoyancy_operation(ocean.model)
     ocean.output_writers[:seasonal_monthly_TS] = JLD2Writer(
-        ocean.model, (T = T, S = S, bo = bo);
+        ocean.model, (T = T, S = S);
         schedule = AveragedTimeInterval(monthly_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_monthly_TS.jld2"),
         overwrite_existing = true,

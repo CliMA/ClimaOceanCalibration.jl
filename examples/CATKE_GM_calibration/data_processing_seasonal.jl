@@ -166,32 +166,42 @@ function seasonal_buoyancy_3d(T::Field, S::Field)
 end
 
 """
-    member_zonal_TSB_2d(member_dir, filename_prefix) -> (zT, zS, zb, latitude, depth, times)
+    member_zonal_TSB_2d(member_dir, filename_prefix; all_months = true)
+        -> (zT, zS, zb, latitude, depth, times)
 
-Load a member's final 12 monthly T, S, and buoyancy snapshots and return their
-zonal-mean `(Nlat, Nz)` arrays (12-vectors each), plus axes and snapshot times.
-Builds the regridder once and reuses it for all three fields. Used by the
-per-member seasonal video.
+Load a member's monthly T, S snapshots, recompute buoyancy from each (T,S) pair,
+and return their zonal-mean `(Nlat, Nz)` arrays (one per snapshot), plus axes and
+snapshot times. With `all_months = true` (default) every monthly snapshot in the
+file is returned (the full multi-year run); with `all_months = false` only the
+final 12 (the last year's cycle). Builds the regridder once and reuses it for all
+three fields. Used by the per-member seasonal video.
 """
-function member_zonal_TSB_2d(member_dir::AbstractString, filename_prefix::AbstractString)
+function member_zonal_TSB_2d(member_dir::AbstractString, filename_prefix::AbstractString;
+                             all_months::Bool = true)
     path = joinpath(member_dir, "$(filename_prefix)_monthly_TS.jld2")
     isfile(path) || error("member_zonal_TSB_2d: missing $path")
     Tfts = FieldTimeSeries(path, "T")
     Sfts = FieldTimeSeries(path, "S")
-    Bfts = FieldTimeSeries(path, "bo")
+    # NB: do NOT read the stored "bo" field. It is written as
+    # Oceananigans.Models.buoyancy_operation(ocean.model), and the ClimaOcean OMIP
+    # ocean model carries buoyancy === nothing, so buoyancy_operation returns a
+    # ZeroField — every "bo" snapshot is identically 0. Recompute buoyancy from the
+    # stored T,S with the SAME SeawaterBuoyancy/TEOS-10 formulation used to build
+    # the WOA reference (seasonal_buoyancy_3d), so the member and WOA panels (and
+    # their difference) are apples-to-apples.
     nt = length(Tfts.times)
     nt >= SEASONAL_N_MONTHS ||
         error("member_zonal_TSB_2d: only $nt monthly snapshots in $path; need $SEASONAL_N_MONTHS")
-    last12   = (nt - SEASONAL_N_MONTHS + 1):nt
+    window   = all_months ? (1:nt) : ((nt - SEASONAL_N_MONTHS + 1):nt)
     grid     = Tfts.grid
     rg       = seasonal_regridder(grid)
     mask     = seasonal_ocean_mask_3d(grid)
     latitude = seasonal_zonal_latitudes()
     depth    = collect(znodes(grid, Center()))
-    zT = [seasonal_zonal_mean(Array(interior(Tfts[n])), mask, rg) for n in last12]
-    zS = [seasonal_zonal_mean(Array(interior(Sfts[n])), mask, rg) for n in last12]
-    zb = [seasonal_zonal_mean(Array(interior(Bfts[n])), mask, rg) for n in last12]
-    times = collect(Tfts.times[last12])
+    zT = [seasonal_zonal_mean(Array(interior(Tfts[n])), mask, rg) for n in window]
+    zS = [seasonal_zonal_mean(Array(interior(Sfts[n])), mask, rg) for n in window]
+    zb = [seasonal_zonal_mean(seasonal_buoyancy_3d(Tfts[n], Sfts[n]), mask, rg) for n in window]
+    times = collect(Tfts.times[window])
     return zT, zS, zb, latitude, depth, times
 end
 

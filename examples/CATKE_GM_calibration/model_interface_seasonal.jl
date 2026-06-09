@@ -23,6 +23,11 @@ include(joinpath(@__DIR__, "forward_model_orca.jl"))
 isdefined(@__MODULE__, :process_member_data_seasonal) ||
     include(joinpath(@__DIR__, "data_processing_seasonal.jl"))
 include(joinpath(@__DIR__, "seasonal_plots.jl"))
+# Annual-style per-member diagnostics (drift/profile/heatmap/tropical-bias),
+# the same figure set produced by model_interface.jl. Brings in data_processing.jl
+# (load_woa_on_orca / load_orca_averaged / member_has_output) transitively.
+isdefined(@__MODULE__, :plot_member_vs_woa) ||
+    include(joinpath(@__DIR__, "calibration_plots.jl"))
 
 if !@isdefined(output_dir)
     error("output_dir must be defined before including model_interface_seasonal.jl")
@@ -205,6 +210,16 @@ function ClimaCalibrate.analyze_iteration(::CATKEGMSeasonalInterface, ekp, g_ens
     # Per-member seasonal-cycle videos (zonal-mean T/S vs WOA monthly).
     iter_fig_root = joinpath(ClimaCalibrate.path_to_iteration(calib_output_dir, iteration), "figures")
     mkpath(iter_fig_root)
+
+    # The annual-style figures (plot_member_vs_woa) compare against the WOA
+    # ANNUAL mean on the ORCA grid, not the monthly-zonal seasonal target in
+    # `woa_file`. Resolve that cache the same way calibrate_catke_gm.jl does
+    # (keyed on Δz_top); skip the annual plots if it hasn't been precomputed.
+    annual_woa_file = abspath(joinpath(@__DIR__, "calibration_data",
+        Δz_top === nothing ? "woa_orca_grid.jld2" : "woa_orca_grid_dztop$(Δz_top).jld2"))
+    has_annual_woa = isfile(annual_woa_file)
+    has_annual_woa || @warn "Annual WOA-on-ORCA cache not found; skipping annual-style \
+        per-member figures (run precompute_woa_orca.jl to enable them)" annual_woa_file
     for m in 1:ensemble_size
         member_path = ClimaCalibrate.path_to_ensemble_member(calib_output_dir, iteration, m)
         if isfile(joinpath(member_path, "RUN_FAILED.err")) ||
@@ -227,6 +242,19 @@ function ClimaCalibrate.analyze_iteration(::CATKEGMSeasonalInterface, ekp, g_ens
                                           joinpath(fig_dir, "seasonal_EP_maps.mp4"))
         catch e
             @warn "plot_member_seasonal_EP_video failed for member $m" exception=e
+        end
+
+        # Annual-style figures (fig16 drift, fig17 profiles, fig21 heatmaps,
+        # tropical target bias), same set as model_interface.jl. The seasonal
+        # forward model writes the same *_means.jld2 / *_average.jld2 files
+        # these read, so they work as long as the annual WOA cache exists.
+        if has_annual_woa
+            try
+                plot_member_vs_woa(member_path, filename_prefix, annual_woa_file,
+                                   latitude_range, z_min, sampling_length, fig_dir)
+            catch e
+                @warn "plot_member_vs_woa failed for member $m" exception=e
+            end
         end
     end
     return nothing
