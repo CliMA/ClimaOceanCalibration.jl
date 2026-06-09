@@ -86,10 +86,10 @@ function plot_member_seasonal_video(member_dir::AbstractString,
     wmonth = [mod1(f, 12) for f in 1:N]
     yr     = [div(f - 1, 12) + 1 for f in 1:N]
 
-    Trange  = (15, 30); Srange = (34.5, 36.5)
+    Trange  = (10, 30); Srange = (34.5, 36)
     Brange  = _finite_extrema((subw(woa.zb[mc]) for mc in 1:n_woa_months)...; default = (-0.04, 0.02))
-    Tdrange = (-5.0, 5.0); Sdrange = (-1.5, 1.5)
-    Bdrange = _symmetric_extrema((sub(zBm[f]) .- subw(woa.zb[wmonth[f]]) for f in 1:N)...; default = 0.005)
+    Tdrange = (-5.0, 5.0); Sdrange = (-0.5, 0.5)
+    Bdrange = (-0.0075, 0.0075)
 
     m  = Observable(1)
     wm = @lift wmonth[$m]   # WOA climatological month for the current frame
