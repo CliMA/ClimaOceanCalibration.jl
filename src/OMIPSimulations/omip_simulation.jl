@@ -551,12 +551,20 @@ function woa_to_teos10!(T_field, S_field)
     for k in 1:Nz, j in 1:Ny, i in 1:Nx
         t  = T_h[i, j, k]
         SP = S_h[i, j, k]
-        (isnan(t) || isnan(SP)) && continue
+        # If either field is missing at this (masked/dry) cell, blank BOTH to NaN.
+        # Otherwise a NaN in one field would leave raw fill (e.g. a huge negative
+        # salinity) in the other, which then breaks sqrt in TEOS-10 when buoyancy
+        # is evaluated over the whole grid downstream.
+        if isnan(t) || isnan(SP)
+            T_h[i, j, k] = NaN
+            S_h[i, j, k] = NaN
+            continue
+        end
         λ = λnode(i, j, k, cpu_grid, Center(), Center(), Center())
         φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
         z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
         p = approx_pressure_dbar(z)
-        SA = max(zero(SP), Sᴬ_from_Sᴾ(SP, p, λ, φ))  # guard against tiny negative Sᴬ (fresh cells) that breaks sqrt in TEOS-10
+        SA = Sᴬ_from_Sᴾ(SP, p, λ, φ)
         Θ  = Θ_from_T(SA, t, p)
         T_h[i, j, k] = Θ
         S_h[i, j, k] = SA
@@ -589,7 +597,7 @@ function woa_salinity_fts_to_teos10!(fts)
             φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
             z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
             p = approx_pressure_dbar(z)
-            S_h[i, j, k] = max(zero(SP), Sᴬ_from_Sᴾ(SP, p, λ, φ))
+            S_h[i, j, k] = Sᴬ_from_Sᴾ(SP, p, λ, φ)
         end
         copyto!(S_int, S_h)
     end
@@ -871,6 +879,34 @@ function build_grid(::Val{:orca}, arch, Nz, depth; Δz_top = nothing)
                     dataset = ORCA1(),
                     Nz,
                     z = z_faces,
+                    halo = (8, 8, 8),
+                    with_bathymetry = true,
+                    active_cells_map = true)
+end
+
+"""
+    upper_orca_grid(grid, max_depth)
+
+ORCA grid sharing `grid`'s horizontal discretization but keeping only the *top*
+cells whose shallower face lies at or above `-max_depth`. The retained z-faces are
+taken directly from `grid`'s own faces (an exact subset), so the returned grid
+coincides cell-for-cell with `grid` in the upper ocean regardless of how `grid`'s
+vertical spacing was constructed (no need to know `Δz_top`). Use this to rebuild a
+deep case grid as a shallow grid for datasets that don't span the full ocean depth
+(e.g. WOA Monthly, ~1525 m): a field set on the result is never extrapolated below
+the dataset's range.
+"""
+function upper_orca_grid(grid, max_depth)
+    arch = architecture(grid)
+    zf = Array(znodes(grid, Face()))                     # ascending, -depth → 0
+    shallow_faces = collect(zf[zf .>= -max_depth])       # contiguous top chunk
+    Nz_shallow = length(shallow_faces) - 1
+    Nz_shallow >= 1 || error("upper_orca_grid: max_depth=$max_depth is shallower than the top cell")
+
+    return ORCAGrid(arch;
+                    dataset = ORCA1(),
+                    Nz = Nz_shallow,
+                    z = shallow_faces,
                     halo = (8, 8, 8),
                     with_bathymetry = true,
                     active_cells_map = true)

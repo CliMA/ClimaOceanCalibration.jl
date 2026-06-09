@@ -326,6 +326,16 @@ LOADERS[:land]          = c -> build_land_mask(get_field(c, :grid))
 LOADERS[:ocean_mask_3d] = c -> build_ocean_mask_3d(get_field(c, :grid))
 LOADERS[:depth]         = c -> collect(znodes(get_field(c, :grid), Center()))
 
+# WOA Monthly only reaches ~1525 m, so loading it onto the full case grid
+# extrapolates the deep cells to nonsense (which then blows up the TEOS-10
+# buoyancy `sqrt`). Build the WOA-monthly fields on a SHALLOW grid — the top
+# cells of the case grid truncated at this depth — where every level is filled
+# by the dataset. The shallow cells coincide with the case grid's top cells, so
+# the resulting zonal arrays align with the (deep) model output after padding.
+const WOA_MAX_DEPTH = parse(Float64, get(ENV, "WOA_MAX_DEPTH", "1500"))
+LOADERS[:woa_shallow_grid]        = c -> upper_orca_grid(get_field(c, :grid), WOA_MAX_DEPTH)
+LOADERS[:woa_shallow_ocean_mask_3d] = c -> build_ocean_mask_3d(get_field(c, :woa_shallow_grid))
+
 #####
 ##### Surface time means (with land masking)
 #####
@@ -1334,24 +1344,26 @@ for (sym, fts) in ((:monthly_zonal_temperature_series, :to_monthly_fts),
     end
 end
 
-# WOA monthly climatology (12 slices) on the case grid, TEOS-10 converted, with
-# buoyancy computed from T,S using the same SeawaterBuoyancy/TEOS-10 formulation
-# as the OMIP model's `bo` output (default gravitational acceleration + reference
-# density). Mirrors `woa_teos10_pair` but loops over the 12 months.
+# WOA monthly climatology (12 slices), TEOS-10 converted, with buoyancy computed
+# from T,S using the same SeawaterBuoyancy/TEOS-10 formulation as the OMIP model's
+# `bo` output (default gravitational acceleration + reference density). Built on the
+# SHALLOW grid (`:woa_shallow_grid`) rather than the full case grid: WOA Monthly
+# only reaches ~1525 m, so `set!` onto the deep grid would extrapolate the deep
+# cells to garbage and crash the buoyancy `sqrt`. On the shallow grid every level is
+# within range. The returned arrays therefore have `Nz_shallow` levels; the zonal
+# loaders pad them back to the deep `Nz` so they align with the model output.
 function woa_monthly_teos10(c)
-    grid     = get_field(c, :grid)
+    grid     = get_field(c, :woa_shallow_grid)
     buoyancy = SeawaterBuoyancy(equation_of_state = TEOS10EquationOfState())
     Ts = Vector{Array{Float64, 3}}(undef, 12)
     Ss = Vector{Array{Float64, 3}}(undef, 12)
     Bs = Vector{Array{Float64, 3}}(undef, 12)
     for m in 1:12
         date = DateTime(2018, m, 1)
-        woaT = Field(Metadatum(:temperature; dataset = WOAMonthly(), date, restoring_kw()...), CPU())
-        woaS = Field(Metadatum(:salinity;    dataset = WOAMonthly(), date, restoring_kw()...), CPU())
         T = CenterField(grid)
         S = CenterField(grid)
-        interpolate!(T, woaT)
-        interpolate!(S, woaS)
+        set!(T, Metadatum(:temperature; dataset = WOAMonthly(), date, restoring_kw()...))
+        set!(S, Metadatum(:salinity;    dataset = WOAMonthly(), date, restoring_kw()...))
         woa_to_teos10!(T, S)
         bop = KernelFunctionOperation{Center, Center, Center}(buoyancy_perturbationᶜᶜᶜ, grid, buoyancy, (T = T, S = S))
         B = Field(bop)
@@ -1365,17 +1377,33 @@ end
 
 LOADERS[:woa_monthly_teos10] = woa_monthly_teos10
 
+# Pad a shallow-grid zonal mean `(Nlat, Nz_shallow)` up to the deep grid's `Nz` by
+# placing the shallow levels at the TOP (high-k) cells they physically coincide with
+# and NaN-filling the deeper cells. This realigns the WOA-monthly arrays (built on
+# the shallow grid) with the deep model output and the deep `:depth` axis that
+# `render_zonal_monthly_video` slices with a shared `z_idx`.
+function pad_zonal_to_depth(zonal_shallow, Nz_deep)
+    Nlat, Nz_shallow = size(zonal_shallow)
+    padded = fill(NaN, Nlat, Nz_deep)
+    padded[:, (Nz_deep - Nz_shallow + 1):Nz_deep] .= zonal_shallow
+    return padded
+end
+
 # 12-element vectors of (Nlat, Nz) WOA-monthly zonal means — the static
 # climatology the video's WOA + difference panels index via mod1(month, 12).
+# Computed with the SHALLOW mask (matching the shallow WOA fields' k-indexing),
+# then padded to the deep Nz so they align with the model series.
 for (sym, key) in ((:zonal_woa_monthly_temperature, :T),
                    (:zonal_woa_monthly_salinity,    :S),
                    (:zonal_woa_monthly_buoyancy,     :b))
     LOADERS[sym] = let k = key, s = sym
         disk_cached(s) do c
             fields12 = get_field(c, :woa_monthly_teos10)[k]
-            mask = get_field(c, :ocean_mask_3d)
+            mask = get_field(c, :woa_shallow_ocean_mask_3d)
             rg   = get_field(c, :zonal_regridder)
-            [compute_zonal_mean(fields12[m], mask, rg, ZONAL_NLON, ZONAL_NLAT) for m in 1:12]
+            Nz_deep = get_field(c, :Nz)
+            [pad_zonal_to_depth(compute_zonal_mean(fields12[m], mask, rg, ZONAL_NLON, ZONAL_NLAT), Nz_deep)
+             for m in 1:12]
         end
     end
 end
