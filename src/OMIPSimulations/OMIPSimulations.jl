@@ -56,6 +56,7 @@ export omip_simulation,
        StraitSection,
        woa_to_teos10!,
        woa_salinity_fts_to_teos10!,
+       upper_orca_grid,
        KPPVerticalDiffusivity, KPPParameters,
        NEMOTKEVerticalDiffusivity, NEMOTKEParameters,
        NORiBaseVerticalDiffusivity

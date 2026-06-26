@@ -44,7 +44,7 @@ using NumericalEarth
 using NumericalEarth.DataWrangling: Metadatum
 using NumericalEarth.DataWrangling.WOA: WOAAnnual, WOAMonthly
 using NumericalEarth: ECCO4Monthly
-using ClimaOceanCalibration.OMIPSimulations: strait_transports, woa_to_teos10!
+using ClimaOceanCalibration.OMIPSimulations: strait_transports, woa_to_teos10!, upper_orca_grid
 
 # The Oceananigans monkey-patches that used to live here (split-file
 # `FieldTimeSeries` support and the matching `set!` extension), plus their
