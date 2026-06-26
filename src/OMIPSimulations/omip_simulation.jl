@@ -388,6 +388,7 @@ function omip_simulation(config::Symbol = :halfdegree;
                          Δz_top = nothing,
                          catke_parameters::NamedTuple = (;),
                          gm_parameters::NamedTuple    = (; κ_skew = 250, κ_symmetric = 100),
+                         nori_parameters::NamedTuple  = (;),
                          # Back-compat flat kwargs; merged into the NamedTuples
                          # above when non-nothing. New code should prefer
                          # `catke_parameters` / `gm_parameters`.
@@ -443,7 +444,7 @@ function omip_simulation(config::Symbol = :halfdegree;
     grid = build_grid(cfg, arch, Nz, depth; Δz_top)
 
     ocean = build_ocean(cfg, grid;
-                        catke_parameters, gm_parameters,
+                        catke_parameters, gm_parameters, nori_parameters,
                         κ_skew, κ_symmetric, Cᵇ, Cᵂu★,
                         biharmonic_timescale,
                         biharmonic_viscosity,
@@ -689,6 +690,7 @@ end
 function omip_closure(vertical_closure::Symbol;
                       catke_parameters::NamedTuple = (;),
                       gm_parameters::NamedTuple    = (; κ_skew = 250, κ_symmetric = 100),
+                      nori_parameters::NamedTuple  = (;),
                       biharmonic_timescale,
                       biharmonic_viscosity = nothing,
                       # Back-compat shims for the old flat kwargs. When non-nothing,
@@ -746,7 +748,7 @@ function omip_closure(vertical_closure::Symbol;
         background = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(); κ=κ_step_simple, ν=ν_step_simple)
         convective, background
     elseif vertical_closure == :nori
-        NORiBaseVerticalDiffusivity(), nothing
+        NORiBaseVerticalDiffusivity(; nori_parameters...), nothing
     elseif vertical_closure == :rbvd
         convective = RiBasedVerticalDiffusivity(; horizontal_Ri_filter = Oceananigans.TurbulenceClosures.FivePointHorizontalFilter())
         background = VerticalScalarDiffusivity(κ=henyey_diffusivity, ν=1e-4)
@@ -973,6 +975,7 @@ config_tracer_advection(::Val{:tenthdegree}) = WENO(order=7, minimum_buffer_upwi
 function build_ocean(config, grid;
                      catke_parameters::NamedTuple = (;),
                      gm_parameters::NamedTuple    = (; κ_skew = 250, κ_symmetric = 100),
+                     nori_parameters::NamedTuple  = (;),
                      κ_skew = nothing, κ_symmetric = nothing, Cᵇ = nothing, Cᵂu★ = nothing,
                      restoring_dir, piston_velocity,
                      biharmonic_timescale,
@@ -982,7 +985,7 @@ function build_ocean(config, grid;
 
     salt_restoring = salinity_surface_restoring(grid, WOAMonthly(); restoring_dir, piston_velocity)
     closure = omip_closure(vertical_closure;
-                           catke_parameters, gm_parameters,
+                           catke_parameters, gm_parameters, nori_parameters,
                            κ_skew, κ_symmetric, Cᵇ, Cᵂu★,
                            biharmonic_timescale, biharmonic_viscosity)
     coriolis = HydrostaticSphericalCoriolis(scheme = Oceananigans.Coriolis.EnstrophyConserving())

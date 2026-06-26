@@ -60,6 +60,38 @@ const GM_DEFAULTS = (
     slope_limiter_max_slope = 1e-2,   # FluxTapering default
 )
 
+# NORi calibrated defaults (from xkykai/NORiOceanParameterization.jl).
+# Only the three parameters we expose for calibration are listed here.
+const NORI_DEFAULTS = (
+    νˢʰ       = 0.0615914063656973,
+    Pr_shearₜ = 1.0842017486284887,
+    Riᶜ       = 0.4366901962987793,
+)
+
+# NORi scaling spec: maps calibration parameter name → NORiBaseVerticalDiffusivity field.
+const NORI_SCALING_SPEC = (
+    νˢʰ_scaling       = :νˢʰ,
+    Pr_shearₜ_scaling = :Pr_shearₜ,
+    Riᶜ_scaling       = :Riᶜ,
+)
+
+"""
+    build_nori_parameters(nori_scalings::AbstractDict)
+
+Convert a dict of `<name>_scaling => value` into the NamedTuple of absolute
+NORi parameter values expected by `omip_simulation` (via `nori_parameters`).
+Each scaling multiplies its calibrated default (see `NORI_DEFAULTS`). Missing
+scalings default to 1.0.
+"""
+function build_nori_parameters(nori_scalings::AbstractDict)
+    params = Dict{Symbol,Float64}()
+    for (param_name, field) in pairs(NORI_SCALING_SPEC)
+        s = get(nori_scalings, String(param_name), 1.0)
+        params[field] = NORI_DEFAULTS[field] * s
+    end
+    return (; (k => v for (k, v) in params)...)
+end
+
 # CATKE scaling parameter spec: maps each *calibration parameter* name to a
 # list of (sub-struct, fieldname) pairs that all share the same scaling
 # factor. sub-struct is :ml (CATKEMixingLength) or :tke (CATKEEquation).
@@ -444,4 +476,118 @@ function run_CATKE_GM_calibration_orca_dry_run(catke_scalings::AbstractDict,
     member = get(config_dict, "member",    -1)
     @info "Dry run member=$member iter=$iter: copied $src → $dst"
     return nothing
+end
+
+"""
+    run_NORi_calibration_orca(nori_scalings, gm_scalings, config_dict)
+
+Build and run a single ensemble member's ORCA simulation using the NORi
+Richardson-number-based vertical diffusivity closure.
+
+`nori_scalings` is a dict from `<name>_scaling` to a scaling factor applied
+multiplicatively to the calibrated NORi defaults (see `NORI_DEFAULTS`).
+`gm_scalings` follows the same convention as in `run_CATKE_GM_calibration_orca`.
+`config_dict` must contain `"output_dir"` and may optionally contain the same
+keys as accepted by `run_CATKE_GM_calibration_orca`.
+"""
+function run_NORi_calibration_orca(nori_scalings::AbstractDict,
+                                   gm_scalings::AbstractDict,
+                                   config_dict::AbstractDict)
+    output_dir = config_dict["output_dir"]
+    mkpath(output_dir)
+
+    logfile_path     = joinpath(output_dir, "output.log")
+    logfile          = open(logfile_path, "w")
+    original_stdout  = stdout
+    original_stderr  = stderr
+    redirect_stdout(logfile)
+    redirect_stderr(logfile)
+    flusher = @async while isopen(logfile); flush(logfile); sleep(1); end
+
+    try
+        simulation_length = get(config_dict, "simulation_length", 10)
+        sampling_length   = get(config_dict, "sampling_length",   5)
+        forcing_dir       = get(config_dict, "forcing_dir",
+                                joinpath(homedir(), "JRA55_data"))
+        restoring_dir     = get(config_dict, "restoring_dir",
+                                joinpath(homedir(), "ECCO_data"))
+        staging_dir       = get(config_dict, "staging_dir",
+                                joinpath(output_dir, "staged_data"))
+        filename_prefix   = get(config_dict, "filename_prefix", "orca_nori_calib")
+        iter              = get(config_dict, "iteration", -1)
+        member            = get(config_dict, "member",    -1)
+
+        nori_parameters  = build_nori_parameters(nori_scalings)
+        gm_parameters    = build_gm_parameters(gm_scalings)
+
+        use_gm = get(config_dict, "use_gm", true)
+        if !use_gm
+            gm_parameters = (; κ_skew = 0, κ_symmetric = 0)
+        end
+
+        with_ice_dynamics = get(config_dict, "with_ice_dynamics", true)
+        Δz_top            = get(config_dict, "Δz_top", nothing)
+        skin_temperature  = get(config_dict, "skin_temperature", false)
+        output_mode       = Symbol(get(config_dict, "output_mode", "annual_mean"))
+
+        @info "Member $member, iter $iter: starting ORCA NORi calibration run"
+        @info "  use_gm            = $use_gm"
+        @info "  with_ice_dynamics = $with_ice_dynamics"
+        @info "  Δz_top            = $(Δz_top === nothing ? "default" : Δz_top)"
+        @info "  skin_temperature  = $skin_temperature"
+        @info "  nori_parameters  = $nori_parameters"
+        @info "  gm_parameters    = $gm_parameters"
+        @info "  simulation_length = $(simulation_length) years, sampling_length = $(sampling_length) years"
+        @info "  output_dir = $output_dir"
+
+        stop_time = simulation_length * 365days
+
+        sim = omip_simulation(:orca;
+                              arch  = GPU(),
+                              Nz    = 70,
+                              depth = 5500,
+                              Δz_top,
+                              vertical_closure     = :nori,
+                              nori_parameters,
+                              gm_parameters,
+                              biharmonic_timescale = 50days,
+                              flux_configuration   = :corrected,
+                              with_snow            = true,
+                              skin_temperature,
+                              with_ice_dynamics,
+                              diagnostics          = false,
+                              Δt              = 30minutes,
+                              forcing_dir,
+                              restoring_dir,
+                              staging_dir,
+                              output_dir,
+                              filename_prefix)
+
+        attach_calibration_output_writers!(sim, output_dir, filename_prefix;
+                                           stop_time,
+                                           sampling_window = sampling_length * 365days)
+
+        if output_mode === :seasonal
+            attach_seasonal_monthly_TS_writer!(sim, output_dir, filename_prefix)
+            attach_seasonal_monthly_EP_writer!(sim, output_dir, filename_prefix)
+        end
+
+        sim.stop_time = stop_time
+        run!(sim)
+
+        @info "Member $member, iter $iter: run! returned cleanly"
+        return nothing
+    catch e
+        if e isa InterruptException
+            println(stderr, "Interrupted by user")
+        else
+            println(stderr, "Error occurred: $e")
+            rethrow(e)
+        end
+    finally
+        redirect_stdout(original_stdout)
+        redirect_stderr(original_stderr)
+        close(logfile)
+        println("Log file closed: $logfile_path")
+    end
 end
