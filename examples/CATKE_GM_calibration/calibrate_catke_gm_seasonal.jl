@@ -98,7 +98,7 @@ isfile(woa_file) || error("""
 """)
 
 output_dir = joinpath(pwd(), "calibration_runs",
-    "seasonal_catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)" *
+    "radiativefix_seasonal_catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)" *
     "_Tstd_$(T_std)_Sstd_$(S_std)_simlength_$(simulation_length)yr_lat$(latitude_range[2])_zmin$(z_min)" *
     "_gm$(use_gm)_dz$(Δz_top === nothing ? "default" : Δz_top)" *
     (skin_temperature ? "_skintemp" : ""))
