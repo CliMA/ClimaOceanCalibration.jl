@@ -16,9 +16,14 @@ Adapt.adapt_structure(to, b::KPPTopBoundaryConditions) =
 #####
 
 @inline function friction_velocity(i, j, grid, clock, fields, top_velocity_bcs, params)
-    Nz = size(grid, 3)
-    τx = total_boundary_flux(top_velocity_bcs.u, i, j, Nz, grid, clock, fields, fields.u)
-    τy = total_boundary_flux(top_velocity_bcs.v, i, j, Nz, grid, clock, fields, fields.v)
+    # Ordinary flux BCs: the top-cell stress is just the boundary-condition value
+    # (equivalent to total_boundary_flux for non-implicit BCs). Restore the implicit
+    # form below once ImplicitExplicitFluxBoundaryCondition (Oceananigans #5630) merges:
+    # Nz = size(grid, 3)
+    # τx = total_boundary_flux(top_velocity_bcs.u, i, j, Nz, grid, clock, fields, fields.u)
+    # τy = total_boundary_flux(top_velocity_bcs.v, i, j, Nz, grid, clock, fields, fields.v)
+    τx = getbc(top_velocity_bcs.u, i, j, grid, clock, fields)
+    τy = getbc(top_velocity_bcs.v, i, j, grid, clock, fields)
     return max(sqrt(sqrt(τx^2 + τy^2)), params.minimum_friction_velocity)
 end
 

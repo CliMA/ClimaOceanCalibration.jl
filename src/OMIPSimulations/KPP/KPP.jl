@@ -10,7 +10,9 @@ using KernelAbstractions: @index, @kernel
 
 using Oceananigans
 using Oceananigans.Architectures: architecture
-using Oceananigans.BoundaryConditions: getbc, FieldBoundaryConditions, total_boundary_flux
+using Oceananigans.BoundaryConditions: getbc, FieldBoundaryConditions
+# Re-add `total_boundary_flux` once ImplicitExplicitFluxBoundaryCondition (Oceananigans #5630) merges:
+# using Oceananigans.BoundaryConditions: getbc, FieldBoundaryConditions, total_boundary_flux
 using Oceananigans.BuoyancyFormulations: ∂z_b, top_buoyancy_flux,
                                           thermal_expansionᶜᶜᶜ, haline_contractionᶜᶜᶜ,
                                           buoyancy_perturbationᶜᶜᶜ
