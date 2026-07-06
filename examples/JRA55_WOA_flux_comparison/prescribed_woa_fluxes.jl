@@ -340,7 +340,11 @@ add_callback!(simulation, accumulate_fluxes!, IterationInterval(1))
 wall = Ref(time_ns())
 function progress(sim)
     elapsed = 1e-9 * (time_ns() - wall[])
-    Qlat = mean(view(acc_device["hfls"], wet_mask)) / max(month_elapsed[], 1.0)
+    # Copy the (small) month-to-date latent-heat bucket to the host before the
+    # masked mean: `mean(view(::CuArray, wet_mask))` falls back to scalar getindex,
+    # which CUDA disallows.
+    hfls_md = Array(acc_device["hfls"])
+    Qlat = mean(view(hfls_md, wet_mask)) / max(month_elapsed[], 1.0)
     @info @sprintf("iter %d, t = %s, month %d, ⟨hfls⟩ (month-to-date, wet) = %.1f W/m², wall %.1f s / 100 iter",
                    iteration(sim), prettytime(sim), current_month[], Qlat, elapsed)
     wall[] = time_ns()

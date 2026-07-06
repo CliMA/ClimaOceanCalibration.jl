@@ -20,6 +20,18 @@
 #    `computed_fluxes(nothing) = ZeroFluxes()` and
 #    `sea_ice_concentration(nothing) = ZeroField()` make it an open-water assembly.
 #
+# 3. `ocean_surface_{temperature,salinity}(::PrescribedOcean)` upstream return the
+#    whole 4-D `FieldTimeSeries` (`ocean.sea_surface_*`). The GPU net-flux and
+#    radiation kernels (`_assemble_net_ocean_fluxes!`,
+#    `_apply_air_sea_radiative_fluxes!`) index these as `field[i, j, 1]`. Three
+#    indices on a 4-D `FieldTimeSeries` fall into the generic `AbstractArray`
+#    path (`_to_subscript_indices → axes → size → dynamic getfield`), which cannot
+#    be GPU-compiled → `InvalidIRError: unsupported call to jl_f_getfield`.
+#    The dynamic ocean (`OceananigansModelSimulations`) instead returns a 3-D
+#    surface `view` of the tracer data; we mirror that contract here, viewing the
+#    single-time slab the per-iteration WOA callback writes into. Only relevant
+#    with no sea ice — `sea_ice_ocean_interface` (the other caller) isn't built.
+#
 # IMPORTANT: include this file BEFORE constructing `ComponentInterfaces`
 # (which calls `net_fluxes(ocean)` once, at construction).
 
@@ -48,4 +60,13 @@ end
 EarthSystemModels.update_net_fluxes!(coupled_model, ocean::PrescribedOcean) =
     update_net_ocean_fluxes!(coupled_model, ocean, ocean.grid)
 
-@info "PrescribedOcean patches loaded: net_fluxes allocation + net-flux assembly enabled."
+# 3-D surface view of the single-time SST/SSS slab (same 3-index-indexable contract
+# the dynamic ocean exposes), so the GPU flux/radiation kernels can index `[i, j, 1]`.
+_prescribed_surface_slab(fts) = view(fts[1].data, :, :, 1:1)
+
+EarthSystemModels.ocean_surface_temperature(ocean::PrescribedOcean) =
+    _prescribed_surface_slab(ocean.sea_surface_temperature)
+EarthSystemModels.ocean_surface_salinity(ocean::PrescribedOcean) =
+    _prescribed_surface_slab(ocean.sea_surface_salinity)
+
+@info "PrescribedOcean patches loaded: net_fluxes allocation + net-flux assembly + GPU-indexable surface T/S views enabled."
