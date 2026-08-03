@@ -2,8 +2,8 @@ module DiffusiveOceanCalibration
 
 using Oceananigans
 using Oceananigans.Simulations: reset!
-using ClimaOcean
-using ClimaOcean.ECCO: ECCO4Monthly
+using NumericalEarth
+using NumericalEarth.ECCO: ECCO4Monthly
 using Oceananigans.OrthogonalSphericalShellGrids
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity
 using Oceananigans.Units

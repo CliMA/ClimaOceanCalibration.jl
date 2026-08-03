@@ -1,14 +1,14 @@
-using ClimaOcean
+using NumericalEarth
 using Oceananigans
 using Oceananigans.Grids
 using Oceananigans.Units
 using Oceananigans.OrthogonalSphericalShellGrids
-using ClimaOcean.Copernicus
-using ClimaOcean.DataWrangling
+using NumericalEarth.Copernicus
+using NumericalEarth.DataWrangling
 using Printf
 using Dates
 using PythonCall
-using ClimaOcean.DataWrangling: download_dataset, NearestNeighborInpainting
+using NumericalEarth.DataWrangling: download_dataset, NearestNeighborInpainting
 using CUDA
 using ClimaOceanCalibration.DataWrangling: TimeAverageOperator
 

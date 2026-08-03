@@ -4,8 +4,8 @@ using Oceananigans
 using Oceananigans.Grids
 using Oceananigans.Units
 using Oceananigans.OrthogonalSphericalShellGrids
-using Oceananigans.BuoyancyFormulations: buoyancy, buoyancy_frequency
-using ClimaOcean.OceanSimulations
+using Oceananigans.Models: buoyancy_field, buoyancy_frequency
+using ClimaOcean.Oceans
 using ClimaOcean.ECCO
 using ClimaOcean.JRA55
 using ClimaOcean.DataWrangling
@@ -155,7 +155,7 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict, obl_closure
         FILE_DIR = config_dict["output_dir"]
         mkpath(FILE_DIR)
 
-        b = Field(buoyancy(ocean.model))
+        b = Field(buoyancy_field(ocean.model))
         N² = Field(buoyancy_frequency(ocean.model))
 
         ocean_outputs = merge(ocean.model.tracers, ocean.model.velocities, (; b, N²))

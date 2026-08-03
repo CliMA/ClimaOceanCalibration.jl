@@ -50,3 +50,10 @@ Manifest.toml
 # calibration data and files
 calibration_data/
 calibration_runs
+
+# image and document files
+*.png
+*.pdf
+*.jpg
+*.jpeg
+*.svg

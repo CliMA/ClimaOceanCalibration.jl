@@ -1,0 +1,1588 @@
+[
+ {
+  "source_id": "CESM2",
+  "variable": "hfds",
+  "grid": "gr",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "hfds_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc",
+    "size": 189880872,
+    "checksum": "8abfcb7c067dd104ec12ca670d568ca68505773bc149cd11ebe345ae3aa0a914",
+    "urls": [
+     "http://esgf3.dkrz.de/thredds/fileServer/cmip6/OMIP/NCAR/CESM2/omip2/r1i1p1f1/Omon/hfds/gr/v20190802/hfds_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CESM2",
+  "variable": "rsntds",
+  "grid": "gr",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "rsntds_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc",
+    "size": 189881142,
+    "urls": [
+     "http://esgf3.dkrz.de/thredds/fileServer/cmip6/OMIP/NCAR/CESM2/omip2/r1i1p1f1/Omon/rsntds/gr/v20190802/rsntds_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CESM2",
+  "variable": "rlntds",
+  "grid": "gr",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "rlntds_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc",
+    "size": 189880872,
+    "urls": [
+     "http://esgf3.dkrz.de/thredds/fileServer/cmip6/OMIP/NCAR/CESM2/omip2/r1i1p1f1/Omon/rlntds/gr/v20190802/rlntds_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CESM2",
+  "variable": "evs",
+  "grid": "gr",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "evs_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc",
+    "size": 189881104,
+    "urls": [
+     "http://esgf3.dkrz.de/thredds/fileServer/cmip6/OMIP/NCAR/CESM2/omip2/r1i1p1f1/Omon/evs/gr/v20190802/evs_Omon_CESM2_omip2_r1i1p1f1_gr_030601-036612.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "hfds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "hfds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 984385679,
+    "urls": [
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/hfds/gn/v20200226/hfds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "rsntds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "rsntds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 889372699,
+    "urls": [
+     "http://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/rsntds/gn/v20200226/rsntds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/rsntds/gn/v20200226/rsntds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "rlntds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "rlntds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 916987742,
+    "urls": [
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/rlntds/gn/v20200226/rlntds_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "evs",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "evs_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 947422169,
+    "urls": [
+     "http://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/evs/gn/v20200226/evs_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/evs/gn/v20200226/evs_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "prra",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "prra_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 909362045,
+    "urls": [
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/prra/gn/v20200226/prra_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "prsn",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "prsn_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 413458626,
+    "urls": [
+     "http://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/prsn/gn/v20200226/prsn_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/prsn/gn/v20200226/prsn_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CMCC-CM2-SR5",
+  "variable": "wfo",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "wfo_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+    "size": 1021189210,
+    "urls": [
+     "http://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/wfo/gn/v20200226/wfo_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc",
+     "http://esgf-node2.cmcc.it/thredds/fileServer/esg_dataroot/CMIP6/OMIP/CMCC/CMCC-CM2-SR5/omip2/r1i1p1f1/Omon/wfo/gn/v20200226/wfo_Omon_CMCC-CM2-SR5_omip2_r1i1p1f1_gn_165301-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CNRM-CM6-1",
+  "variable": "hfds",
+  "grid": "gn",
+  "member": "r1i1p1f2",
+  "files": [
+   {
+    "file": "hfds_Omon_CNRM-CM6-1_omip2_r1i1p1f2_gn_195801-201812.nc",
+    "size": 181208242,
+    "urls": [
+     "http://esg1.umr-cnrm.fr/thredds/fileServer/CMIP6_CNRM/OMIP/CNRM-CERFACS/CNRM-CM6-1/omip2/r1i1p1f2/Omon/hfds/gn/v20200724/hfds_Omon_CNRM-CM6-1_omip2_r1i1p1f2_gn_195801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CNRM-CM6-1",
+  "variable": "rsntds",
+  "grid": "gn",
+  "member": "r1i1p1f2",
+  "files": [
+   {
+    "file": "rsntds_Omon_CNRM-CM6-1_omip2_r1i1p1f2_gn_195801-201812.nc",
+    "size": 168587364,
+    "urls": [
+     "http://esg1.umr-cnrm.fr/thredds/fileServer/CMIP6_CNRM/OMIP/CNRM-CERFACS/CNRM-CM6-1/omip2/r1i1p1f2/Omon/rsntds/gn/v20200724/rsntds_Omon_CNRM-CM6-1_omip2_r1i1p1f2_gn_195801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "CNRM-CM6-1",
+  "variable": "wfo",
+  "grid": "gn",
+  "member": "r1i1p1f2",
+  "files": [
+   {
+    "file": "wfo_Omon_CNRM-CM6-1_omip2_r1i1p1f2_gn_195801-201812.nc",
+    "size": 183489154,
+    "urls": [
+     "http://esg1.umr-cnrm.fr/thredds/fileServer/CMIP6_CNRM/OMIP/CNRM-CERFACS/CNRM-CM6-1/omip2/r1i1p1f2/Omon/wfo/gn/v20200724/wfo_Omon_CNRM-CM6-1_omip2_r1i1p1f2_gn_195801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "EC-Earth3",
+  "variable": "hfds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc",
+    "size": 13576689,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/hfds/gn/v20200928/hfds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "EC-Earth3",
+  "variable": "rsntds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc",
+    "size": 13576787,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/rsntds/gn/v20200928/rsntds_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "EC-Earth3",
+  "variable": "evs",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc",
+    "size": 13576722,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/evs/gn/v20200928/evs_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "EC-Earth3",
+  "variable": "prsn",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc",
+    "size": 13575546,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/prsn/gn/v20200928/prsn_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "EC-Earth3",
+  "variable": "wfo",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198801-198812.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_198901-198912.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199001-199012.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199101-199112.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199201-199212.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199301-199312.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199401-199412.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199501-199512.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199601-199612.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199701-199712.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199801-199812.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_199901-199912.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200001-200012.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200101-200112.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200201-200212.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200301-200312.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200401-200412.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200501-200512.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200601-200612.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200701-200712.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200801-200812.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_200901-200912.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201001-201012.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201101-201112.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201201-201212.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201301-201312.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201401-201412.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201501-201512.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201601-201612.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201701-201712.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc",
+    "size": 13576698,
+    "urls": [
+     "http://esgf.bsc.es/thredds/fileServer/esg_dataroot/omip2-OMIP-r1/CMIP6/OMIP/EC-Earth-Consortium/EC-Earth3/omip2/r1i1p1f1/Omon/wfo/gn/v20200928/wfo_Omon_EC-Earth3_omip2_r1i1p1f1_gn_201801-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "NorESM2-LM",
+  "variable": "hfds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc",
+    "size": 37143718,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/hfds/gn/v20190920/hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc",
+    "size": 37137350,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/hfds/gn/v20190920/hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc",
+    "size": 37116959,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/hfds/gn/v20190920/hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc"
+    ]
+   },
+   {
+    "file": "hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc",
+    "size": 33623907,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/hfds/gn/v20190920/hfds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "NorESM2-LM",
+  "variable": "rsntds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc",
+    "size": 32743351,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/rsntds/gn/v20190920/rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc",
+    "size": 32727289,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/rsntds/gn/v20190920/rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc",
+    "size": 32703283,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/rsntds/gn/v20190920/rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc"
+    ]
+   },
+   {
+    "file": "rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc",
+    "size": 29683140,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/rsntds/gn/v20190920/rsntds_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "NorESM2-LM",
+  "variable": "evs",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc",
+    "size": 35798441,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/evs/gn/v20190920/evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc",
+    "size": 35784782,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/evs/gn/v20190920/evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc",
+    "size": 35767985,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/evs/gn/v20190920/evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc"
+    ]
+   },
+   {
+    "file": "evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc",
+    "size": 32405611,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/evs/gn/v20190920/evs_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "NorESM2-LM",
+  "variable": "prra",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc",
+    "size": 33469555,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prra/gn/v20190920/prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc"
+    ]
+   },
+   {
+    "file": "prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc",
+    "size": 33544640,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prra/gn/v20190920/prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc"
+    ]
+   },
+   {
+    "file": "prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc",
+    "size": 33557436,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prra/gn/v20190920/prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc"
+    ]
+   },
+   {
+    "file": "prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc",
+    "size": 30497429,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prra/gn/v20190920/prra_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "NorESM2-LM",
+  "variable": "prsn",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc",
+    "size": 14950381,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prsn/gn/v20190920/prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc",
+    "size": 14916095,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prsn/gn/v20190920/prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc",
+    "size": 14901800,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prsn/gn/v20190920/prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc"
+    ]
+   },
+   {
+    "file": "prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc",
+    "size": 13509854,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/prsn/gn/v20190920/prsn_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "NorESM2-LM",
+  "variable": "wfo",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc",
+    "size": 37372359,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/wfo/gn/v20190920/wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_198001-198912.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc",
+    "size": 37346084,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/wfo/gn/v20190920/wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_199001-199912.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc",
+    "size": 37309021,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/wfo/gn/v20190920/wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_200001-200912.nc"
+    ]
+   },
+   {
+    "file": "wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc",
+    "size": 33797844,
+    "urls": [
+     "http://noresg.nird.sigma2.no/thredds/fileServer/esg_dataroot/cmor/CMIP6/OMIP/NCC/NorESM2-LM/omip2/r1i1p1f1/Omon/wfo/gn/v20190920/wfo_Omon_NorESM2-LM_omip2_r1i1p1f1_gn_201001-201812.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "TaiESM1-TIMCOM",
+  "variable": "hfds",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "hfds_Omon_TaiESM1-TIMCOM_omip2_r1i1p1f1_gn_030603-036703.nc",
+    "size": 164361485,
+    "urls": [
+     "http://esgf.rcec.sinica.edu.tw/thredds/fileServer/my_cmip6_dataroot/OMIP/NTU/TaiESM1-TIMCOM/omip2/r1i1p1f1/Omon/hfds/gn/v20201013/hfds_Omon_TaiESM1-TIMCOM_omip2_r1i1p1f1_gn_030603-036703.nc"
+    ]
+   }
+  ]
+ },
+ {
+  "source_id": "TaiESM1-TIMCOM",
+  "variable": "wfo",
+  "grid": "gn",
+  "member": "r1i1p1f1",
+  "files": [
+   {
+    "file": "wfo_Omon_TaiESM1-TIMCOM_omip2_r1i1p1f1_gn_030603-036703.nc",
+    "size": 170386936,
+    "urls": [
+     "http://esgf.rcec.sinica.edu.tw/thredds/fileServer/my_cmip6_dataroot/OMIP/NTU/TaiESM1-TIMCOM/omip2/r1i1p1f1/Omon/wfo/gn/v20201013/wfo_Omon_TaiESM1-TIMCOM_omip2_r1i1p1f1_gn_030603-036703.nc"
+    ]
+   }
+  ]
+ }
+]

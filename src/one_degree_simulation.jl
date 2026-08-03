@@ -1,5 +1,5 @@
-using ClimaOcean
-using ClimaOcean.ECCO: ECCO4Monthly
+using NumericalEarth
+using NumericalEarth.ECCO: ECCO4Monthly
 using Oceananigans.OrthogonalSphericalShellGrids
 using Oceananigans
 using Oceananigans.Units
@@ -65,7 +65,7 @@ set!(ocean.model,
 
 radiation = Radiation(arch)
 atmosphere = JRA55_prescribed_atmosphere(arch; backend=JRA55NetCDFBackend(41))
-sea_ice = ClimaOcean.OceanSeaIceModels.MinimumTemperatureSeaIce()
+sea_ice = NumericalEarth.OceanSeaIceModels.MinimumTemperatureSeaIce()
 coupled_model = OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation)
 
 simulation = Simulation(coupled_model; Δt=1, stop_iteration=10)
