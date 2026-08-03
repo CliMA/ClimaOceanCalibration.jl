@@ -24,8 +24,9 @@ using NumericalEarth.EarthSystemModels.InterfaceComputations: COARELogarithmicSi
                                                               large_yeager_stability_functions,
                                                               RelativeVelocity,
                                                               WindVelocity,
-                                                              ConstantGustiness,
-                                                              ShearAwareGustiness,
+                                                              ConvectiveGustiness,
+                                                              SubgridVelocityCorrection,
+                                                              mahrt_sun_subgrid_velocity,
                                                               SkinTemperature
 
 #####
@@ -44,8 +45,10 @@ COARE 3.6-consistent atmosphere-ocean flux formulation with:
 - Wind-dependent Charnock parameter (Edson et al. 2013, eq. 13)
 - COARE logarithmic similarity profile (no ψ(ℓ/L) term)
 - Minimum gustiness = 0.5 m/s (CICE / NCAR CORE-II convention)
-- `gustiness` kwarg accepts either a `ConstantGustiness(min_gust, β)` (default; constant floor)
-  or a `ShearAwareGustiness(c, min_gust, β)` (Mahrt-Sun 1995 / Edson 2013 form)
+- `subgrid_velocities` kwarg accepts anything NumericalEarth's `vsgs²` dispatches on:
+  a `ConvectiveGustiness(; gustiness_parameter, minimum_gustiness)` (default), a plain
+  `Number` (a static m/s scale), or a `SubgridVelocityCorrection` composing a convective
+  and a mesoscale contribution
 - Temperature-dependent air viscosity
 
 `von_karman_scaling` multiplies the canonical von Kármán constant
@@ -55,14 +58,14 @@ scaling ≠ 1 makes the parameterization internally inconsistent with the data i
 tuned to. Default `1` reproduces the unmodified physics.
 """
 function corrected_atmosphere_ocean_fluxes(FT = Float64;
-                                           gustiness = ConstantGustiness(FT; minimum_gustiness = 0.5),
+                                           subgrid_velocities = ConvectiveGustiness{FT}(minimum_gustiness = FT(0.5)),
                                            von_karman_scaling = 1)
     air_kinematic_viscosity = TemperatureDependentAirViscosity(FT)
     von_karman_constant = convert(FT, VON_KARMAN_CONSTANT * von_karman_scaling)
     return SimilarityTheoryFluxes(FT;
                                   von_karman_constant          = von_karman_constant,
                                   similarity_form              = COARELogarithmicSimilarityProfile(),
-                                  gustiness                    = gustiness,
+                                  subgrid_velocities           = subgrid_velocities,
                                   momentum_roughness_length    = MomentumRoughnessLength(FT;
                                   wave_formulation             = WindDependentWaveFormulation(FT),
                                   air_kinematic_viscosity      = TemperatureDependentAirViscosity(FT)),
@@ -84,7 +87,7 @@ corrected_atmosphere_sea_ice_fluxes(FT = Float64) =
     SimilarityTheoryFluxes(FT;
                            stability_functions          = atmosphere_sea_ice_stability_functions(FT),
                            similarity_form              = COARELogarithmicSimilarityProfile(),
-                           minimum_gustiness            = FT(0.2),
+                           subgrid_velocities           = ConvectiveGustiness{FT}(minimum_gustiness = FT(0.2)),
                            momentum_roughness_length    = FT(5e-4),
                            temperature_roughness_length = FT(5e-5),
                            water_vapor_roughness_length = FT(5e-5))
@@ -127,8 +130,8 @@ ncar_atmosphere_sea_ice_fluxes(FT = Float64) =
     SimilarityTheoryFluxes(FT;
                            stability_functions          = large_yeager_stability_functions(FT),
                            similarity_form              = COARELogarithmicSimilarityProfile(),
-                           gustiness_parameter          = FT(0),
-                           minimum_gustiness            = FT(0.5),
+                           subgrid_velocities           = ConvectiveGustiness{FT}(gustiness_parameter = FT(0),
+                                                                                  minimum_gustiness   = FT(0.5)),
                            momentum_roughness_length    = FT(5e-4),
                            temperature_roughness_length = FT(5e-4),
                            water_vapor_roughness_length = FT(5e-4))
@@ -162,13 +165,12 @@ end
                         velocity_formulation = :relative)
 
 Build the `OceanSeaIceModel` with the specified flux configuration.
-Options for `flux_configuration`: `:default`, `:corrected`, `:shear_aware`, `:ncar`.
+Options for `flux_configuration`: `:default`, `:corrected`, `:ncar`.
 Options for `velocity_formulation`:  `:relative`, `:wind`
 """
 function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                              velocity_formulation::Symbol = :relative,
                              von_karman_scaling = 1,
-                             ocean_minimum_salinity = 1,
                              skin_temperature::Bool = false)
     FT = eltype(ocean.model.grid)
     interface_temperature_kwarg = skin_temperature_kwarg(ocean, skin_temperature)
@@ -177,8 +179,7 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
                                          land,
-                                         interface_temperature_kwarg...,
-                                         ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
+                                         interface_temperature_kwarg...)
         return OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, land, interfaces)
     end
 
@@ -186,20 +187,17 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
                               velocity_formulation == :wind     ? WindVelocity()     :
                               error("Unknown velocity_formulation: $velocity_formulation. Options: :relative, :wind")
 
-    if flux_configuration == :corrected || flux_configuration == :shear_aware
-        gustiness = flux_configuration == :shear_aware ?
-                    ShearAwareGustiness(FT; shear_wind_scale = 0.04, minimum_gustiness = 0.5) :
-                    ConstantGustiness(FT;   minimum_gustiness = 0.5)
+    if flux_configuration == :corrected
+        subgrid_velocities = ConvectiveGustiness{FT}(minimum_gustiness = FT(0.5))
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
                                          land,
-                                         atmosphere_ocean_fluxes   = corrected_atmosphere_ocean_fluxes(FT; gustiness, von_karman_scaling),
+                                         atmosphere_ocean_fluxes   = corrected_atmosphere_ocean_fluxes(FT; subgrid_velocities, von_karman_scaling),
                                          atmosphere_sea_ice_fluxes = corrected_atmosphere_sea_ice_fluxes(FT),
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
                                          atmosphere_ocean_velocity_difference   = velocity_difference_obj,
                                          atmosphere_sea_ice_velocity_difference = velocity_difference_obj,
-                                         interface_temperature_kwarg...,
-                                         ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
+                                         interface_temperature_kwarg...)
     elseif flux_configuration == :ncar
         interfaces = ComponentInterfaces(atmosphere, ocean, sea_ice;
                                          radiation,
@@ -209,10 +207,9 @@ function build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_c
                                          sea_ice_ocean_heat_flux   = corrected_ice_ocean_heat_flux(),
                                          atmosphere_ocean_velocity_difference   = velocity_difference_obj,
                                          atmosphere_sea_ice_velocity_difference = velocity_difference_obj,
-                                         interface_temperature_kwarg...,
-                                         ocean_minimum_salinity = convert(FT, ocean_minimum_salinity))
+                                         interface_temperature_kwarg...)
     else
-        error("Unknown flux_configuration: $flux_configuration. Options: :default, :corrected, :shear_aware, :ncar")
+        error("Unknown flux_configuration: $flux_configuration. Options: :default, :corrected, :ncar")
     end
 
     return OceanSeaIceModel(ocean, sea_ice; atmosphere, radiation, land, interfaces)
@@ -335,11 +332,6 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
 - `flux_configuration`: surface flux formulation. Options:
    * `:default` — current defaults (Edson/COARE with constant Charnock 0.02)
    * `:corrected` — COARE 3.6 with wind-dependent Charnock, fixed ice roughness, momentum-based u*
-   * `:shear_aware` — `:corrected` plus the Mahrt–Sun (1995) / Edson (2013)
-                      shear-aware gustiness form (`ShearAwareGustiness`),
-                      Uᴳ² = (β·w★)² + (c·|Δu|)² + Uᴳ₀². Designed to inject
-                      additional gustiness at moderate winds where convective
-                      gustiness is weak (e.g., the equator).
    * `:ncar` — OMIP-2 standard Large & Yeager (2004) bulk formulae
 - `vertical_closure::Symbol`: ocean vertical-mixing closure. Options:
    * `:catke` — CATKE TKE-based scheme (default).
@@ -364,14 +356,14 @@ plumbing is needed because `NumericalEarth.EarthSystemModels` provides
      response from current feedback (e.g. when an over-strong ACC self-reinforces).
 - `von_karman_scaling`: multiplier on the canonical von Kármán constant (0.4) in the
    atmosphere–ocean bulk fluxes. Effective κ = `0.4 * von_karman_scaling`. Numerical
-   sensitivity knob; only affects `flux_configuration ∈ (:corrected, :shear_aware)`
+   sensitivity knob; only affects `flux_configuration = :corrected`
    (the COARE/`SimilarityTheoryFluxes` path). Default `1` ⇒ unmodified physics.
 - `skin_temperature::Bool`: when `true`, computes the atmosphere–ocean interface
    temperature as a flux-balance "skin" temperature
    (`SkinTemperature(DiffusiveFlux(δ, 1e-2))`, with `δ` = half the top grid cell's
    thickness) instead of using the bulk temperature of the top ocean cell
    (`BulkTemperature()`, the default). Independent of `flux_configuration` — applies
-   uniformly across `:default`, `:corrected`, `:shear_aware`, and `:ncar`.
+   uniformly across `:default`, `:corrected`, and `:ncar`.
    Default: `false`.
 - `diagnostics::Bool`: whether to attach OMIP diagnostics. Default: `true`.
 - `monthly_averaging_interval`: window for the `_monthly_fields` (3-D T/S/b) and
@@ -413,7 +405,6 @@ function omip_simulation(config::Symbol = :halfdegree;
                          velocity_formulation = :relative,
                          von_karman_scaling = 1,
                          skin_temperature = false,
-                         ocean_minimum_salinity = 4,
                          Cᵂu★ = nothing,
                          with_snow = false,
                          with_ice_dynamics = true,
@@ -464,19 +455,33 @@ function omip_simulation(config::Symbol = :halfdegree;
         atmosphere_dir = forcing_dir
     end
 
-    atmosphere, radiation, land = omip_forcing(arch, sea_ice;
-                                               forcing_dir = atmosphere_dir,
-                                               start_date,
-                                               end_date,
-                                               backend_size,
-                                               repeat_year_forcing,
-                                               prefetch)
+    atmosphere, radiation = omip_forcing(arch, sea_ice;
+                                         forcing_dir = atmosphere_dir,
+                                         start_date,
+                                         end_date,
+                                         backend_size,
+                                         repeat_year_forcing,
+                                         prefetch)
+
+    # Land is built from the grid, not the architecture: NumericalEarth 0.6's
+    # `JRA55PrescribedLand` routes each river to an ocean outlet and so needs the
+    # bathymetry. Upstream (experiments/OMIPSimulations on ss/omip-prototype)
+    # builds it *before* the ocean so `land.river_routing` can seed an extra
+    # river-mouth vertical diffusivity; we do not carry that closure yet, so the
+    # placement here is free — keep the call shape identical to upstream's to
+    # make adopting `river_mouth_vertical_diffusivity` a local change later.
+    land = omip_land_forcing(grid;
+                             forcing_dir = atmosphere_dir,
+                             start_date,
+                             end_date,
+                             backend_size,
+                             repeat_year_forcing,
+                             prefetch)
 
     coupled = build_coupled_model(ocean, sea_ice, atmosphere, radiation, land, flux_configuration;
                                   velocity_formulation,
                                   von_karman_scaling,
-                                  skin_temperature,
-                                  ocean_minimum_salinity)
+                                  skin_temperature)
 
     simulation = Simulation(coupled; Δt, stop_time)
 
@@ -878,7 +883,7 @@ function build_grid(::Val{:orca}, arch, Nz, depth; Δz_top = nothing)
     z_faces = ExponentialDiscretization(Nz, -depth, 0; scale, mutable=true)
 
     return ORCAGrid(arch;
-                    dataset = ORCA1(),
+                    dataset = ORCAOne(),
                     Nz,
                     z = z_faces,
                     halo = (8, 8, 8),
@@ -906,7 +911,7 @@ function upper_orca_grid(grid, max_depth)
     Nz_shallow >= 1 || error("upper_orca_grid: max_depth=$max_depth is shallower than the top cell")
 
     return ORCAGrid(arch;
-                    dataset = ORCA1(),
+                    dataset = ORCAOne(),
                     Nz = Nz_shallow,
                     z = shallow_faces,
                     halo = (8, 8, 8),
@@ -941,7 +946,7 @@ function upper_orca_grid(arch, Nz, depth, max_depth; Δz_top = nothing)
     Nz_shallow >= 1 || error("upper_orca_grid: max_depth=$max_depth is shallower than the top cell")
 
     return ORCAGrid(arch;
-                    dataset = ORCA1(),
+                    dataset = ORCAOne(),
                     Nz = Nz_shallow,
                     z = shallow_faces,
                     halo = (8, 8, 8),

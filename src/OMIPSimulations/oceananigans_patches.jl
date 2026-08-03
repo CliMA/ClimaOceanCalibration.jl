@@ -19,6 +19,13 @@ using Oceananigans.OutputReaders: SplitFilePath, InMemory
 #####
 ##### BatchedTridiagonalSolver: fix size -> worksize
 #####
+#
+# NOTE (Oceananigans 0.110): upstream now uses `worksize(grid)` for the default
+# `scratch` too (`Solvers/batched_tridiagonal_solver.jl`), so this override is
+# currently a no-op — it reproduces the upstream default exactly. It is kept
+# because NumericalEarth's experiments/OMIPSimulations (ss/omip-prototype) still
+# carries it, and this file is a vendored copy of that module; dropping it here
+# would be a gratuitous divergence. Remove it when upstream does.
 
 FTGU = TripolarGrid
 FTG  = Union{ImmersedBoundaryGrid{<:Any, <:Any, <:Any, <:Any, <:FTGU}, FTGU}
@@ -46,11 +53,11 @@ end
 # to a single part file, producing "No data found for time …" warnings (and
 # stale/zero data) on later snapshot reads.
 #
-# The patches below: (a) extend `set!` on an `InMemoryFTS` to iterate
-# the per-part files referenced by a `SplitFilePath`, and (b) override the
-# `FieldTimeSeries(path, name; …)` constructor so that an `InMemory`
-# backend whose `fts.path` is a single file is detected as a split set and
-# re-wrapped with the correct `SplitFilePath`.
+# The patch below overrides the `FieldTimeSeries(path, name; …)` constructor so
+# that an `InMemory` backend whose `fts.path` is a single file is detected as a
+# split set and re-wrapped with the correct `SplitFilePath`.
+# (`set!(::InMemoryFTS, ::SplitFilePath)` is now provided by Oceananigans, so the
+# former local definition was removed.)
 #
 # The helpers (`jld2_output_part_paths`, etc.) are factored out so this file
 # and `scripts/visualize/common.jl` (and any future call site) can share a

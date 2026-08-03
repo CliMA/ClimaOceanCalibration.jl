@@ -98,13 +98,10 @@ Environment variables (physics):
                 (Δu = u_atm) instead of OMIP-2 relative wind (Δu = u_atm − u_ocean)
   VONKARMAN_SCALING  Scaling factor on the von Kármán constant (0.4) in the
                 atmosphere–ocean bulk fluxes; effective κ = 0.4 * VONKARMAN_SCALING.
-                Default: 1 (unmodified). Only affects CORRECTED / SHEAR_GUST runs.
+                Default: 1 (unmodified). Only affects CORRECTED runs.
   DZ_TOP        Target thickness of the top (surface) cell in meters
 
 Equatorial-MLD knobs (closure parameters; configuration switches):
-  SHEAR_GUST    Mahrt–Sun/Edson shear-aware gustiness; implies :corrected
-  MIN_SALINITY  Floor (psu) below which freshening freshwater flux is suppressed.
-                Default: 1.
   NORMALIZE_SALINITY Set to "true" to normalize salinity flux. Default: false.
   CATKE_CWUSTAR `Cᵂu★` of CATKEEquation. Default (Oceananigans): 3.179.
                 Forwarded as catke_parameters = (; tke_equation = (; Cᵂu★ = …)).
@@ -170,7 +167,6 @@ Examples:
   KSKEW=0 ./launch_inrepo.sh orca                    # disable eddy closure
   BIHARMONIC=nothing ./launch_inrepo.sh orca         # disable biharmonic viscosity
   DZ_TOP=2 ./launch_inrepo.sh orca
-  SHEAR_GUST=true ./launch_inrepo.sh orca
   SKIN_TEMPERATURE=true ./launch_inrepo.sh orca      # flux-balance skin temperature
   VONKARMAN_SCALING=0.9 CORRECTED=true ./launch_inrepo.sh orca   # κ = 0.36 sensitivity run
   CATKE_CWUSTAR=5.0 ./launch_inrepo.sh orca
@@ -285,9 +281,7 @@ RUN_NAME="$CONFIG"
 [[ "$BIHARMONIC" != "$DEFAULT_BIHARMONIC" ]]   && RUN_NAME="${RUN_NAME}_bih${BIHARMONIC}"
 [[ -n "${BIHVISC:-}" ]]                        && RUN_NAME="${RUN_NAME}_bihvisc${BIHVISC}"
 [[ "$DZ_TOP" != "$DEFAULT_DZ_TOP" ]]           && RUN_NAME="${RUN_NAME}_dz${DZ_TOP}"
-[[ "${SHEAR_GUST:-false}" == "true" ]]         && RUN_NAME="${RUN_NAME}_sgust"
 [[ -n "${CATKE_CWUSTAR:-}" ]]                  && RUN_NAME="${RUN_NAME}_cwu${CATKE_CWUSTAR}"
-[[ -n "${MIN_SALINITY:-}" ]]                   && RUN_NAME="${RUN_NAME}_smin${MIN_SALINITY}"
 [[ -n "${CATKE_PARAMS_EXPR:-}" ]]              && RUN_NAME="${RUN_NAME}_catkeext"
 [[ -n "${GM_PARAMS_EXPR:-}" ]]                 && RUN_NAME="${RUN_NAME}_gmext"
 # Diagnostic knobs — tag so each run gets its own output dir / checkpoint and
@@ -322,9 +316,7 @@ PROBE="${PROBE:-false}"
 CB="${CB:-}"
 BIHVISC="${BIHVISC:-}"
 DZ_TOP="${DZ_TOP:-}"
-SHEAR_GUST="${SHEAR_GUST:-false}"
 CATKE_CWUSTAR="${CATKE_CWUSTAR:-}"
-MIN_SALINITY="${MIN_SALINITY:-}"
 BACKEND_SIZE="${BACKEND_SIZE:-}"
 NCAR="${NCAR:-false}"
 CORRECTED="${CORRECTED:-false}"
@@ -363,9 +355,6 @@ BIHVISC_KWARG=""
 DZ_TOP_KWARG=""
 [[ -n "$DZ_TOP" ]] && DZ_TOP_KWARG="Δz_top = ${DZ_TOP},"
 
-MIN_SALINITY_KWARG=""
-[[ -n "$MIN_SALINITY" ]] && MIN_SALINITY_KWARG="ocean_minimum_salinity = ${MIN_SALINITY},"
-
 NORMALIZE_SALINITY_KWARG=""
 [[ "$NORMALIZE_SALINITY" == "true" ]] && NORMALIZE_SALINITY_KWARG="normalize_salinity = true,"
 
@@ -397,7 +386,6 @@ fi
 FLUX_KWARG=""
 [[ "$NCAR" == "true" ]]        && FLUX_KWARG="flux_configuration = :ncar,"
 [[ "$CORRECTED" == "true" ]]   && FLUX_KWARG="flux_configuration = :corrected,"
-[[ "$SHEAR_GUST" == "true" ]]  && FLUX_KWARG="flux_configuration = :shear_aware,"
 
 CLOSURE_KWARG=""
 [[ "${CLOSURE:-catke}" == "simple"   ]] && CLOSURE_KWARG="vertical_closure = :simple,"
@@ -409,7 +397,7 @@ CLOSURE_KWARG=""
 VELOCITY_KWARG=""
 [[ "${WIND_VELOCITY:-false}" == "true" ]] && VELOCITY_KWARG="velocity_formulation = :wind,"
 
-# von Kármán scaling — only meaningful for the COARE path (:corrected / :shear_aware).
+# von Kármán scaling — only meaningful for the COARE path (:corrected).
 VONKARMAN_KWARG=""
 [[ "$VONKARMAN_SCALING" != "1" ]] && VONKARMAN_KWARG="von_karman_scaling = ${VONKARMAN_SCALING},"
 
@@ -451,7 +439,6 @@ sim = omip_simulation(:${CONFIG};
                       ${SKIN_TEMPERATURE_KWARG}
                       ${ICE_DYNAMICS_KWARG}
                       ${DIAGNOSTICS_KWARG}
-                      ${MIN_SALINITY_KWARG}
                       ${NORMALIZE_SALINITY_KWARG}
                       Δt = ${DT},
                       forcing_dir = \"${FORCING_DIR}\",
