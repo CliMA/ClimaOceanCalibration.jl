@@ -45,12 +45,25 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 WorldOceanAtlasTools = "04f20302-f1b9-11e8-29d9-7d841cb0a64a"
 XESMF = "2e0b0046-e7a1-486f-88de-807ee8ffabe5"
 
-[sources]
-ClimaSeaIce = {rev = "xk/free-oceananigans-108-compat", url = "https://github.com/CliMA/ClimaSeaIce.jl.git"}
-ConservativeRegridding = {rev = "main", url = "https://github.com/JuliaGeo/ConservativeRegridding.jl.git"}
-NumericalEarth = {rev = "ss/omip-prototype", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
-Oceananigans = {rev = "xk/for-omip-merge", url = "https://github.com/CliMA/Oceananigans.jl.git"}
-SeawaterPolynomials = {rev = "ss/conversion-functions", url = "https://github.com/CliMA/SeawaterPolynomials.jl.git"}
+[sources.ClimaSeaIce]
+rev = "xk/free-oceananigans-108-compat"
+url = "https://github.com/CliMA/ClimaSeaIce.jl.git"
+
+[sources.ConservativeRegridding]
+rev = "main"
+url = "https://github.com/JuliaGeo/ConservativeRegridding.jl.git"
+
+[sources.NumericalEarth]
+rev = "ss/omip-prototype"
+url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"
+
+[sources.Oceananigans]
+rev = "xk/for-omip-merge"
+url = "https://github.com/CliMA/Oceananigans.jl.git"
+
+[sources.SeawaterPolynomials]
+rev = "ss/conversion-functions"
+url = "https://github.com/CliMA/SeawaterPolynomials.jl.git"
 
 [compat]
 CFTime = "0.2"
@@ -69,6 +82,7 @@ PkgDev = "1.7"
 PrecompileTools = "1.3.3"
 SeawaterPolynomials = "0.4.0"
 Statistics = "1"
+WorldOceanAtlasTools = "0.6"
 julia = "1.12"
 
 [extras]
