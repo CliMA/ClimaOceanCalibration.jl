@@ -53,6 +53,7 @@ Oceananigans = {rev = "xk/for-omip-merge", url = "https://github.com/CliMA/Ocean
 SeawaterPolynomials = {rev = "ss/conversion-functions", url = "https://github.com/CliMA/SeawaterPolynomials.jl.git"}
 
 [compat]
+ArgParse = "1"
 CFTime = "0.2"
 ClimaCalibrate = "0.3"
 ClimaSeaIce = "0.5.5"
