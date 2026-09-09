@@ -41,9 +41,8 @@
 ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"
 
 # OMIPSimulations is self-contained (only NumericalEarth/Oceananigans deps), so
-# include it directly rather than via `using ClimaOceanCalibration` — the parent
-# package drags in DataWrangling→XESMF→PythonCall, which needs a provisioned
-# python env and is irrelevant here.
+# include it directly rather than via `using ClimaOceanCalibration`, which pulls
+# in plotting and calibration dependencies that are irrelevant here.
 include(joinpath(@__DIR__, "..", "..", "src", "OMIPSimulations", "OMIPSimulations.jl"))
 using .OMIPSimulations: upper_orca_grid,
                         corrected_atmosphere_ocean_fluxes,

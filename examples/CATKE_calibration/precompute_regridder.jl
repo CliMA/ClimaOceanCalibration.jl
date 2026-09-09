@@ -5,11 +5,9 @@ using Oceananigans.Utils: launch!
 using Oceananigans.Grids: znodes
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 using CUDA
-using XESMF
+using ConservativeRegridding
 using JLD2
 using KernelAbstractions: @index, @kernel
-
-import Oceananigans.Architectures: on_architecture
 
 Nz = 100
 z_faces = ExponentialDiscretization(Nz, -6000, 0; scale=1800)
@@ -55,14 +53,22 @@ mask_immersed_field!(src_field, NaN)
 
 dst_field = CenterField(target_grid)
 
-regridder = XESMF.Regridder(dst_field, src_field, method="conservative")
+# The regridder carries horizontal weights only, and is built from single-level,
+# vertically regular copies of the grids: that is what pairs each cell of the
+# tripolar fold row with its partner instead of counting it twice.
+regridder_source_grid = TripolarGrid(size=(Nx_source, Ny_source, 1), z=(0, 1), halo=(7, 7, 1))
 
-on_architecture(on, r::XESMF.Regridder) = XESMF.Regridder(on_architecture(on, r.method),
-                                                          on_architecture(on, r.weights),
-                                                          on_architecture(on, r.src_temp),
-                                                          on_architecture(on, r.dst_temp))
+regridder_target_grid = LatitudeLongitudeGrid(size=(Nx_target, Ny_target, 1), z=(0, 1),
+                                              longitude=(0, 360), latitude=(-84, 84))
 
-regrid!(dst_field, regridder, src_field)
+regridder = ConservativeRegridding.Regridder(regridder_target_grid, regridder_source_grid)
+
+source_levels = reshape(Array(interior(src_field)), Nx_source * Ny_source, Nz)
+target_levels = zeros(Nx_target * Ny_target, Nz)
+
+ConservativeRegridding.regrid!(target_levels, regridder, source_levels; dims=1)
+
+set!(dst_field, reshape(target_levels, Nx_target, Ny_target, Nz))
 
 bottom_height_target = Field{Center, Center, Nothing}(target_grid)
 find_immersed_height!(bottom_height_target, target_grid, dst_field)

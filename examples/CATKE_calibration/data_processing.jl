@@ -14,7 +14,7 @@ using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 using Oceananigans.Architectures: on_architecture
 using NumericalEarth
 using NumericalEarth.DataWrangling
-using XESMF
+using ConservativeRegridding
 using JLD2
 using NaNStatistics
 using Glob
@@ -46,6 +46,24 @@ function compute_dz_weights(grid, z_indices)
 end
 
 """
+    regrid_levels!(target, regridder, source)
+
+Conservatively regrid every depth level of `source` onto `target`.
+"""
+function regrid_levels!(target, regridder, source)
+    Nx, Ny, Nz = size(target)
+
+    source_levels = reshape(Array(interior(source)), :, Nz)
+    target_levels = zeros(Nx * Ny, Nz)
+
+    ConservativeRegridding.regrid!(target_levels, regridder, source_levels; dims=1)
+
+    set!(target, reshape(target_levels, Nx, Ny, Nz))
+
+    return target
+end
+
+"""
     regrid_model_data(simdir, target_grid, regridder, month_name)
 
 Regrid model output from 0.5° tripolar grid to 4° lat-lon grid.
@@ -53,7 +71,7 @@ Regrid model output from 0.5° tripolar grid to 4° lat-lon grid.
 Arguments:
 - `simdir`: Directory containing model output files
 - `target_grid`: Target grid for regridding (4° lat-lon)
-- `regridder`: XESMF regridder object
+- `regridder`: Conservative regridder mapping the source grid onto `target_grid`
 - `month_name`: Month symbol (e.g., :jan, :feb) to specify which monthly average file to read
 - `buoyancy`: If true, process buoyancy as well as temperature and salinity
 """
@@ -74,13 +92,13 @@ function regrid_model_data(simdir, target_grid, regridder, month_name; buoyancy=
     if Nt > 2
         @warn "Expected 2 time indices in $filepath, found $Nt. Using 2nd time index."
     end
-    regrid!(T_target, regridder, T_data[2])
-    regrid!(S_target, regridder, S_data[2])
+    regrid_levels!(T_target, regridder, T_data[2])
+    regrid_levels!(S_target, regridder, S_data[2])
 
     if buoyancy
         b_data = FieldTimeSeries(filepath, "b", backend=OnDisk())
         b_target = CenterField(target_grid)
-        regrid!(b_target, regridder, b_data[2])
+        regrid_levels!(b_target, regridder, b_data[2])
         return T_target, S_target, b_target
     end
     
