@@ -62,13 +62,12 @@ regridder_target_grid = LatitudeLongitudeGrid(size=(Nx_target, Ny_target, 1), z=
                                               longitude=(0, 360), latitude=(-84, 84))
 
 regridder = ConservativeRegridding.Regridder(regridder_target_grid, regridder_source_grid)
+regridder = on_architecture(arch, regridder)
 
-source_levels = reshape(Array(interior(src_field)), Nx_source * Ny_source, Nz)
-target_levels = zeros(Nx_target * Ny_target, Nz)
-
-ConservativeRegridding.regrid!(target_levels, regridder, source_levels; dims=1)
-
-set!(dst_field, reshape(target_levels, Nx_target, Ny_target, Nz))
+for k in 1:Nz
+    ConservativeRegridding.regrid!(vec(interior(dst_field, :, :, k)), regridder,
+                                   vec(interior(src_field, :, :, k)))
+end
 
 bottom_height_target = Field{Center, Center, Nothing}(target_grid)
 find_immersed_height!(bottom_height_target, target_grid, dst_field)

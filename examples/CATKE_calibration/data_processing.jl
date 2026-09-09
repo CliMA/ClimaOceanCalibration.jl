@@ -51,14 +51,10 @@ end
 Conservatively regrid every depth level of `source` onto `target`.
 """
 function regrid_levels!(target, regridder, source)
-    Nx, Ny, Nz = size(target)
-
-    source_levels = reshape(Array(interior(source)), :, Nz)
-    target_levels = zeros(Nx * Ny, Nz)
-
-    ConservativeRegridding.regrid!(target_levels, regridder, source_levels; dims=1)
-
-    set!(target, reshape(target_levels, Nx, Ny, Nz))
+    for k in 1:size(target, 3)
+        ConservativeRegridding.regrid!(vec(interior(target, :, :, k)), regridder,
+                                       vec(interior(source, :, :, k)))
+    end
 
     return target
 end
