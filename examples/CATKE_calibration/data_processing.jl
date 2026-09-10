@@ -48,11 +48,13 @@ end
 """
     regrid_levels!(target, regridder, source)
 
-Conservatively regrid every depth level of `source` onto `target`.
+Conservatively regrid every depth level of `source` onto `target`, whose grid must
+be unfolded: cells duplicated across a fold are not mirrored back.
 """
 function regrid_levels!(target, regridder, source)
     for k in 1:size(target, 3)
-        ConservativeRegridding.regrid!(view(target, :, :, k), regridder, view(source, :, :, k))
+        ConservativeRegridding.regrid!(vec(interior(target, :, :, k)), regridder,
+                                       vec(interior(source, :, :, k)))
     end
 
     return target
