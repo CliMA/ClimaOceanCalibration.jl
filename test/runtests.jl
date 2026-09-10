@@ -20,4 +20,5 @@ using ClimaOceanCalibration.DiffusiveOceanCalibration
     # end
     
     include("test_time_averaging.jl")
+    include("test_visualization.jl")
 end
