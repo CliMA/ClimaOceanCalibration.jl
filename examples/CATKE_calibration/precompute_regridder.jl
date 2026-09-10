@@ -4,10 +4,10 @@ using Oceananigans.Architectures: on_architecture, architecture
 using Oceananigans.Utils: launch!
 using Oceananigans.Grids: znodes
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
-using Oceananigans.BoundaryConditions: fill_halo_regions!
 using CUDA
 using ConservativeRegridding
 using JLD2
+using ClimaOceanCalibration.DataWrangling: regrid_levels!
 using KernelAbstractions: @index, @kernel
 
 Nz = 100
@@ -65,12 +65,7 @@ regridder_target_grid = LatitudeLongitudeGrid(size=(Nx_target, Ny_target, 1), z=
 regridder = ConservativeRegridding.Regridder(regridder_target_grid, regridder_source_grid)
 regridder = on_architecture(arch, regridder)
 
-for k in 1:Nz
-    ConservativeRegridding.regrid!(vec(interior(dst_field, :, :, k)), regridder,
-                                   vec(interior(src_field, :, :, k)))
-end
-
-fill_halo_regions!(dst_field)
+regrid_levels!(dst_field, regridder, src_field)
 
 bottom_height_target = Field{Center, Center, Nothing}(target_grid)
 find_immersed_height!(bottom_height_target, target_grid, dst_field)

@@ -5,12 +5,13 @@ using Oceananigans.BuoyancyFormulations: buoyancy_perturbationᶜᶜᶜ
 using Oceananigans.Architectures: architecture
 using Oceananigans.Utils: launch!
 using Oceananigans.Fields: interpolate!
+using Oceananigans.BoundaryConditions: fill_halo_regions!
 using NumericalEarth
 using NumericalEarth.DataWrangling: DatasetFieldTimeSeries, native_grid
 using Dates
 using JLD2
 using KernelAbstractions
-using XESMF
+using ConservativeRegridding
 
 """
     AveragedFieldTimeSeries{D, T, S}
@@ -311,7 +312,25 @@ function (𝒯::TimeAverageBuoyancyOperator)(T_metadata::Metadata, S_metadata::M
     return target_buoyancy_fts
 end
 
-function spatial_averaging(fts::FieldTimeSeries, target_grid, spatial_average_operator::XESMF.Regridder)
+"""
+    regrid_levels!(target, regridder, source)
+
+Conservatively regrid every depth level of `source` onto `target`. `regridder`
+carries horizontal weights only, so it is built from single-level copies of the
+source and target grids.
+"""
+function regrid_levels!(target, regridder, source)
+    for k in 1:size(target, 3)
+        ConservativeRegridding.regrid!(vec(interior(target, :, :, k)), regridder,
+                                       vec(interior(source, :, :, k)))
+    end
+
+    fill_halo_regions!(target)
+
+    return target
+end
+
+function spatial_averaging(fts::FieldTimeSeries, target_grid, spatial_average_operator::ConservativeRegridding.Regridder)
     times = fts.times
     ntime = length(times)
     LX, LY, LZ = location(fts)
@@ -320,7 +339,7 @@ function spatial_averaging(fts::FieldTimeSeries, target_grid, spatial_average_op
     averaged_fts = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
 
     for t in 1:ntime
-        regrid!(averaged_fts[t], spatial_average_operator, fts[t])
+        regrid_levels!(averaged_fts[t], spatial_average_operator, fts[t])
     end
 
     return averaged_fts
