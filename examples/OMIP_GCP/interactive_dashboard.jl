@@ -5,6 +5,8 @@
 # From a REPL, `Run(dir)` lists the available `group/variable` keys, and
 # `dashboard(runs...; fields = [...])` opens the figure.
 
+isempty(ARGS) && error("usage: julia --project examples/OMIP_GCP/interactive_dashboard.jl run_dir [run_dir...]")
+
 using GLMakie
 using Dates
 using ClimaOceanCalibration.Visualization
