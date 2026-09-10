@@ -52,8 +52,7 @@ Conservatively regrid every depth level of `source` onto `target`.
 """
 function regrid_levels!(target, regridder, source)
     for k in 1:size(target, 3)
-        ConservativeRegridding.regrid!(vec(interior(target, :, :, k)), regridder,
-                                       vec(interior(source, :, :, k)))
+        ConservativeRegridding.regrid!(view(target, :, :, k), regridder, view(source, :, :, k))
     end
 
     return target

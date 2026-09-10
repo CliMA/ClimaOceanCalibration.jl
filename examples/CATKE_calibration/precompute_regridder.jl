@@ -65,8 +65,7 @@ regridder = ConservativeRegridding.Regridder(regridder_target_grid, regridder_so
 regridder = on_architecture(arch, regridder)
 
 for k in 1:Nz
-    ConservativeRegridding.regrid!(vec(interior(dst_field, :, :, k)), regridder,
-                                   vec(interior(src_field, :, :, k)))
+    ConservativeRegridding.regrid!(view(dst_field, :, :, k), regridder, view(src_field, :, :, k))
 end
 
 bottom_height_target = Field{Center, Center, Nothing}(target_grid)
