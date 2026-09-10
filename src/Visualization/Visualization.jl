@@ -116,7 +116,9 @@ end
 
 function rescale!(colorrange, planes, transform = identity)
     values = filter(isfinite, reduce(vcat, vec(p[]) for p in planes))
-    isempty(values) || (colorrange[] = transform(extrema(values)))
+    isempty(values) && return nothing
+    lo, hi = transform(extrema(values))
+    colorrange[] = lo < hi ? (lo, hi) : (lo - one(lo), hi + one(hi))
     return nothing
 end
 
