@@ -20,14 +20,15 @@ using ..OMIPSimulations: jld2_output_part_paths
 #####
 
 """
-    Run(dir; name = basename(dir))
+    Run(dir; name = basename(dir), grid = nothing)
     Run(name, series)
 
 A named collection of `FieldTimeSeries`. Reading `dir` collects every variable of every
 Oceananigans JLD2 output in it (split `_partN` files included) under the key
 `"group/variable"`, where `group` is the file stem without the prefix shared by all files.
 Series with at most one spatial dimension are held in memory; the rest are read from disk
-on demand.
+on demand. Pass `grid` for files whose serialized grid the current Oceananigans cannot
+deserialize.
 """
 struct Run
     name :: String
@@ -36,7 +37,7 @@ end
 
 Run(name::AbstractString, series::AbstractDict) = Run(String(name), Dict{String, FieldTimeSeries}(series))
 
-function Run(dir::AbstractString; name = basename(rstrip(dir, '/')))
+function Run(dir::AbstractString; name = basename(rstrip(dir, '/')), grid = nothing)
     files = filter(f -> endswith(f, ".jld2") && !occursin("checkpoint", f), readdir(dir))
     stems = unique!(replace.(files, r"(_part\d+)?\.jld2$" => ""))
     prefix = common_prefix(stems)
@@ -44,11 +45,11 @@ function Run(dir::AbstractString; name = basename(rstrip(dir, '/')))
     for stem in stems
         path = joinpath(dir, stem * ".jld2")
         group = chopprefix(stem, prefix)
-        grid = nothing
+        file_grid = grid
         for variable in variables(first(jld2_output_part_paths(path)))
-            fts = FieldTimeSeries(path, variable; backend = OnDisk(), grid)
-            grid = fts.grid
-            length(spatial_dims(fts)) ≤ 1 && (fts = FieldTimeSeries(path, variable; backend = InMemory(), grid))
+            fts = FieldTimeSeries(path, variable; backend = OnDisk(), grid = file_grid, boundary_conditions = nothing)
+            file_grid = fts.grid
+            length(spatial_dims(fts)) ≤ 1 && (fts = FieldTimeSeries(path, variable; backend = InMemory(), grid = file_grid, boundary_conditions = nothing))
             series[group * "/" * variable] = fts
         end
     end
