@@ -137,6 +137,7 @@ the slice slider, or averaged along it when the mean toggle is on; two-dimension
 as maps; one-dimensional fields as profiles; scalar series against time. The time slider
 selects the nearest snapshot of every series. Two runs on grids of equal size get a
 difference column. The menu on every row switches among the variables of the same shape.
+For `:x` and `:y` sections an inset map of the ocean mask marks the slice position.
 """
 function dashboard(runs::Run...; fields = first(common_keys(runs), 3), section = :x,
                    reference_date = nothing, colormap = :viridis)
@@ -161,6 +162,11 @@ function dashboard(runs::Run...; fields = first(common_keys(runs), 3), section =
     toggle = Toggle(controls[1, 1])
     Label(controls[1, 2], "mean along $section")
     button = Button(controls[1, 3]; label = "rescale colors")
+
+    if dim != 3
+        grid = runs[1][first(fields)].grid
+        locator!(fig[nrows + 1:nrows + 2, 1], grid, dim, @lift(clamp($index, 1, size(grid, dim))))
+    end
 
     rescalers = Function[]
     for (r, key) in enumerate(fields)
@@ -214,6 +220,17 @@ function heatmap_panel!(position, fts, plane, dim, index, title; kwargs...)
     heatmap!(ax, x, y, plane; nan_color = :lightgray, kwargs...)
     dim == shown[1] && vlines!(ax, @lift([x[$index]]); color = :white, linestyle = :dash)
     dim == shown[2] && hlines!(ax, @lift([y[$index]]); color = :white, linestyle = :dash)
+    return ax
+end
+
+function locator!(position, grid, dim, index)
+    ocean = Field{Center, Center, Nothing}(grid)
+    set!(ocean, 1)
+    mask_immersed_field!(ocean, NaN)
+    ax = heatmap_panel!(position, ocean, Observable(squeeze(Array(interior(ocean)))), dim, index, "";
+                        colormap = [:steelblue, :steelblue], colorrange = (0, 1))
+    ax.aspect = DataAspect()
+    hidedecorations!(ax)
     return nothing
 end
 
