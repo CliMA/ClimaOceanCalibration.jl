@@ -4,6 +4,7 @@ using Oceananigans.Architectures: on_architecture, architecture
 using Oceananigans.Utils: launch!
 using Oceananigans.Grids: znodes
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
+using Oceananigans.BoundaryConditions: fill_halo_regions!
 using CUDA
 using ConservativeRegridding
 using JLD2
@@ -68,6 +69,8 @@ for k in 1:Nz
     ConservativeRegridding.regrid!(vec(interior(dst_field, :, :, k)), regridder,
                                    vec(interior(src_field, :, :, k)))
 end
+
+fill_halo_regions!(dst_field)
 
 bottom_height_target = Field{Center, Center, Nothing}(target_grid)
 find_immersed_height!(bottom_height_target, target_grid, dst_field)

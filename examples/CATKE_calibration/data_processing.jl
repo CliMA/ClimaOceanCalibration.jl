@@ -11,6 +11,7 @@ using Oceananigans
 using Oceananigans.Grids: znodes, φnodes
 using Oceananigans.Fields: location, Field
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
+using Oceananigans.BoundaryConditions: fill_halo_regions!
 using Oceananigans.Architectures: on_architecture
 using NumericalEarth
 using NumericalEarth.DataWrangling
@@ -56,6 +57,8 @@ function regrid_levels!(target, regridder, source)
         ConservativeRegridding.regrid!(vec(interior(target, :, :, k)), regridder,
                                        vec(interior(source, :, :, k)))
     end
+
+    fill_halo_regions!(target)
 
     return target
 end
