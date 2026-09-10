@@ -9,7 +9,6 @@ using Dates
 using CUDA
 using ClimaOceanCalibration.DataWrangling
 using JLD2
-using XESMF
 
 arch = GPU()
 

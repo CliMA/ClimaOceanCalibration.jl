@@ -11,18 +11,16 @@ using Oceananigans
 using Oceananigans.Grids: znodes, φnodes
 using Oceananigans.Fields: location, Field
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
-using Oceananigans.BoundaryConditions: fill_halo_regions!
 using Oceananigans.Architectures: on_architecture
 using NumericalEarth
 using NumericalEarth.DataWrangling
-using ConservativeRegridding
 using JLD2
 using NaNStatistics
 using Glob
 using Statistics
 using LinearAlgebra
 using EnsembleKalmanProcesses: tsvd_cov_from_samples, SVDplusD
-using ClimaOceanCalibration
+using ClimaOceanCalibration.DataWrangling: regrid_levels!
 
 """
     compute_dz_weights(grid, z_indices)
@@ -44,23 +42,6 @@ function compute_dz_weights(grid, z_indices)
     Δz_normalized = Δz ./ sum(Δz)
 
     return Δz_normalized
-end
-
-"""
-    regrid_levels!(target, regridder, source)
-
-Conservatively regrid every depth level of `source` onto `target`, whose grid must
-be unfolded: cells duplicated across a fold are not mirrored back.
-"""
-function regrid_levels!(target, regridder, source)
-    for k in 1:size(target, 3)
-        ConservativeRegridding.regrid!(vec(interior(target, :, :, k)), regridder,
-                                       vec(interior(source, :, :, k)))
-    end
-
-    fill_halo_regions!(target)
-
-    return target
 end
 
 """

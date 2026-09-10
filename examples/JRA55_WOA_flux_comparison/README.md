@@ -27,7 +27,8 @@ compares them with the flux products published by the CMIP6 **omip2** models
    length as the calibrate_catke_gm_seasonal.jl forward runs, so fluxes are
    directly relatable to the calibration simulations. REPEAT_YEAR=true switches
    to RepeatYearJRA55 (small-download demo mode). The run script loads the
-   in-repo OMIPSimulations module standalone (no XESMF/PythonCall needed).
+   in-repo OMIPSimulations module standalone, without the calibration and
+   plotting dependencies.
 
 3. Postprocess our run (HPC or anywhere with the run output + repo env)
    julia --project=<repo> postprocess_flux_climatology.jl <run>_monthly_fluxes.jld2
