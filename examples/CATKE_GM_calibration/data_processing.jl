@@ -2,7 +2,7 @@
 # Tropical-belt observation/model extraction utilities for the ORCA-grid
 # CATKE+GM calibration.
 #
-# Model output and WOA both live on the ORCA grid, so there is no XESMF
+# Model output and WOA both live on the ORCA grid, so there is no
 # regridding step — we just slice by latitude / depth, drop NaNs, and
 # concatenate [T..., S...] into a single observation vector.
 

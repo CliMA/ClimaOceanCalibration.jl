@@ -3,7 +3,7 @@ using Oceananigans.Grids: znodes, φnodes
 using Oceananigans.Fields: location
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 using Oceananigans.Architectures: on_architecture
-using XESMF
+using ClimaOceanCalibration.DataWrangling: regrid_levels!
 using JLD2
 using NaNStatistics
 using Glob
@@ -30,8 +30,8 @@ function regrid_model_data(simdir)
     S_target = FieldTimeSeries{LX, LY, LZ}(target_grid, times; boundary_conditions)
 
     for t in 1:length(times)
-        regrid!(T_target[t], regridder, T_data[t])
-        regrid!(S_target[t], regridder, S_data[t])
+        regrid_levels!(T_target[t], regridder, T_data[t])
+        regrid_levels!(S_target[t], regridder, S_data[t])
     end
     return T_target, S_target
 end
