@@ -1,22 +1,27 @@
 using Oceananigans
-using XESMF
+using Oceananigans.Architectures: on_architecture
+using ConservativeRegridding
 using CUDA
 
 z = (-1, 0)
 
 arch = GPU()
-tg = TripolarGrid(arch; size=(360, 170, 2), z, southernmost_latitude = -80)
+tg = TripolarGrid(arch; size=(360, 170, 1), z, southernmost_latitude = -80)
 
-llg = LatitudeLongitudeGrid(arch; size=(360, 180, 2), z,
+llg = LatitudeLongitudeGrid(arch; size=(360, 180, 1), z,
                             longitude=(0, 360), latitude=(-82, 90))
 
-src_field = CenterField(tg)
-dst_field = CenterField(llg)
+src_field = Field{Center, Center, Nothing}(tg)
+dst_field = Field{Center, Center, Nothing}(llg)
 
 λ₀, φ₀ = 150, 30.  # degrees
 width = 12         # degrees
-set!(src_field, (λ, φ, z) -> exp(-((λ - λ₀)^2 + (φ - φ₀)^2) / 2width^2))
+set!(src_field, (λ, φ) -> exp(-((λ - λ₀)^2 + (φ - φ₀)^2) / 2width^2))
 
-regridder = XESMF.Regridder(dst_field, src_field, method="conservative")
+# The weights are computed on the host, then moved to `arch` alongside the fields.
+regridder = ConservativeRegridding.Regridder(on_architecture(CPU(), llg),
+                                             on_architecture(CPU(), tg))
 
-regrid!(dst_field, regridder, src_field)
+regridder = on_architecture(arch, regridder)
+
+ConservativeRegridding.regrid!(dst_field, regridder, src_field)
