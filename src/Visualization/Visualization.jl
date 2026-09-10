@@ -2,10 +2,6 @@ module Visualization
 
 export Run, dashboard
 
-using Dates
-using Makie
-using JLD2
-using NaNStatistics: nanmean
 using Oceananigans
 using Oceananigans.Fields: location
 using Oceananigans.Grids: nodes, OrthogonalSphericalShellGrid
@@ -13,6 +9,12 @@ using Oceananigans.OutputReaders: FieldTimeSeries, OnDisk, InMemory
 using Oceananigans.ImmersedBoundaries: mask_immersed_field!
 using Oceananigans.Utils: prettytime
 using Oceananigans.Units: days
+
+using Dates
+using JLD2
+using Makie
+using NaNStatistics: nanmean
+
 using ..OMIPSimulations: jld2_output_part_paths
 
 #####
@@ -20,31 +22,37 @@ using ..OMIPSimulations: jld2_output_part_paths
 #####
 
 """
-    Run(dir; name = basename(dir), grid = nothing)
+    Run(dir; name = basename(dir), grid = nothing, groups = Dict())
     Run(name, series)
 
-A named collection of `FieldTimeSeries`. Reading `dir` collects every variable of every
-Oceananigans JLD2 output in it (split `_partN` files included) under the key
-`"group/variable"`, where `group` is the file stem without the prefix shared by all files.
-Series with at most one spatial dimension are held in memory; the rest are read from disk
-on demand. Pass `grid` for files whose serialized grid the current Oceananigans cannot
-deserialize.
+Return a named collection of `FieldTimeSeries` keyed by `"group/variable"`: either `series`
+itself, or every variable of every Oceananigans JLD2 output in `dir` (split `_partN` files
+included). Series with at most one spatial dimension are held in memory; the rest are read
+from disk on demand.
+
+Keyword arguments
+=================
+
+- `name`: Name shown in panel titles and legends.
+
+- `grid`: Grid of the output, for files whose serialized grid cannot be deserialized.
+
+- `groups`: Group name of each file stem. Stems not listed get the stem without the
+            prefix shared by all files.
 """
-struct Run
-    name :: String
-    series :: Dict{String, FieldTimeSeries}
+struct Run{S}
+      name :: String
+    series :: S
 end
 
-Run(name::AbstractString, series::AbstractDict) = Run(String(name), Dict{String, FieldTimeSeries}(series))
-
-function Run(dir::AbstractString; name = basename(rstrip(dir, '/')), grid = nothing)
+function Run(dir::AbstractString; name = basename(rstrip(dir, '/')), grid = nothing, groups = Dict{String, String}())
     files = filter(f -> endswith(f, ".jld2") && !occursin("checkpoint", f), readdir(dir))
     stems = unique!(replace.(files, r"(_part\d+)?\.jld2$" => ""))
     prefix = common_prefix(stems)
     series = Dict{String, FieldTimeSeries}()
     for stem in stems
         path = joinpath(dir, stem * ".jld2")
-        group = chopprefix(stem, prefix)
+        group = get(groups, stem, chopprefix(stem, prefix))
         file_grid = grid
         for variable in variables(first(jld2_output_part_paths(path)))
             fts = FieldTimeSeries(path, variable; backend = OnDisk(), grid = file_grid, boundary_conditions = nothing)
@@ -62,12 +70,7 @@ end
 
 function common_prefix(stems)
     length(stems) > 1 || return ""
-    chars = collect.(stems)
-    n = 0
-    while all(c -> length(c) > n && c[n + 1] == chars[1][n + 1], chars)
-        n += 1
-    end
-    prefix = join(chars[1][1:n])
+    prefix = join(first(chars) for chars in Iterators.takewhile(allequal, zip(stems...)))
     cut = findlast('_', prefix)
     return isnothing(cut) ? "" : prefix[1:cut]
 end
@@ -78,10 +81,11 @@ Base.keys(run::Run) = sort!(collect(keys(run.series)))
 Base.getindex(run::Run, key::AbstractString) = run.series[key]
 common_keys(runs) = mapreduce(keys, intersect, runs)
 
-Base.show(io::IO, run::Run) = print(io, "Run(\"", run.name, "\", ", length(run.series), " series)")
+Base.summary(run::Run) = string("Run \"", run.name, "\" with ", length(run.series), " series")
+Base.show(io::IO, run::Run) = print(io, summary(run))
 
 function Base.show(io::IO, ::MIME"text/plain", run::Run)
-    print(io, "Run \"", run.name, "\" with ", length(run.series), " series")
+    print(io, summary(run))
     for key in keys(run)
         print(io, "\n  ", rpad(key, 32), join(size(run[key]), "×"))
     end
@@ -130,15 +134,26 @@ symmetric(range) = (-maximum(abs, range), maximum(abs, range))
 #####
 
 """
-    dashboard(runs...; fields, section = :x, reference_date = nothing, colormap = :viridis)
+    dashboard(runs...; fields = first(common_keys(runs), 3), section = :x, reference_date = nothing, colormap = :viridis)
 
-Interactive figure with one row per field and one column per run. Three-dimensional
-fields are shown as sections normal to `section` (`:x`, `:y` or `:z`) at the index set by
-the slice slider, or averaged along it when the mean toggle is on; two-dimensional fields
-as maps; one-dimensional fields as profiles; scalar series against time. The time slider
-selects the nearest snapshot of every series. Two runs on grids of equal size get a
-difference column. The menu on every row switches among the variables of the same shape.
-For `:x` and `:y` sections an inset map of the ocean mask marks the slice position.
+Return an interactive `Figure` with one row per field and one column per run. Three-dimensional
+fields are shown as sections at the index set by the slice slider, or averaged along the
+section normal when the mean toggle is on; two-dimensional fields as maps; one-dimensional
+fields as profiles; scalar series against time. The time slider selects the nearest snapshot
+of every series, and the menu on every row switches among the variables of the same shape.
+Two runs on grids of equal size get a difference column. For `:x` and `:y` sections an
+inset map of the ocean mask marks the slice position.
+
+Keyword arguments
+=================
+
+- `fields`: Keys of the series shown, one per row.
+
+- `section`: Normal of the sections through three-dimensional fields, `:x`, `:y` or `:z`.
+
+- `reference_date`: `DateTime` of time zero; when given, the time slider shows dates.
+
+- `colormap`: Colormap of the field panels.
 """
 function dashboard(runs::Run...; fields = first(common_keys(runs), 3), section = :x,
                    reference_date = nothing, colormap = :viridis)
@@ -170,16 +185,16 @@ function dashboard(runs::Run...; fields = first(common_keys(runs), 3), section =
     end
 
     rescalers = Function[]
-    for (r, key) in enumerate(fields)
+    for (row, key) in enumerate(fields)
         options = filter(k -> all(size(run[k])[1:3] == size(run[key])[1:3] for run in runs), common_keys(runs))
-        menu = Menu(fig[r, 1]; options, default = key, width = 180, valign = :top, tellheight = false)
+        menu = Menu(fig[row, 1]; options, default = key, width = 180, valign = :top, tellheight = false)
         dimensionality = length(spatial_dims(runs[1][key]))
         if dimensionality == 0
-            timeseries_row!(fig[r, 2:nruns + 1], runs, menu.selection, time)
+            timeseries_row!(fig[row, 2:nruns + 1], runs, menu.selection, time)
         elseif dimensionality == 1
-            profile_row!(fig[r, 2:nruns + 1], runs, menu.selection, time)
+            profile_row!(fig[row, 2:nruns + 1], runs, menu.selection, time)
         else
-            push!(rescalers, heatmap_row!(fig, r, runs, menu.selection, time, dim, index, toggle.active, colormap))
+            push!(rescalers, heatmap_row!(fig, row, runs, menu.selection, time, dim, index, toggle.active, colormap))
         end
     end
     on(_ -> foreach(f -> f(), rescalers), button.clicks)
@@ -187,28 +202,29 @@ function dashboard(runs::Run...; fields = first(common_keys(runs), 3), section =
     return fig
 end
 
-function heatmap_row!(fig, r, runs, field, time, dim, index, average, colormap)
+function heatmap_row!(fig, row, runs, field, time, dim, index, average, colormap)
     nruns = length(runs)
     indices = [@lift(clamp($index, 1, size(run[field[]], dim))) for run in runs]
     snapshots = [@lift(snapshot(run[$field], $time)) for run in runs]
     planes = [@lift(plane($snapshot, dim, $index, $average)) for (snapshot, index) in zip(snapshots, indices)]
     colorrange = Observable((0.0, 1.0))
-    rescale!(colorrange, planes)
-    for (c, run) in enumerate(runs)
-        heatmap_panel!(fig[r, 1 + c], run[field[]], planes[c], dim, indices[c], run.name; colormap, colorrange)
+    rescalers = Function[() -> rescale!(colorrange, planes)]
+    for (column, run) in enumerate(runs)
+        heatmap_panel!(fig[row, 1 + column], run[field[]], planes[column], dim, indices[column], run.name; colormap, colorrange)
     end
-    Colorbar(fig[r, nruns + 2]; colormap, limits = colorrange)
+    Colorbar(fig[row, nruns + 2]; colormap, limits = colorrange)
 
-    rescale = () -> rescale!(colorrange, planes)
     if nruns == 2 && size(planes[1][]) == size(planes[2][])
         difference = @lift $(planes[1]) .- $(planes[2])
         difference_range = Observable((-1.0, 1.0))
-        rescale!(difference_range, (difference,), symmetric)
-        heatmap_panel!(fig[r, nruns + 3], runs[1][field[]], difference, dim, indices[1], "$(runs[1].name) − $(runs[2].name)";
+        push!(rescalers, () -> rescale!(difference_range, (difference,), symmetric))
+        heatmap_panel!(fig[row, nruns + 3], runs[1][field[]], difference, dim, indices[1], "$(runs[1].name) − $(runs[2].name)";
                        colormap = :balance, colorrange = difference_range)
-        Colorbar(fig[r, nruns + 4]; colormap = :balance, limits = difference_range)
-        rescale = () -> (rescale!(colorrange, planes); rescale!(difference_range, (difference,), symmetric))
+        Colorbar(fig[row, nruns + 4]; colormap = :balance, limits = difference_range)
     end
+
+    rescale() = foreach(f -> f(), rescalers)
+    rescale()
     on(_ -> rescale(), field)
     return rescale
 end
@@ -236,14 +252,14 @@ function locator!(position, grid, dim, index)
 end
 
 function profile_row!(position, runs, field, time)
-    d = only(spatial_dims(runs[1][field[]]))
-    label = spatial_axes(runs[1][field[]])[2][d]
+    dim = only(spatial_dims(runs[1][field[]]))
+    label = spatial_axes(runs[1][field[]])[2][dim]
     name = @lift string($field)
-    ax = d == 3 ? Axis(position; xlabel = name, ylabel = label) : Axis(position; xlabel = label, ylabel = name)
+    ax = dim == 3 ? Axis(position; xlabel = name, ylabel = label) : Axis(position; xlabel = label, ylabel = name)
     for run in runs
-        ξ = spatial_axes(run[field[]])[1][d]
+        ξ = spatial_axes(run[field[]])[1][dim]
         values = @lift vec(snapshot(run[$field], $time))
-        points = d == 3 ? (@lift Point2f.($values, ξ)) : (@lift Point2f.(ξ, $values))
+        points = dim == 3 ? (@lift Point2f.($values, ξ)) : (@lift Point2f.(ξ, $values))
         lines!(ax, points; label = run.name)
         on(_ -> autolimits!(ax), points)
     end

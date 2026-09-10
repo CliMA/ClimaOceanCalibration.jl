@@ -26,6 +26,7 @@ using ClimaOceanCalibration.Visualization
     @test size(a["fields/T"]) == (8, 6, 4, 4)
     @test size(a["surface/T"]) == (8, 6, 1, 4)
     @test size(a["averages/T_h"]) == (1, 1, 4, 4)
+    @test "top/T" in keys(Run(dir; groups = Dict("run_surface" => "top")))
 
     b = Run("b", Dict("fields/T" => a["fields/T"], "averages/T_avg" => a["averages/T_avg"]))
     for section in (:x, :y, :z)
