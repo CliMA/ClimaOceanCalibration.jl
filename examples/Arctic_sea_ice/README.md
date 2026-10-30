@@ -1,6 +1,7 @@
 # Pan-Arctic sea ice configuration
 
-Coupled ocean–sea ice simulation of the Arctic on a polar-stereographic grid with GLORYS open boundaries,
+Coupled ocean–sea ice simulation of the Arctic on a polar-stereographic grid (or, for reference, the
+rotated lat-lon grid it replaced upstream; `[grid] type` in the config) with GLORYS open boundaries,
 adapted from [NoraLoose/PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans). This is
 the forward model for Arctic sea ice calibration.
 
