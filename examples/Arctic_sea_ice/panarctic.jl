@@ -157,7 +157,7 @@ end
 # Daily means (centred at noon) from the day before the start date to the end of the run, so that the
 # whole run lies inside the record. Index 2 is the daily mean of the start date.
 
-run_days = ceil(Int, stop_time / 1day)
+run_days = ceil(Int, stop_time / 1days)
 dates    = start_date - Day(1) : Day(1) : start_date + Day(run_days)
 dataset  = GLORYSDaily()
 region   = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
@@ -355,12 +355,12 @@ sea_ice_outputs = (; he)
 ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                             filename = joinpath(output_dir, "arctic_ocean_surface.jld2"),
                                             indices = (:, :, grid.Nz-2),
-                                            schedule = TimeInterval(1day),
+                                            schedule = TimeInterval(1days),
                                             overwrite_files = true)
 
 sea_ice.output_writers[:surface] = JLD2Writer(sea_ice.model, sea_ice_outputs;
                                               filename = joinpath(output_dir, "arctic_sea_ice_surface.jld2"),
-                                              schedule = TimeInterval(1day),
+                                              schedule = TimeInterval(1days),
                                               overwrite_files = true)
 
 run!(simulation)
