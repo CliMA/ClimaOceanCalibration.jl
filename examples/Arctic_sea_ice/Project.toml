@@ -1,0 +1,17 @@
+[deps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CopernicusMarine = "cd43e856-93a3-40c8-bc9e-6146cdce14fa"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+NumericalEarth = "904d977b-046a-4731-8b86-9235c0d1ef02"
+Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
+[compat]
+NumericalEarth = "0.8.2"
+Oceananigans = "0.113"
+julia = "1.10"
+
+[extras]
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
