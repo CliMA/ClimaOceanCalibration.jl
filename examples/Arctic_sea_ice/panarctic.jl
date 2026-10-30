@@ -1,9 +1,11 @@
 # Pan-Arctic coupled ocean–sea ice simulation, after github.com/NoraLoose/PanArcticShenanigans.
-# Settings are read from a TOML file: `julia +1.13 panarctic.jl [config.toml]`. See README.
+# Model settings are the variables under "Model settings"; run options are command-line flags:
+#   julia +1.13 --project panarctic.jl [--stop_hours 3] [--output_dir output/quick] [--figures false] [--movies false]
 
 using Pkg
 Pkg.activate(@__DIR__)
 
+using ArgParse
 using NumericalEarth, Oceananigans, Oceananigans.Units
 using Oceananigans.BoundaryConditions: NormalRadiation, GravityWaveRadiationBoundaryCondition, NormalFlowBoundaryCondition
 using Oceananigans.Operators: Δzᶠᶜᶜ, Δzᶜᶠᶜ, intrinsic_vector
@@ -14,26 +16,69 @@ using Oceananigans.ImmersedBoundaries: immersed_peripheral_node, immersed_inacti
 using Oceananigans.OrthogonalSphericalShellGrids: RotatedLatitudeLongitudeGrid, LambertConformalConicGrid
 using Dates, CUDA, Printf
 using CopernicusMarine   # enables the GLORYS download extension
-using TOML
 
-config_file = isempty(ARGS) ? joinpath(@__DIR__, "config.toml") : ARGS[1]
-config = TOML.parsefile(config_file)
-@info "Settings from $config_file" config
+function parse_commandline()
+    s = ArgParseSettings()
+    @add_arg_table! s begin
+        "--architecture"
+            help = "GPU or CPU"
+            default = "GPU"
+        "--stop_hours"
+            help = "run length in hours (3 for a quick check)"
+            arg_type = Float64
+            default = 120.0
+        "--output_dir"
+            help = "where output (.jld2, .png, .mp4) is written, relative to this directory"
+            default = "output"
+        "--glorys_dir"
+            help = "GLORYS download cache"
+            default = "~/GLORYS_data"
+        "--jra55_dir"
+            help = "JRA55 download cache"
+            default = "~/JRA55_data"
+        "--ecco_dir"
+            help = "ECCO download cache"
+            default = "~/ECCO_data"
+        "--figures"
+            help = "save bathymetry.png and grid_spacing.png"
+            arg_type = Bool
+            default = true
+        "--movies"
+            help = "make arctic_free_surface.mp4 (GLORYS input) and arctic_sea.mp4 (results)"
+            arg_type = Bool
+            default = true
+    end
+    return parse_args(s)
+end
 
-arch = config["architecture"] == "GPU" ? GPU() : CPU()
+args = parse_commandline()
+@info "Run options" args
+
+arch         = args["architecture"] == "GPU" ? GPU() : CPU()
+stop_time    = args["stop_hours"] * hours
+output_dir   = mkpath(isabspath(args["output_dir"]) ? args["output_dir"] : joinpath(@__DIR__, args["output_dir"]))
+glorys_dir   = expanduser(args["glorys_dir"])
+jra55_dir    = expanduser(args["jra55_dir"])
+ecco_dir     = expanduser(args["ecco_dir"])
+make_figures = args["figures"]
+make_movies  = args["movies"]
+
+# ## Model settings
+
+grid_type     = "stereographic"      # "stereographic" (polar stereographic) or "rotated" (rotated lat-lon)
+spacing       = 15kilometers         # largest horizontal spacing: at the pole (stereographic) or Δy (rotated)
+Nz            = 20                   # vertical levels
+depth         = 5000meters
+start_date    = DateTime(1993, 1, 1) # initial condition (GLORYS and ECCO); GLORYS is loaded from here to the end of the run
+Δt            = 10minutes
+jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYearJRA55() is the 1990–91 repeat year
 
 # ## Grid
 #
-# "stereographic" (polar stereographic, LambertConformalConicGrid with λ₀ = −40°) or "rotated" (rotated
-# lat-lon). Both have their open boundaries on the south (Atlantic, j = 1) and north (Pacific, j = Ny)
-# edges; the east/west edges are land. `spacing_km` is the largest spacing: at the pole (stereographic),
-# or Δy (rotated).
+# Both grids have their open boundaries on the south (Atlantic, j = 1) and north (Pacific, j = Ny)
+# edges; the east/west edges are land.
 
-grid_type = config["grid"]["type"]
-Nz        = config["grid"]["Nz"]
-depth     = config["grid"]["depth"] * meters
-spacing   = config["grid"]["spacing_km"] * kilometers
-z         = ExponentialDiscretization(Nz, -depth, 0; scale = depth/4, mutable = true)
+z = ExponentialDiscretization(Nz, -depth, 0; scale = depth/4, mutable = true)
 
 if grid_type == "rotated"
     λ₁, λ₂ = 151, 212     # rotated longitude
@@ -65,15 +110,6 @@ end
 
 Nx, Ny = size(underlying_grid)[1:2]
 @info "Grid: $grid_type, $Nx × $Ny × $Nz, largest spacing $(spacing / 1e3) km"
-
-paths = config["paths"]
-dataset_dir(key) = isempty(paths[key]) ? (;) : (; dir = expanduser(paths[key]))
-glorys_kw  = dataset_dir("glorys_dir")
-jra55_kw   = dataset_dir("jra55_dir")
-ecco_kw    = dataset_dir("ecco_dir")
-output_dir = mkpath(isabspath(paths["output_dir"]) ? paths["output_dir"] : joinpath(@__DIR__, paths["output_dir"]))
-make_figures = config["output"]["figures"]   # bathymetry and grid-spacing PNGs
-make_movies  = config["output"]["movies"]    # GLORYS free-surface and results movies
 
 bathymetry = Metadatum(:bottom_height; dataset = ETOPO2022())
 bottom_height = regrid_bathymetry(underlying_grid, bathymetry;
@@ -120,18 +156,17 @@ end
 #
 # Daily means (centred at noon) from the start date to the end of the run.
 
-start_date = DateTime(config["time"]["start_date"])
-run_days   = ceil(Int, config["time"]["stop_hours"] / 24)
-dates      = start_date : Day(1) : start_date + Day(max(run_days, 1))
-dataset = GLORYSDaily()
-region  = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
+run_days = ceil(Int, stop_time / 1day)
+dates    = start_date : Day(1) : start_date + Day(max(run_days, 1))
+dataset  = GLORYSDaily()
+region   = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
 
 # T and S need full inpainting: capped inpainting leaves gaps in deep basins.
-Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, glorys_kw...), grid, time_indices_in_memory=length(dates))
-Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, glorys_kw...), grid, time_indices_in_memory=length(dates))
-uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, glorys_kw...), grid, inpainting=100, time_indices_in_memory=length(dates))
-vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, glorys_kw...), grid, inpainting=100, time_indices_in_memory=length(dates))
-ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, glorys_kw...), grid, inpainting=100, time_indices_in_memory=length(dates))
+Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid, time_indices_in_memory=length(dates))
+Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid, time_indices_in_memory=length(dates))
+uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100, time_indices_in_memory=length(dates))
+vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100, time_indices_in_memory=length(dates))
+ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid, inpainting=100, time_indices_in_memory=length(dates))
 
 # Rotate GLORYS velocities from east/north into the grid frame.
 
@@ -225,10 +260,10 @@ for j in 1:Ny
     sponge_mask[:, j, :] .= exp(-(d / sponge_width)^2)
 end
 
-FT = DatasetRestoring(Metadata(:temperature; dates, dataset, region, glorys_kw...), grid; rate = 1/1days, mask = sponge_mask)
+FT = DatasetRestoring(Metadata(:temperature; dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask)
 Fu = DatasetRestoring(uᵉˣᵗ, nothing, on_architecture(arch, sponge_mask), UVelocity(), 1/20minutes)
 Fv = DatasetRestoring(vᵉˣᵗ, nothing, on_architecture(arch, sponge_mask), VVelocity(), 1/20minutes)
-FS = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, glorys_kw...), grid; rate = 1/1days, mask = sponge_mask)
+FS = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask)
 
 # ## Ocean and sea ice
 
@@ -250,8 +285,8 @@ sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)   # thermodynamics o
 # ## Initial conditions: GLORYS (ocean) and ECCO4 (sea ice)
 
 set!(ocean.model, T = Tᵉˣᵗ[1], S = Sᵉˣᵗ[1])
-set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date=dates[1], dataset=ECCO4Monthly(), ecco_kw...),
-                    ℵ = Metadatum(:sea_ice_concentration; date=dates[1], dataset=ECCO4Monthly(), ecco_kw...))
+set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date=dates[1], dataset=ECCO4Monthly(), dir = ecco_dir),
+                    ℵ = Metadatum(:sea_ice_concentration; date=dates[1], dataset=ECCO4Monthly(), dir = ecco_dir))
 
 # Warn about unstable stratification (N² < -1e-6 s⁻² between wet cells) in the initial state.
 
@@ -273,26 +308,16 @@ end
 
 # ## Atmosphere and coupled model
 
-# JRA55 for the run's own dates, so the winds match the GLORYS initial and boundary data ("multi_year"),
-# or the 1990–91 repeat year whatever the start date ("repeat_year", e.g. for spin-ups).
+jra55 = jra55_dataset isa MultiYearJRA55 ? (; dataset = jra55_dataset, start_date = dates[1], end_date = dates[end]) :
+                                           (; dataset = jra55_dataset)
 
-jra55 = if config["atmosphere"]["jra55"] == "multi_year"
-    (; dataset = MultiYearJRA55(), start_date = dates[1], end_date = dates[end])
-elseif config["atmosphere"]["jra55"] == "repeat_year"
-    (; dataset = RepeatYearJRA55())
-else
-    error("Unknown JRA55 forcing \"$(config["atmosphere"]["jra55"])\"; use \"multi_year\" or \"repeat_year\"")
-end
-
-atmosphere    = JRA55PrescribedAtmosphere(arch; jra55..., jra55_kw...)
-radiation     = JRA55PrescribedRadiation(arch; jra55..., jra55_kw...)
-land          = JRA55PrescribedLand(grid; jra55..., jra55_kw...)
+atmosphere    = JRA55PrescribedAtmosphere(arch; jra55..., dir = jra55_dir)
+radiation     = JRA55PrescribedRadiation(arch; jra55..., dir = jra55_dir)
+land          = JRA55PrescribedLand(grid; jra55..., dir = jra55_dir)
 coupled_model = EarthSystemModel(; ocean, sea_ice, land, atmosphere, radiation)
 
 # ## Simulation
 
-Δt        = config["time"]["dt_minutes"] * minutes
-stop_time = config["time"]["stop_hours"] * hours
 simulation = Simulation(coupled_model; Δt, stop_time)
 
 wall_time = Ref(time_ns())
