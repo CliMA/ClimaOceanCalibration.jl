@@ -78,7 +78,7 @@ start_date    = DateTime(1993, 1, 2) # initial condition (GLORYS and ECCO); the 
 Δt            = 10minutes
 jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYearJRA55() is the 1990–91 repeat year
 
-velocity_inflow_timescale     = 1day           # oblique radiation on u, v: nudging toward GLORYS on inflow
+velocity_inflow_timescale     = 1days           # oblique radiation on u, v: nudging toward GLORYS on inflow
 velocity_outflow_timescale    = Inf            # same on outflow; Inf = pure radiation
 tracer_inflow_length_atlantic = 50kilometers   # T, S reservoirs: relaxation length scale on inflow, Atlantic edge
 tracer_inflow_length_pacific  = 20kilometers   # same, Pacific edge
