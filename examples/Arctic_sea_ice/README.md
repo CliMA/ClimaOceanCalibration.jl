@@ -17,9 +17,8 @@ and ClimaSeaIce 0.5. It needs Julia 1.13.
 ## Requirements
 
 - **Data credentials** as environment variables (`~/API_keys.sh` on the GCP cluster):
-  - GLORYS12 (ocean initial and boundary data): `COPERNICUSMARINE_SERVICE_USERNAME` and `COPERNICUSMARINE_SERVICE_PASSWORD`.
-  - ECCO4 (initial sea ice): `ECCO_USERNAME` and `ECCO_WEBDAV_PASSWORD`.
-  - JRA55 (atmosphere, rivers) and ETOPO (bathymetry) need no account.
+  - GLORYS12 (initial ocean and sea ice, ocean boundary data): `COPERNICUSMARINE_SERVICE_USERNAME` and `COPERNICUSMARINE_SERVICE_PASSWORD`.
+  - JRA55 (atmosphere, rivers) and GEBCO (bathymetry) need no account.
 
 ## Running
 
@@ -38,9 +37,9 @@ sbatch examples/Arctic_sea_ice/run_panarctic.slurm [options]
 Model settings (grid, resolution, dates, time step, atmosphere) are variables at the top of `panarctic.jl`.
 Run options are command-line flags (`--help` lists them): `--stop_hours` (default 120; use 3 for a quick
 check), `--output_dir` (default `output`, relative to this directory), `--figures` and `--movies`
-(default true), `--architecture` (default GPU), and the data folders `--glorys_dir`, `--jra55_dir`,
-`--ecco_dir` (default the caches already on the cluster in `$HOME`). The first run downloads and inpaints
-the GLORYS boundary data (cached afterwards).
+(default true), `--architecture` (default GPU), and the data folders `--glorys_dir` and `--jra55_dir`
+(default the caches already on the cluster in `$HOME`). The first run downloads and inpaints the GLORYS
+data and regrids the bathymetry (both cached afterwards).
 
 Output (`arctic_*.jld2`, `*.png`, `*.mp4`) is written to the output directory.
 

@@ -19,6 +19,7 @@ using Oceananigans.Operators: Δzᶜᶜᶜ, intrinsic_vector
 using NumericalEarth.DataWrangling: DatasetRestoring
 using Oceananigans.ImmersedBoundaries: immersed_peripheral_node, immersed_inactive_node
 using Oceananigans.OrthogonalSphericalShellGrids: RotatedLatitudeLongitudeGrid, LambertConformalConicGrid
+using ClimaSeaIce: IncrementalRemapping
 using Dates, CUDA, Printf
 using CopernicusMarine   # enables the GLORYS download extension
 
@@ -41,9 +42,6 @@ function parse_commandline()
         "--jra55_dir"
             help = "JRA55 download cache"
             default = "~/JRA55_data"
-        "--ecco_dir"
-            help = "ECCO download cache"
-            default = "~/ECCO_data"
         "--figures"
             help = "save bathymetry.png and grid_spacing.png"
             arg_type = Bool
@@ -64,7 +62,6 @@ stop_time    = args["stop_hours"] * hours
 output_dir   = mkpath(isabspath(args["output_dir"]) ? args["output_dir"] : joinpath(@__DIR__, args["output_dir"]))
 glorys_dir   = expanduser(args["glorys_dir"])
 jra55_dir    = expanduser(args["jra55_dir"])
-ecco_dir     = expanduser(args["ecco_dir"])
 make_figures = args["figures"]
 make_movies  = args["movies"]
 
@@ -74,7 +71,7 @@ grid_type     = "stereographic"      # "stereographic" (polar stereographic) or 
 spacing       = 15kilometers         # largest horizontal spacing: at the pole (stereographic) or Δy (rotated)
 Nz            = 100                  # vertical levels
 depth         = 5500meters
-start_date    = DateTime(1993, 1, 2) # initial condition (GLORYS and ECCO); the GLORYS record starts the day before, so this is its earliest value
+start_date    = DateTime(1993, 1, 2) # initial condition; the GLORYS record starts the day before, so this is its earliest value
 Δt            = 10minutes
 jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYearJRA55() is the 1990–91 repeat year
 
@@ -325,17 +322,34 @@ ocean = ocean_simulation(grid;
                                                 T = T_obcs, S = S_obcs,
                                                 U = U_obcs, V = V_obcs))
 
-sea_ice = sea_ice_simulation(grid, ocean; advection = WENO(order = 5))   # elasto-viscous-plastic dynamics
+# Elasto-viscous-plastic dynamics with the OMIP defaults (ice-ocean drag referenced to the top 6 m, landfast
+# basal stress) and conservative remapping of thickness and concentration.
+sea_ice = sea_ice_simulation(grid, ocean; advection = IncrementalRemapping())
 
-# ## Initial conditions: GLORYS (ocean) and ECCO4 (sea ice)
+# ## Initial conditions: GLORYS (ocean and sea ice)
 
 u₀ = compute!(Field(KernelFunctionOperation{Center, Center, Center}(grid_frame_u, grid, uᵉˣᵗ[2], vᵉˣᵗ[2])))
 v₀ = compute!(Field(KernelFunctionOperation{Center, Center, Center}(grid_frame_v, grid, uᵉˣᵗ[2], vᵉˣᵗ[2])))
 set!(ocean.model, T = Tᵉˣᵗ[2], S = Sᵉˣᵗ[2], η = ηᵉˣᵗ[2],
                   u = compute!(Field(@at((Face, Center, Center), u₀))),
                   v = compute!(Field(@at((Center, Face, Center), v₀))))
-set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date=start_date, dataset=ECCO4Monthly(), dir = ecco_dir),
-                    ℵ = Metadatum(:sea_ice_concentration; date=start_date, dataset=ECCO4Monthly(), dir = ecco_dir))
+set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date = start_date, dataset, region, dir = glorys_dir),
+                    ℵ = Metadatum(:sea_ice_concentration; date = start_date, dataset, region, dir = glorys_dir))
+
+# GLORYS sea-ice fields are NaN on land and open water; after interpolation make them consistent:
+# concentration in [0, 1], and thickness and concentration either both zero or both positive.
+h₀ = Array(interior(sea_ice.model.ice_thickness))
+ℵ₀ = Array(interior(sea_ice.model.ice_concentration))
+replace!(h₀, NaN => 0)
+replace!(ℵ₀, NaN => 0)
+clamp!(ℵ₀, 0, 1)
+no_ice = (h₀ .<= 0) .| (ℵ₀ .<= 0)
+h₀[no_ice] .= 0
+ℵ₀[no_ice] .= 0
+set!(sea_ice.model, h = h₀, ℵ = ℵ₀)
+Oceananigans.BoundaryConditions.fill_halo_regions!(sea_ice.model.ice_thickness)
+Oceananigans.BoundaryConditions.fill_halo_regions!(sea_ice.model.ice_concentration)
+@info @sprintf("GLORYS sea ice at the start: %d cells with ice, max thickness %.2f m", count(.!no_ice), maximum(h₀))
 
 # Warn about unstable stratification (N² < -1e-6 s⁻² between wet cells) in the initial state.
 
