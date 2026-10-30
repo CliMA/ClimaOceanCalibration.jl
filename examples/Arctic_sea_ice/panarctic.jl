@@ -67,8 +67,8 @@ make_movies  = args["movies"]
 
 grid_type     = "stereographic"      # "stereographic" (polar stereographic) or "rotated" (rotated lat-lon)
 spacing       = 15kilometers         # largest horizontal spacing: at the pole (stereographic) or Δy (rotated)
-Nz            = 20                   # vertical levels
-depth         = 5000meters
+Nz            = 100                  # vertical levels
+depth         = 5500meters
 start_date    = DateTime(1993, 1, 2) # initial condition (GLORYS and ECCO); the GLORYS record starts the day before, so this is its earliest value
 Δt            = 10minutes
 jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYearJRA55() is the 1990–91 repeat year
@@ -78,7 +78,7 @@ jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYear
 # Both grids have their open boundaries on the south (Atlantic, j = 1) and north (Pacific, j = Ny)
 # edges; the east/west edges are land.
 
-z = ExponentialDiscretization(Nz, -depth, 0; scale = depth/4, mutable = true)
+z = ExponentialDiscretization(Nz, -depth, 0; scale = 1037.4meters, mutable = true)   # 1.5 m surface cell as in the OMIP 1/12° setup, 285 m at the bottom
 
 if grid_type == "rotated"
     λ₁, λ₂ = 151, 212     # rotated longitude
@@ -341,7 +341,7 @@ end
 
 add_callback!(simulation, progress, TimeInterval(1hours))
 
-# ## Output: daily fields near the surface
+# ## Output: daily surface fields
 
 u, v, w = ocean.model.velocities
 h = sea_ice.model.ice_thickness
@@ -354,7 +354,7 @@ sea_ice_outputs = (; he)
 
 ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                             filename = joinpath(output_dir, "arctic_ocean_surface.jld2"),
-                                            indices = (:, :, grid.Nz-2),
+                                            indices = (:, :, grid.Nz),
                                             schedule = TimeInterval(1days),
                                             overwrite_files = true)
 
