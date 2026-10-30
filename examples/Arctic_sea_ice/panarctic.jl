@@ -154,10 +154,11 @@ end
 
 # ## GLORYS boundary data
 #
-# Daily means (centred at noon) from the start date to the end of the run.
+# Daily means (centred at noon) from the day before the start date to the end of the run, so that the
+# whole run lies inside the record. Index 2 is the daily mean of the start date.
 
 run_days = ceil(Int, stop_time / 1day)
-dates    = start_date : Day(1) : start_date + Day(max(run_days, 1))
+dates    = start_date - Day(1) : Day(1) : start_date + Day(run_days)
 dataset  = GLORYSDaily()
 region   = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
 
@@ -267,7 +268,7 @@ FS = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glory
 
 # ## Ocean and sea ice
 
-closure = (CATKEVerticalDiffusivity(minimum_tke=1e-7))
+closure = CATKEVerticalDiffusivity()
 time_discretization = AdaptiveVerticallyImplicitDiscretization(cfl=0.5)
 
 ocean = ocean_simulation(grid;
@@ -284,9 +285,9 @@ sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)   # thermodynamics o
 
 # ## Initial conditions: GLORYS (ocean) and ECCO4 (sea ice)
 
-set!(ocean.model, T = Tᵉˣᵗ[1], S = Sᵉˣᵗ[1])
-set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date=dates[1], dataset=ECCO4Monthly(), dir = ecco_dir),
-                    ℵ = Metadatum(:sea_ice_concentration; date=dates[1], dataset=ECCO4Monthly(), dir = ecco_dir))
+set!(ocean.model, T = Tᵉˣᵗ[2], S = Sᵉˣᵗ[2])
+set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date=start_date, dataset=ECCO4Monthly(), dir = ecco_dir),
+                    ℵ = Metadatum(:sea_ice_concentration; date=start_date, dataset=ECCO4Monthly(), dir = ecco_dir))
 
 # Warn about unstable stratification (N² < -1e-6 s⁻² between wet cells) in the initial state.
 
@@ -340,7 +341,7 @@ end
 
 add_callback!(simulation, progress, TimeInterval(1hours))
 
-# ## Output: hourly fields near the surface
+# ## Output: daily fields near the surface
 
 u, v, w = ocean.model.velocities
 h = sea_ice.model.ice_thickness
@@ -354,12 +355,12 @@ sea_ice_outputs = (; he)
 ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                             filename = joinpath(output_dir, "arctic_ocean_surface.jld2"),
                                             indices = (:, :, grid.Nz-2),
-                                            schedule = TimeInterval(1hours),
+                                            schedule = TimeInterval(1day),
                                             overwrite_files = true)
 
 sea_ice.output_writers[:surface] = JLD2Writer(sea_ice.model, sea_ice_outputs;
                                               filename = joinpath(output_dir, "arctic_sea_ice_surface.jld2"),
-                                              schedule = TimeInterval(1hours),
+                                              schedule = TimeInterval(1day),
                                               overwrite_files = true)
 
 run!(simulation)
@@ -375,7 +376,7 @@ if make_movies
     times = To.times
     n = Observable(length(times))
 
-    title = @lift "Arctic — hour " * string(round(Int, times[$n] / hours))
+    title = @lift "Arctic — day " * string(round(Int, times[$n] / days))
 
     Tₙ = @lift(To[$n])
     Sₙ = @lift(So[$n])
