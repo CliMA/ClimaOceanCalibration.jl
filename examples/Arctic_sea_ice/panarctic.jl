@@ -69,7 +69,7 @@ grid_type     = "stereographic"      # "stereographic" (polar stereographic) or 
 spacing       = 15kilometers         # largest horizontal spacing: at the pole (stereographic) or Δy (rotated)
 Nz            = 20                   # vertical levels
 depth         = 5000meters
-start_date    = DateTime(1993, 1, 1) # initial condition (GLORYS and ECCO); GLORYS is loaded from here to the end of the run
+start_date    = DateTime(1993, 1, 2) # initial condition (GLORYS and ECCO); the GLORYS record starts the day before, so this is its earliest value
 Δt            = 10minutes
 jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYearJRA55() is the 1990–91 repeat year
 
