@@ -80,14 +80,13 @@ jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYear
 
 velocity_inflow_timescale     = 1days           # oblique radiation on u, v: nudging toward GLORYS on inflow
 velocity_outflow_timescale    = Inf            # same on outflow; Inf = pure radiation
-tracer_inflow_length_atlantic = 50kilometers   # T, S reservoirs: relaxation length scale on inflow, Atlantic edge
-tracer_inflow_length_pacific  = 20kilometers   # same, Pacific edge
+tracer_inflow_length_scale    = 50kilometers   # T, S reservoirs: relaxation length scale on inflow
 sponge = false                                 # GLORYS restoring in a rim along the open edges, for debugging
 
 # ## Grid
 #
-# Both grids have their open boundaries on the Atlantic (j = 1) and Pacific (j = Ny) edges; the
-# east/west edges are land.
+# Open boundaries on the Atlantic (j = 1), Pacific (j = Ny) and Gulf of Alaska (i = 1) edges; the east
+# edge is land. On the rotated grid the west edge is land too.
 
 z = ExponentialDiscretization(Nz, -depth, 0; scale = 1037.4meters, mutable = true)   # 1.5 m surface cell as in the OMIP 1/12° setup, 285 m at the bottom
 
@@ -103,8 +102,8 @@ if grid_type == "rotated"
                                                    z,
                                                    halo = (7, 7, 7))
 elseif grid_type == "stereographic"
-    x₁, x₂  = -3580e3, 3616e3   # west–east projected extent (m); the west edge lies on Alaska
-    y₁, y₂  = -4100e3, 2300e3   # south–north projected extent (m); the Pacific edge spans the Bering Sea from the Alaska Peninsula to Chukotka
+    x₁, x₂  = -3580e3, 3616e3   # west–east projected extent (m); the west edge crosses the Gulf of Alaska
+    y₁, y₂  = -4100e3, 3100e3   # south–north projected extent (m); the Pacific edge lies south of the Aleutian arc
     underlying_grid = LambertConformalConicGrid(arch;
                                                 size               = (round(Int, (x₂ - x₁) / spacing), round(Int, (y₂ - y₁) / spacing), Nz),
                                                 x                  = (x₁, x₂),
@@ -207,16 +206,15 @@ end
 
 # ## Open boundary conditions
 #
-# Velocities: oblique radiation (Raymond & Kuo 1984), nudged toward GLORYS on inflow, on both the normal (v)
-# and the tangential (u) component. Tracers: reservoirs (as in MOM6) that relax toward GLORYS over a
-# length scale on inflow. Barotropic transport: Flather.
+# Velocities: oblique radiation (Raymond & Kuo 1984), nudged toward GLORYS on inflow, on both the normal
+# and the tangential component. Tracers: reservoirs (as in MOM6) that relax toward GLORYS over a length
+# scale on inflow. Barotropic transport: Flather. The same conditions apply on the three open edges.
 
-velocity_scheme()        = ObliqueRadiation(inflow_timescale = velocity_inflow_timescale, outflow_timescale = velocity_outflow_timescale)
-atlantic_tracer_scheme() = TracerReservoir(inflow_length_scale = tracer_inflow_length_atlantic)
-pacific_tracer_scheme()  = TracerReservoir(inflow_length_scale = tracer_inflow_length_pacific)
+velocity_scheme() = ObliqueRadiation(inflow_timescale = velocity_inflow_timescale, outflow_timescale = velocity_outflow_timescale)
+tracer_scheme()   = TracerReservoir(inflow_length_scale = tracer_inflow_length_scale)
 
-# The boundary values are read from the GLORYS series at the first wet row of each edge, rotated into
-# the grid frame; the tangential velocity is averaged onto the u faces.
+# The boundary values are read from the GLORYS series at the first wet row or column of each edge, rotated
+# into the grid frame; the tangential velocity is averaged onto the faces where it lives.
 
 @inline function grid_frame(i, j, k, grid, p, t)
     uₑ = @inbounds p.u[i, j, k, t]
@@ -225,54 +223,71 @@ pacific_tracer_scheme()  = TracerReservoir(inflow_length_scale = tracer_inflow_l
 end
 
 @inline tangential_u(i, j, k, grid, p, t) = (grid_frame(max(i - 1, 1), j, k, grid, p, t)[1] + grid_frame(i, j, k, grid, p, t)[1]) / 2
+@inline tangential_v(i, j, k, grid, p, t) = (grid_frame(i, max(j - 1, 1), k, grid, p, t)[2] + grid_frame(i, j, k, grid, p, t)[2]) / 2
 
 @inline atlantic_obc(i, k, grid, clock, fields, φ) = @inbounds φ[i, 1,       k, Oceananigans.Units.Time(clock.time)]
 @inline  pacific_obc(i, k, grid, clock, fields, φ) = @inbounds φ[i, grid.Ny, k, Oceananigans.Units.Time(clock.time)]
+@inline   alaska_obc(j, k, grid, clock, fields, φ) = @inbounds φ[1, j,       k, Oceananigans.Units.Time(clock.time)]
 
 @inline atlantic_u_obc(i, k, grid, clock, fields, p) = tangential_u(i, 1,       k, grid, p, Oceananigans.Units.Time(clock.time))
 @inline  pacific_u_obc(i, k, grid, clock, fields, p) = tangential_u(i, grid.Ny, k, grid, p, Oceananigans.Units.Time(clock.time))
-@inline atlantic_v_obc(i, k, grid, clock, fields, p) = grid_frame(i, 1,       k, grid, p, Oceananigans.Units.Time(clock.time))[2]
-@inline  pacific_v_obc(i, k, grid, clock, fields, p) = grid_frame(i, grid.Ny, k, grid, p, Oceananigans.Units.Time(clock.time))[2]
+@inline   alaska_u_obc(j, k, grid, clock, fields, p) = grid_frame(1, j,        k, grid, p, Oceananigans.Units.Time(clock.time))[1]
+@inline atlantic_v_obc(i, k, grid, clock, fields, p) = grid_frame(i, 1,        k, grid, p, Oceananigans.Units.Time(clock.time))[2]
+@inline  pacific_v_obc(i, k, grid, clock, fields, p) = grid_frame(i, grid.Ny,  k, grid, p, Oceananigans.Units.Time(clock.time))[2]
+@inline   alaska_v_obc(j, k, grid, clock, fields, p) = tangential_v(1, j,       k, grid, p, Oceananigans.Units.Time(clock.time))
 
 glorys = (u = uᵉˣᵗ, v = vᵉˣᵗ, η = ηᵉˣᵗ)
 
 u_obcs = FieldBoundaryConditions(
-    south = ValueBoundaryCondition(atlantic_u_obc, discrete_form = true, parameters = glorys, scheme = velocity_scheme()),
-    north = ValueBoundaryCondition(pacific_u_obc,  discrete_form = true, parameters = glorys, scheme = velocity_scheme()))
+    south = ValueBoundaryCondition(atlantic_u_obc,     discrete_form = true, parameters = glorys, scheme = velocity_scheme()),
+    north = ValueBoundaryCondition(pacific_u_obc,      discrete_form = true, parameters = glorys, scheme = velocity_scheme()),
+    west  = NormalFlowBoundaryCondition(alaska_u_obc,  discrete_form = true, parameters = glorys, scheme = velocity_scheme()))
 
 v_obcs = FieldBoundaryConditions(
     south = NormalFlowBoundaryCondition(atlantic_v_obc, discrete_form = true, parameters = glorys, scheme = velocity_scheme()),
-    north = NormalFlowBoundaryCondition(pacific_v_obc,  discrete_form = true, parameters = glorys, scheme = velocity_scheme()))
+    north = NormalFlowBoundaryCondition(pacific_v_obc,  discrete_form = true, parameters = glorys, scheme = velocity_scheme()),
+    west  = ValueBoundaryCondition(alaska_v_obc,        discrete_form = true, parameters = glorys, scheme = velocity_scheme()))
 
 T_obcs = FieldBoundaryConditions(
-    south = ValueBoundaryCondition(atlantic_obc, discrete_form = true, parameters = Tᵉˣᵗ, scheme = atlantic_tracer_scheme()),
-    north = ValueBoundaryCondition(pacific_obc,  discrete_form = true, parameters = Tᵉˣᵗ, scheme = pacific_tracer_scheme()))
+    south = ValueBoundaryCondition(atlantic_obc, discrete_form = true, parameters = Tᵉˣᵗ, scheme = tracer_scheme()),
+    north = ValueBoundaryCondition(pacific_obc,  discrete_form = true, parameters = Tᵉˣᵗ, scheme = tracer_scheme()),
+    west  = ValueBoundaryCondition(alaska_obc,   discrete_form = true, parameters = Tᵉˣᵗ, scheme = tracer_scheme()))
 
 S_obcs = FieldBoundaryConditions(
-    south = ValueBoundaryCondition(atlantic_obc, discrete_form = true, parameters = Sᵉˣᵗ, scheme = atlantic_tracer_scheme()),
-    north = ValueBoundaryCondition(pacific_obc,  discrete_form = true, parameters = Sᵉˣᵗ, scheme = pacific_tracer_scheme()))
+    south = ValueBoundaryCondition(atlantic_obc, discrete_form = true, parameters = Sᵉˣᵗ, scheme = tracer_scheme()),
+    north = ValueBoundaryCondition(pacific_obc,  discrete_form = true, parameters = Sᵉˣᵗ, scheme = tracer_scheme()),
+    west  = ValueBoundaryCondition(alaska_obc,   discrete_form = true, parameters = Sᵉˣᵗ, scheme = tracer_scheme()))
 
 @inline wetcell(i, j, k, grid, ℓx, ℓy, ℓz) =
     !immersed_peripheral_node(i, j, k, grid, ℓx, ℓy, ℓz) & !immersed_inactive_node(i, j, k, grid, ℓx, ℓy, ℓz)
 
-@inline function transport(i, j, grid, p, t)
-    V = zero(eltype(grid))
+# Depth-integrated GLORYS velocity, component 1 (u) or 2 (v) in the grid frame.
+@inline function transport(i, j, grid, p, t, component)
+    U = zero(eltype(grid))
     @inbounds for k in 1:grid.Nz
         wet = wetcell(i, j, k, grid, Center(), Center(), Center())
-        V += ifelse(wet, grid_frame(i, j, k, grid, p, t)[2] * Δzᶜᶜᶜ(i, j, k, grid), zero(V))
+        U += ifelse(wet, grid_frame(i, j, k, grid, p, t)[component] * Δzᶜᶜᶜ(i, j, k, grid), zero(U))
     end
-    return V
+    return U
+end
+
+@inline function alaska_U_obc(j, k, grid, clock, fields, p)
+    t = Oceananigans.Units.Time(clock.time)
+    return (transport(1, j, grid, p, t, 1), @inbounds p.η[1, j, 1, t])
 end
 
 @inline function atlantic_V_obc(i, k, grid, clock, fields, p)
     t = Oceananigans.Units.Time(clock.time)
-    return (transport(i, 1, grid, p, t), @inbounds p.η[i, 1, 1, t])
+    return (transport(i, 1, grid, p, t, 2), @inbounds p.η[i, 1, 1, t])
 end
 
 @inline function pacific_V_obc(i, k, grid, clock, fields, p)
     t = Oceananigans.Units.Time(clock.time)
-    return (transport(i, grid.Ny, grid, p, t), @inbounds p.η[i, grid.Ny, 1, t])
+    return (transport(i, grid.Ny, grid, p, t, 2), @inbounds p.η[i, grid.Ny, 1, t])
 end
+
+U_obcs = FieldBoundaryConditions(grid, (Face(), Center(), nothing);
+    west  = GravityWaveRadiationBoundaryCondition(alaska_U_obc,   discrete_form = true, parameters = glorys))
 
 V_obcs = FieldBoundaryConditions(grid, (Center(), Face(), nothing);
     south = GravityWaveRadiationBoundaryCondition(atlantic_V_obc, discrete_form = true, parameters = glorys),
@@ -285,9 +300,9 @@ V_obcs = FieldBoundaryConditions(grid, (Center(), Face(), nothing);
 if sponge
     sponge_width = 4   # cells
     sponge_mask  = zeros(Nx, Ny, Nz)
-    for j in 1:Ny
-        d = min(j - 1, Ny - j)   # cells to the nearest open edge
-        sponge_mask[:, j, :] .= exp(-(d / sponge_width)^2)
+    for j in 1:Ny, i in 1:Nx
+        d = min(i - 1, j - 1, Ny - j)   # cells to the nearest open edge
+        sponge_mask[i, j, :] .= exp(-(d / sponge_width)^2)
     end
     forcing = (T = DatasetRestoring(Metadata(:temperature; dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask),
                S = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask))
@@ -308,9 +323,9 @@ ocean = ocean_simulation(grid;
                          forcing,
                          boundary_conditions = (u = u_obcs, v = v_obcs,
                                                 T = T_obcs, S = S_obcs,
-                                                V = V_obcs))
+                                                U = U_obcs, V = V_obcs))
 
-sea_ice = sea_ice_simulation(grid, ocean; dynamics=nothing)   # thermodynamics only
+sea_ice = sea_ice_simulation(grid, ocean; advection = WENO(order = 5))   # elasto-viscous-plastic dynamics
 
 # ## Initial conditions: GLORYS (ocean) and ECCO4 (sea ice)
 
