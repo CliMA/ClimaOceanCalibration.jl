@@ -7,6 +7,7 @@ Pkg.activate(@__DIR__)
 
 using ArgParse
 using NumericalEarth, Oceananigans, Oceananigans.Units
+using NumericalEarth.DataWrangling: GEBCO2026
 using Oceananigans.BoundaryConditions: NormalRadiation, GravityWaveRadiationBoundaryCondition, NormalFlowBoundaryCondition
 using Oceananigans.Operators: Δzᶠᶜᶜ, Δzᶜᶠᶜ, intrinsic_vector
 using Oceananigans.BoundaryConditions: fill_halo_regions!
@@ -111,13 +112,15 @@ end
 Nx, Ny = size(underlying_grid)[1:2]
 @info "Grid: $grid_type, $Nx × $Ny × $Nz, largest spacing $(spacing / 1e3) km"
 
-bathymetry = Metadatum(:bottom_height; dataset = ETOPO2022())
-bottom_height = regrid_bathymetry(underlying_grid, bathymetry;
-                                  minimum_depth = 15,
-                                  interpolation_passes = 2,
+# GEBCO at 15 arc-seconds, as in the OMIP setups; regridded on the CPU, where the native field fits, and
+# cached for later runs.
+bathymetry = Metadatum(:bottom_height; dataset = GEBCO2026())
+bottom_height = regrid_bathymetry(Oceananigans.Architectures.on_architecture(CPU(), underlying_grid), bathymetry;
+                                  minimum_depth = 20,
+                                  interpolation_passes = 25,
                                   major_basins = 1)
 
-grid = ImmersedBoundaryGrid(underlying_grid, PartialCellBottom(bottom_height); active_cells_map = true)
+grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBottom(Array(interior(bottom_height, :, :, 1))); active_cells_map = true)
 
 using CairoMakie
 

@@ -21,6 +21,6 @@ echo "Options: $*"
 nvidia-smi -L
 
 julia +1.13.3 --project="$EXAMPLE_DIR" -e 'using Pkg; Pkg.instantiate()'
-stdbuf -oL -eL julia +1.13.3 --project="$EXAMPLE_DIR" "$EXAMPLE_DIR/panarctic.jl" "$@"
+stdbuf -oL -eL julia +1.13.3 -t 16 --project="$EXAMPLE_DIR" "$EXAMPLE_DIR/panarctic.jl" "$@"
 
 echo "Finished $(date)"
