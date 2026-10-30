@@ -5,8 +5,9 @@ rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORY
 adapted from [NoraLoose/PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans). This is
 the forward model for Arctic sea ice calibration.
 
-This example has its own environment (`Project.toml`), pinned to registered NumericalEarth 0.8.2 and
-Oceananigans 0.113, and needs Julia 1.13.
+This example has its own environment (`Project.toml`): NumericalEarth from its `ss/omip-prototype` branch and
+SeawaterPolynomials from its `ss/conversion-functions` branch (the sources the repository root uses), Oceananigans 0.113
+and ClimaSeaIce 0.5. It needs Julia 1.13.
 
 ## Requirements
 
