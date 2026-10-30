@@ -6,7 +6,8 @@
 > improvements there rather than here.
 
 Coupled ocean–sea ice simulation of the Arctic on a polar-stereographic grid (or, for reference, the
-rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORYS open boundaries.
+rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORYS open boundaries
+(oblique radiation for velocities, tracer reservoirs for T and S, Flather for the barotropic transport).
 This is the forward model for Arctic sea ice calibration.
 
 This example has its own environment (`Project.toml`): NumericalEarth from its `ss/omip-prototype` branch and
