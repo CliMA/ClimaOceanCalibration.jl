@@ -55,4 +55,10 @@ by Simone Silvestri. Changes from the source:
 - grid switch between the polar-stereographic and rotated lat-lon grids; conic domain moved so the closed west edge is land;
 - 100 vertical levels with a 1.5 m surface cell; GEBCO 2026 bathymetry, 20 m minimum depth, grid-fitted bottom;
 - start on 1993-01-02 with the GLORYS record from the day before; daily surface output;
-- NumericalEarth from its `ss/omip-prototype` branch.
+- NumericalEarth from its `ss/omip-prototype` branch;
+- oblique radiation for the velocities and tracer reservoirs for T and S, in place of normal radiation, on three
+  open edges (Atlantic, Pacific south of the Aleutians, Gulf of Alaska), with the domain extended to y₂ = 3100 km;
+- GLORYS boundary data streamed two days at a time; sponge off by default;
+- ocean starts from rest; sea ice starts from GLORYS in place of ECCO, with elasto-viscous-plastic dynamics and
+  incremental-remapping advection;
+- grid floor at 5275 m, the deepest GLORYS level with data; barotropic substeps from the CFL.
