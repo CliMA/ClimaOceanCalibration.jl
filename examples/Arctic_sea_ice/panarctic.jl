@@ -403,7 +403,7 @@ h = sea_ice.model.ice_thickness
 he = h * ℵ
 ocean_outputs = merge(ocean.model.tracers, (; 𝒱))
 
-sea_ice_outputs = (; he)
+sea_ice_outputs = (; he, ℵ)
 
 ocean.output_writers[:surface] = JLD2Writer(ocean.model, ocean_outputs;
                                             filename = joinpath(output_dir, "arctic_ocean_surface.jld2"),
@@ -415,6 +415,11 @@ sea_ice.output_writers[:surface] = JLD2Writer(sea_ice.model, sea_ice_outputs;
                                               filename = joinpath(output_dir, "arctic_sea_ice_surface.jld2"),
                                               schedule = TimeInterval(1days),
                                               overwrite_files = true)
+
+ocean.output_writers[:monthly] = JLD2Writer(ocean.model, (; T = ocean.model.tracers.T, S = ocean.model.tracers.S);
+                                            filename = joinpath(output_dir, "arctic_ocean_monthly.jld2"),
+                                            schedule = TimeInterval(30days),
+                                            overwrite_files = true)
 
 run!(simulation)
 
