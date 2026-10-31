@@ -179,11 +179,6 @@ uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir 
 vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
 ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
 
-# GLORYS u and v are east/north components; `intrinsic_vector` rotates them into the grid frame.
-
-@inline grid_frame_u(i, j, k, grid, uₑ, vₑ) = intrinsic_vector(i, j, k, grid, uₑ, vₑ)[1]
-@inline grid_frame_v(i, j, k, grid, uₑ, vₑ) = intrinsic_vector(i, j, k, grid, uₑ, vₑ)[2]
-
 if make_movies
     iter = Observable(1)
     ηv = @lift begin
@@ -326,13 +321,9 @@ ocean = ocean_simulation(grid;
 # basal stress) and conservative remapping of thickness and concentration.
 sea_ice = sea_ice_simulation(grid, ocean; advection = IncrementalRemapping())
 
-# ## Initial conditions: GLORYS (ocean and sea ice)
+# ## Initial conditions: GLORYS (ocean and sea ice); the ocean starts from rest
 
-u₀ = compute!(Field(KernelFunctionOperation{Center, Center, Center}(grid_frame_u, grid, uᵉˣᵗ[2], vᵉˣᵗ[2])))
-v₀ = compute!(Field(KernelFunctionOperation{Center, Center, Center}(grid_frame_v, grid, uᵉˣᵗ[2], vᵉˣᵗ[2])))
-set!(ocean.model, T = Tᵉˣᵗ[2], S = Sᵉˣᵗ[2], η = ηᵉˣᵗ[2],
-                  u = compute!(Field(@at((Face, Center, Center), u₀))),
-                  v = compute!(Field(@at((Center, Face, Center), v₀))))
+set!(ocean.model, T = Tᵉˣᵗ[2], S = Sᵉˣᵗ[2], η = ηᵉˣᵗ[2])
 set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date = start_date, dataset, region, dir = glorys_dir),
                     ℵ = Metadatum(:sea_ice_concentration; date = start_date, dataset, region, dir = glorys_dir))
 
