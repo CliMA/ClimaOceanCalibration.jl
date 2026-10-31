@@ -313,7 +313,7 @@ closure = CATKEVerticalDiffusivity()
 time_discretization = AdaptiveVerticallyImplicitDiscretization(cfl=0.5)
 
 ocean = ocean_simulation(grid;
-                         free_surface = SplitExplicitFreeSurface(grid; substeps=30),
+                         free_surface = SplitExplicitFreeSurface(grid; cfl = 0.7, fixed_Δt = Δt),
                          momentum_advection = WENOVectorInvariant(; order=5, time_discretization),
                          tracer_advection = WENO(; order=7, time_discretization, minimum_buffer_upwind_order=1),
                          closure,
