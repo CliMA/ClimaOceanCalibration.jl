@@ -1,4 +1,10 @@
-# Pan-Arctic coupled ocean–sea ice simulation, after github.com/NoraLoose/PanArcticShenanigans.
+# WARNING: early, uncalibrated snapshot of https://github.com/NoraLoose/PanArcticShenanigans, where the
+# configuration is under active development. Please contribute improvements there rather than here.
+#
+# Copyright 2026 Nora Loose and Francis Poulin. Licensed under the Apache License 2.0.
+# Modified by Xin Kai Lee, 2026; the changes are listed in README.md.
+#
+# Pan-Arctic coupled ocean–sea ice simulation.
 # Model settings are the variables under "Model settings"; run options are command-line flags:
 #   julia +1.13 --project panarctic.jl [--stop_hours 3] [--output_dir output/quick] [--figures false] [--movies false]
 

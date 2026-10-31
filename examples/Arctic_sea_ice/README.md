@@ -1,9 +1,13 @@
 # Pan-Arctic sea ice configuration
 
+> [!WARNING]
+> This is an early, uncalibrated snapshot of [PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans)
+> by Nora Loose and Francis Poulin, where the configuration is under active development. Please contribute
+> improvements there rather than here.
+
 Coupled ocean–sea ice simulation of the Arctic on a polar-stereographic grid (or, for reference, the
-rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORYS open boundaries,
-adapted from [NoraLoose/PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans). This is
-the forward model for Arctic sea ice calibration.
+rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORYS open boundaries.
+This is the forward model for Arctic sea ice calibration.
 
 This example has its own environment (`Project.toml`): NumericalEarth from its `ss/omip-prototype` branch and
 SeawaterPolynomials from its `ss/conversion-functions` branch (the sources the repository root uses), Oceananigans 0.113
@@ -38,3 +42,17 @@ check), `--output_dir` (default `output`, relative to this directory), `--figure
 the GLORYS boundary data (cached afterwards).
 
 Output (`arctic_*.jld2`, `*.png`, `*.mp4`) is written to the output directory.
+
+## License
+
+`panarctic.jl` and this README are modified from [PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans),
+Copyright 2026 Nora Loose and Francis Poulin, licensed under the Apache License 2.0 (see `LICENSE` at the repository
+root). PanArcticShenanigans is adapted from the
+[Barents Sea regional example](https://github.com/NumericalEarth/BjerknesWorkshop/blob/main/tutorials/day2/notebooks/02_barents_sea_regional.ipynb)
+by Simone Silvestri. Changes from the source:
+
+- model settings are script variables and run options are command-line flags, in place of `config.toml`;
+- grid switch between the polar-stereographic and rotated lat-lon grids; conic domain moved so the closed west edge is land;
+- 100 vertical levels with a 1.5 m surface cell; GEBCO 2026 bathymetry, 20 m minimum depth, grid-fitted bottom;
+- start on 1993-01-02 with the GLORYS record from the day before; daily surface output;
+- NumericalEarth from its `ss/omip-prototype` branch.
