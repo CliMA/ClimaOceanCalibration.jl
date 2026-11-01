@@ -17,6 +17,7 @@ using NumericalEarth.DataWrangling: GEBCO2026
 using Oceananigans.BoundaryConditions: ObliqueRadiation, TracerReservoir, GravityWaveRadiationBoundaryCondition, NormalFlowBoundaryCondition
 using Oceananigans.Operators: Δzᶜᶜᶜ, intrinsic_vector
 using NumericalEarth.DataWrangling: DatasetRestoring
+using Oceananigans.OutputReaders: Clamp
 using Oceananigans.ImmersedBoundaries: immersed_peripheral_node, immersed_inactive_node
 using Oceananigans.OrthogonalSphericalShellGrids: RotatedLatitudeLongitudeGrid, LambertConformalConicGrid
 using ClimaSeaIce: IncrementalRemapping
@@ -71,7 +72,7 @@ grid_type     = "stereographic"      # "stereographic" (polar stereographic) or 
 spacing       = 15kilometers         # largest horizontal spacing: at the pole (stereographic) or Δy (rotated)
 Nz            = 100                  # vertical levels
 depth         = 5275meters           # deepest GLORYS level with data; deeper cells would blend in the empty level below
-start_date    = DateTime(1993, 1, 2) # initial condition; the GLORYS record starts the day before, so this is its earliest value
+start_date    = DateTime(1993, 1, 2) # initial condition
 Δt            = 10minutes
 jra55_dataset = MultiYearJRA55()     # JRA55 for the run's own dates; RepeatYearJRA55() is the 1990–91 repeat year
 
@@ -163,21 +164,21 @@ end
 
 # ## GLORYS boundary data
 #
-# Daily means (centred at noon) from the day before the start date to the end of the run, so that the
-# whole run lies inside the record. Index 2 is the daily mean of the start date.
+# Daily means (centred at noon) from the start date to the end of the run. The record is not periodic:
+# before the first mean, which is the initial condition, the boundary values hold it.
 
 run_days = ceil(Int, stop_time / 1days)
-dates    = start_date - Day(1) : Day(1) : start_date + Day(run_days)
+dates    = start_date : Day(1) : start_date + Day(run_days)
 dataset  = GLORYSDaily()
 region   = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
 
 # T and S need full inpainting: capped inpainting leaves gaps in deep basins. Two days at a time are
 # kept in memory; the series advance with the model clock.
-Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid)
-Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid)
-uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
-vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
-ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
+Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp())
+Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp())
+uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp(), inpainting = 100)
+vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp(), inpainting = 100)
+ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp(), inpainting = 100)
 
 if make_movies
     iter = Observable(1)
@@ -296,8 +297,8 @@ if sponge
         d = min(i - 1, j - 1, Ny - j)   # cells to the nearest open edge
         sponge_mask[i, j, :] .= exp(-(d / sponge_width)^2)
     end
-    forcing = (T = DatasetRestoring(Metadata(:temperature; dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask),
-               S = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask))
+    forcing = (T = DatasetRestoring(Metadata(:temperature; dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask, time_indexing = Clamp()),
+               S = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask, time_indexing = Clamp()))
 else
     forcing = NamedTuple()
 end
@@ -323,7 +324,7 @@ sea_ice = sea_ice_simulation(grid, ocean; advection = IncrementalRemapping())
 
 # ## Initial conditions: GLORYS (ocean and sea ice); the ocean starts from rest
 
-set!(ocean.model, T = Tᵉˣᵗ[2], S = Sᵉˣᵗ[2], η = ηᵉˣᵗ[2])
+set!(ocean.model, T = Tᵉˣᵗ[1], S = Sᵉˣᵗ[1], η = ηᵉˣᵗ[1])
 set!(sea_ice.model, h = Metadatum(:sea_ice_thickness;     date = start_date, dataset, region, dir = glorys_dir),
                     ℵ = Metadatum(:sea_ice_concentration; date = start_date, dataset, region, dir = glorys_dir))
 
@@ -362,7 +363,7 @@ end
 
 # ## Atmosphere and coupled model
 
-jra55 = jra55_dataset isa MultiYearJRA55 ? (; dataset = jra55_dataset, start_date = dates[1], end_date = dates[end]) :
+jra55 = jra55_dataset isa MultiYearJRA55 ? (; dataset = jra55_dataset, start_date = dates[1], end_date = dates[end], time_indexing = Clamp()) :
                                            (; dataset = jra55_dataset)
 
 atmosphere    = JRA55PrescribedAtmosphere(arch; jra55..., dir = jra55_dir)
