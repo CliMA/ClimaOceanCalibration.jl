@@ -43,6 +43,12 @@ data and regrids the bathymetry (both cached afterwards).
 
 Output (`arctic_*.jld2`, `*.png`, `*.mp4`) is written to the output directory.
 
+`analysis/` checks a run against GLORYS: `glorys_ice_series.jl` writes the daily GLORYS sea-ice extent and volume
+on the run's grid next to its output and `glorys_surface_series.jl` the daily GLORYS surface T and S (`sbatch
+examples/Arctic_sea_ice/analysis/run_glorys_series.slurm <ice or surface> <run dir> <start date> <ndays>`);
+`seasonal_analysis.jl <figure dir> <run dir> [<slurm log>]` plots ice extent and volume and the surface means by
+region against them, the monthly 3D T and S drift and the daily extrema from the log.
+
 ## License
 
 `panarctic.jl` and this README are modified from [PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans),
