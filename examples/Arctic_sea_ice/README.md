@@ -6,7 +6,8 @@
 > improvements there rather than here.
 
 Coupled ocean–sea ice simulation of the Arctic on a polar-stereographic grid (or, for reference, the
-rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORYS open boundaries.
+rotated lat-lon grid it replaced upstream; `grid_type` in the script) with GLORYS open boundaries
+(oblique radiation for velocities, tracer reservoirs for T and S, Flather for the barotropic transport).
 This is the forward model for Arctic sea ice calibration.
 
 This example has its own environment (`Project.toml`): NumericalEarth from its `ss/omip-prototype` branch and
@@ -16,9 +17,8 @@ and ClimaSeaIce 0.5. It needs Julia 1.13.
 ## Requirements
 
 - **Data credentials** as environment variables (`~/API_keys.sh` on the GCP cluster):
-  - GLORYS12 (ocean initial and boundary data): `COPERNICUSMARINE_SERVICE_USERNAME` and `COPERNICUSMARINE_SERVICE_PASSWORD`.
-  - ECCO4 (initial sea ice): `ECCO_USERNAME` and `ECCO_WEBDAV_PASSWORD`.
-  - JRA55 (atmosphere, rivers) and ETOPO (bathymetry) need no account.
+  - GLORYS12 (initial ocean and sea ice, ocean boundary data): `COPERNICUSMARINE_SERVICE_USERNAME` and `COPERNICUSMARINE_SERVICE_PASSWORD`.
+  - JRA55 (atmosphere, rivers) and GEBCO (bathymetry) need no account.
 
 ## Running
 
@@ -37,9 +37,9 @@ sbatch examples/Arctic_sea_ice/run_panarctic.slurm [options]
 Model settings (grid, resolution, dates, time step, atmosphere) are variables at the top of `panarctic.jl`.
 Run options are command-line flags (`--help` lists them): `--stop_hours` (default 120; use 3 for a quick
 check), `--output_dir` (default `output`, relative to this directory), `--figures` and `--movies`
-(default true), `--architecture` (default GPU), and the data folders `--glorys_dir`, `--jra55_dir`,
-`--ecco_dir` (default the caches already on the cluster in `$HOME`). The first run downloads and inpaints
-the GLORYS boundary data (cached afterwards).
+(default true), `--architecture` (default GPU), and the data folders `--glorys_dir` and `--jra55_dir`
+(default the caches already on the cluster in `$HOME`). The first run downloads and inpaints the GLORYS
+data and regrids the bathymetry (both cached afterwards).
 
 Output (`arctic_*.jld2`, `*.png`, `*.mp4`) is written to the output directory.
 
@@ -54,5 +54,11 @@ by Simone Silvestri. Changes from the source:
 - model settings are script variables and run options are command-line flags, in place of `config.toml`;
 - grid switch between the polar-stereographic and rotated lat-lon grids; conic domain moved so the closed west edge is land;
 - 100 vertical levels with a 1.5 m surface cell; GEBCO 2026 bathymetry, 20 m minimum depth, grid-fitted bottom;
-- start on 1993-01-02 with the GLORYS record from the day before; daily surface output;
-- NumericalEarth from its `ss/omip-prototype` branch.
+- start on 1993-01-02; daily surface output;
+- NumericalEarth from its `ss/omip-prototype` branch;
+- oblique radiation for the velocities and tracer reservoirs for T and S, in place of normal radiation, on three
+  open edges (Atlantic, Pacific south of the Aleutians, Gulf of Alaska), with the domain extended to y₂ = 3100 km;
+- GLORYS boundary data streamed two days at a time; sponge off by default;
+- ocean starts from rest; sea ice starts from GLORYS in place of ECCO, with elasto-viscous-plastic dynamics and
+  incremental-remapping advection;
+- grid floor at 5275 m, the deepest GLORYS level with data; barotropic substeps from the CFL.
