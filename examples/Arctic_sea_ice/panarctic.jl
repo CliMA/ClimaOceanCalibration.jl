@@ -172,13 +172,13 @@ dates      = start_date : Day(1) : start_date + Day(ceil(Int, run_length / 1days
 dataset    = GLORYSDaily()
 region     = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
 
-# T and S need full inpainting: capped inpainting leaves gaps in deep basins. Two days at a time are
-# kept in memory; the series advance with the model clock.
-Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid)
-Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid)
-uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
-vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
-ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
+# T and S need full inpainting: capped inpainting leaves gaps in deep basins. The series advance with the
+# model clock, three days at a time: the barotropic substeps read the boundary data up to 1.4Δt ahead.
+Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid, time_indices_in_memory=3)
+Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid, time_indices_in_memory=3)
+uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100, time_indices_in_memory=3)
+vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100, time_indices_in_memory=3)
+ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid, inpainting=100, time_indices_in_memory=3)
 
 if make_movies
     iter = Observable(1)
