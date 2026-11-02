@@ -17,7 +17,6 @@ using NumericalEarth.DataWrangling: GEBCO2026
 using Oceananigans.BoundaryConditions: ObliqueRadiation, TracerReservoir, GravityWaveRadiationBoundaryCondition, NormalFlowBoundaryCondition
 using Oceananigans.Operators: Δzᶜᶜᶜ, intrinsic_vector
 using NumericalEarth.DataWrangling: DatasetRestoring
-using Oceananigans.OutputReaders: Clamp
 using Oceananigans.ImmersedBoundaries: immersed_peripheral_node, immersed_inactive_node
 using Oceananigans.OrthogonalSphericalShellGrids: RotatedLatitudeLongitudeGrid, LambertConformalConicGrid
 using ClimaSeaIce: IncrementalRemapping
@@ -59,7 +58,7 @@ args = parse_commandline()
 @info "Run options" args
 
 arch         = args["architecture"] == "GPU" ? GPU() : CPU()
-stop_time    = args["stop_hours"] * hours
+run_length   = args["stop_hours"] * hours
 output_dir   = mkpath(isabspath(args["output_dir"]) ? args["output_dir"] : joinpath(@__DIR__, args["output_dir"]))
 glorys_dir   = expanduser(args["glorys_dir"])
 jra55_dir    = expanduser(args["jra55_dir"])
@@ -164,21 +163,22 @@ end
 
 # ## GLORYS boundary data
 #
-# Daily means (centred at noon) from the start date to the end of the run. The record is not periodic:
-# before the first mean, which is the initial condition, the boundary values hold it.
+# Daily means from the start date to the end of the run. The series count time from 00:00 on the start
+# date and place each mean at noon, so the run starts at noon on the start date, on the first mean.
 
-run_days = ceil(Int, stop_time / 1days)
-dates    = start_date : Day(1) : start_date + Day(run_days)
-dataset  = GLORYSDaily()
-region   = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
+start_time = 12hours
+stop_time  = start_time + run_length
+dates      = start_date : Day(1) : start_date + Day(ceil(Int, run_length / 1days))
+dataset    = GLORYSDaily()
+region     = BoundingBox(longitude = (-180, 180), latitude = (φ_south, 90))
 
 # T and S need full inpainting: capped inpainting leaves gaps in deep basins. Two days at a time are
 # kept in memory; the series advance with the model clock.
-Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp())
-Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp())
-uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp(), inpainting = 100)
-vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp(), inpainting = 100)
-ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid; time_indexing = Clamp(), inpainting = 100)
+Tᵉˣᵗ = FieldTimeSeries(Metadata(:temperature;  dates, dataset, region, dir = glorys_dir), grid)
+Sᵉˣᵗ = FieldTimeSeries(Metadata(:salinity;     dates, dataset, region, dir = glorys_dir), grid)
+uᵉˣᵗ = FieldTimeSeries(Metadata(:u_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
+vᵉˣᵗ = FieldTimeSeries(Metadata(:v_velocity;   dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
+ηᵉˣᵗ = FieldTimeSeries(Metadata(:free_surface; dates, dataset, region, dir = glorys_dir), grid, inpainting=100)
 
 if make_movies
     iter = Observable(1)
@@ -297,8 +297,8 @@ if sponge
         d = min(i - 1, j - 1, Ny - j)   # cells to the nearest open edge
         sponge_mask[i, j, :] .= exp(-(d / sponge_width)^2)
     end
-    forcing = (T = DatasetRestoring(Metadata(:temperature; dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask, time_indexing = Clamp()),
-               S = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask, time_indexing = Clamp()))
+    forcing = (T = DatasetRestoring(Metadata(:temperature; dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask),
+               S = DatasetRestoring(Metadata(:salinity;    dates, dataset, region, dir = glorys_dir), grid; rate = 1/1days, mask = sponge_mask))
 else
     forcing = NamedTuple()
 end
@@ -309,6 +309,7 @@ closure = CATKEVerticalDiffusivity()
 time_discretization = AdaptiveVerticallyImplicitDiscretization(cfl=0.5)
 
 ocean = ocean_simulation(grid;
+                         clock = Clock(time = start_time),
                          free_surface = SplitExplicitFreeSurface(grid; cfl = 0.7, fixed_Δt = Δt),
                          momentum_advection = WENOVectorInvariant(; order=5, time_discretization),
                          tracer_advection = WENO(; order=7, time_discretization, minimum_buffer_upwind_order=1),
@@ -320,7 +321,7 @@ ocean = ocean_simulation(grid;
 
 # Elasto-viscous-plastic dynamics with the OMIP defaults (ice-ocean drag referenced to the top 6 m, landfast
 # basal stress) and conservative remapping of thickness and concentration.
-sea_ice = sea_ice_simulation(grid, ocean; advection = IncrementalRemapping())
+sea_ice = sea_ice_simulation(grid, ocean; clock = Clock(time = start_time), advection = IncrementalRemapping())
 
 # ## Initial conditions: GLORYS (ocean and sea ice); the ocean starts from rest
 
@@ -363,13 +364,20 @@ end
 
 # ## Atmosphere and coupled model
 
-jra55 = jra55_dataset isa MultiYearJRA55 ? (; dataset = jra55_dataset, start_date = dates[1], end_date = dates[end], time_indexing = Clamp()) :
+# The multi-year record runs three days past the run, so that the JRA55 windows in memory (ten 3-hourly
+# records and the prefetched next ten) stay inside it.
+jra55 = jra55_dataset isa MultiYearJRA55 ? (; dataset = jra55_dataset, start_date = dates[1], end_date = dates[end] + Day(3)) :
                                            (; dataset = jra55_dataset)
 
 atmosphere    = JRA55PrescribedAtmosphere(arch; jra55..., dir = jra55_dir)
 radiation     = JRA55PrescribedRadiation(arch; jra55..., dir = jra55_dir)
 land          = JRA55PrescribedLand(grid; jra55..., dir = jra55_dir)
-coupled_model = EarthSystemModel(; ocean, sea_ice, land, atmosphere, radiation)
+
+for component in (atmosphere, radiation, land)
+    component.clock.time = start_time
+end
+
+coupled_model = EarthSystemModel(; ocean, sea_ice, land, atmosphere, radiation, clock = Clock(time = start_time))
 
 # ## Simulation
 
@@ -435,7 +443,7 @@ if make_movies
     times = To.times
     n = Observable(length(times))
 
-    title = @lift "Arctic — day " * string(round(Int, times[$n] / days))
+    title = @lift "Arctic — day " * string(round(Int, (times[$n] - start_time) / days))
 
     Tₙ = @lift(To[$n])
     Sₙ = @lift(So[$n])
