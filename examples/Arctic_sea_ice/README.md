@@ -54,5 +54,5 @@ by Simone Silvestri. Changes from the source:
 - model settings are script variables and run options are command-line flags, in place of `config.toml`;
 - grid switch between the polar-stereographic and rotated lat-lon grids; conic domain moved so the closed west edge is land;
 - 100 vertical levels with a 1.5 m surface cell; GEBCO 2026 bathymetry, 20 m minimum depth, grid-fitted bottom;
-- start on 1993-01-02 with the GLORYS record from the day before; daily surface output;
+- start at noon on 1993-01-02, the time of the first GLORYS daily mean; daily surface output;
 - NumericalEarth from its `ss/omip-prototype` branch.
