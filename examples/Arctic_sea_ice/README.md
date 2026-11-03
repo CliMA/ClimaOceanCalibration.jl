@@ -43,6 +43,11 @@ data and regrids the bathymetry (both cached afterwards).
 
 Output (`arctic_*.jld2`, `*.png`, `*.mp4`) is written to the output directory.
 
+For a run of months, fetch the GLORYS record first: the run otherwise downloads its boundary series date by
+date before stepping, about a minute per file. `prefetch_glorys.jl` takes the same dates and inpainting as the
+run and splits them over jobs, `sbatch examples/Arctic_sea_ice/run_prefetch.slurm --days 365 --njobs 8 --job 0`
+through `--job 7`; the jobs together fetch about 130 files an hour, so a year takes most of a day.
+
 ## License
 
 `panarctic.jl` and this README are modified from [PanArcticShenanigans](https://github.com/NoraLoose/PanArcticShenanigans),
