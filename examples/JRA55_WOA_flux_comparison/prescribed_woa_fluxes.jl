@@ -196,7 +196,7 @@ jra55_kw = (; dir = forcing_dir,
 atmosphere = JRA55PrescribedAtmosphere(arch; jra55_kw...)
 radiation  = JRA55PrescribedRadiation(arch; jra55_kw...,
                                       ocean_surface = SurfaceRadiationProperties(0.06, 1.00))
-land       = JRA55PrescribedLand(arch; jra55_kw...)
+land       = JRA55PrescribedLand(grid; jra55_kw...)
 
 # ============================================
 # Coupled model (no sea ice) + simulation

@@ -2,13 +2,14 @@ using Printf
 using KernelAbstractions: @index, @kernel
 using Oceananigans.Operators: Δzᶜᶜᶜ
 using Oceananigans.Grids: λnode, φnode, znode, Center
-using Oceananigans.Architectures: on_architecture, architecture
+using Oceananigans.Architectures: on_architecture, architecture, cpu_architecture
 using Oceananigans.DistributedComputations: @root
 using Oceananigans.BoundaryConditions: DiscreteBoundaryFunction, getbc
 using Oceananigans.Fields: CenterField, interior
 using Oceananigans.Utils: launch!
 using NumericalEarth.Oceans: MultipleFluxes
-using SeawaterPolynomials.TEOS10: Sᴬ_from_Sᴾ, Θ_from_T
+using SeawaterPolynomials.TEOS10: Θ_from_T
+using ClimaOcean: SAARAtlas, absolute_salinity
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity,
                                        ConvectiveAdjustmentVerticalDiffusivity
 using Oceananigans.Utils: NormalDivision
@@ -549,9 +550,10 @@ data is copied to/from the device automatically.
 """
 function woa_to_teos10!(T_field, S_field)
     grid = T_field.grid
-    cpu_arch = Oceananigans.DistributedComputations.cpu_architecture(architecture(grid))
+    cpu_arch = cpu_architecture(architecture(grid))
     cpu_grid = on_architecture(cpu_arch, grid)
     Nx, Ny, Nz = size(grid)
+    atlas = SAARAtlas()
     T_h = Array(interior(T_field))
     S_h = Array(interior(S_field))
     for k in 1:Nz, j in 1:Ny, i in 1:Nx
@@ -570,7 +572,7 @@ function woa_to_teos10!(T_field, S_field)
         φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
         z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
         p = approx_pressure_dbar(z)
-        SA = Sᴬ_from_Sᴾ(SP, p, λ, φ)
+        SA = absolute_salinity(atlas, SP, p, λ, φ)
         Θ  = Θ_from_T(SA, t, p)
         T_h[i, j, k] = Θ
         S_h[i, j, k] = SA
@@ -589,10 +591,11 @@ Absolute Salinity, in place. Requires that all time indices be in memory
 """
 function woa_salinity_fts_to_teos10!(fts)
     grid = fts.grid
-    cpu_arch = Oceananigans.DistributedComputations.cpu_architecture(architecture(grid))
+    cpu_arch = cpu_architecture(architecture(grid))
     cpu_grid = on_architecture(cpu_arch, grid)
     Nx, Ny, Nz = size(grid)
     Nt = length(fts.times)
+    atlas = SAARAtlas()
     for t_idx in 1:Nt
         S_int = interior(fts[t_idx])
         S_h   = Array(S_int)
@@ -603,7 +606,7 @@ function woa_salinity_fts_to_teos10!(fts)
             φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
             z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
             p = approx_pressure_dbar(z)
-            S_h[i, j, k] = Sᴬ_from_Sᴾ(SP, p, λ, φ)
+            S_h[i, j, k] = absolute_salinity(atlas, SP, p, λ, φ)
         end
         copyto!(S_int, S_h)
     end

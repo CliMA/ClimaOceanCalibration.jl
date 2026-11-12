@@ -14,11 +14,11 @@ using ClimaOceanCalibration.Visualization
     simulation = Simulation(model, Δt = 10minutes, stop_iteration = 6, verbose = false)
     T = model.tracers.T
     simulation.output_writers[:fields] = JLD2Writer(model, (; T); schedule = IterationInterval(2), dir, filename = "run_fields",
-                                                    overwrite_existing = true, file_splitting = IterationInterval(4))
+                                                    overwrite_files = true, file_splitting = IterationInterval(4))
     simulation.output_writers[:surface] = JLD2Writer(model, (; T = view(T, :, :, 4)); schedule = IterationInterval(2), dir,
-                                                     filename = "run_surface", overwrite_existing = true)
+                                                     filename = "run_surface", overwrite_files = true)
     simulation.output_writers[:averages] = JLD2Writer(model, (; T_h = Average(T, dims = (1, 2)), T_avg = Average(T));
-                                                      schedule = IterationInterval(2), dir, filename = "run_averages", overwrite_existing = true)
+                                                      schedule = IterationInterval(2), dir, filename = "run_averages", overwrite_files = true)
     run!(simulation)
 
     a = Run(dir; name = "a")

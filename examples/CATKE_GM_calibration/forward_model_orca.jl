@@ -231,7 +231,7 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
         ocean.model, (; T, S, u);
         schedule = AveragedTimeInterval(stop_time, window = sampling_window),
         filename = joinpath(output_dir, "$(filename_prefix)_$(year_tag)year_average.jld2"),
-        overwrite_existing = true,
+        overwrite_files = true,
     )
 
     # 2. Global-mean scalars vs time (for fig16 drift).
@@ -241,7 +241,7 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
         ocean.model, (T = T_bar, S = S_bar);
         schedule = AveragedTimeInterval(scalar_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_global_means.jld2"),
-        overwrite_existing = true,
+        overwrite_files = true,
     )
 
     # 3. Horizontal-mean 1-D profiles vs time (for fig17 / fig21).
@@ -251,7 +251,7 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
         ocean.model, (T = T_h, S = S_h);
         schedule = AveragedTimeInterval(scalar_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_horizontal_means.jld2"),
-        overwrite_existing = true,
+        overwrite_files = true,
     )
 
     # 4. Tropical (|lat| <= 20°) horizontal-mean 1-D profiles vs time
@@ -263,7 +263,7 @@ function attach_calibration_output_writers!(sim, output_dir, filename_prefix;
         ocean.model, (T = T_h_trop, S = S_h_trop);
         schedule = AveragedTimeInterval(scalar_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_tropical_horizontal_means.jld2"),
-        overwrite_existing = true,
+        overwrite_files = true,
     )
 
     return sim
@@ -293,7 +293,7 @@ function attach_seasonal_monthly_TS_writer!(sim, output_dir, filename_prefix;
         ocean.model, (T = T, S = S);
         schedule = AveragedTimeInterval(monthly_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_monthly_TS.jld2"),
-        overwrite_existing = true,
+        overwrite_files = true,
     )
     return sim
 end
@@ -326,7 +326,7 @@ function attach_seasonal_monthly_EP_writer!(sim, output_dir, filename_prefix;
         ocean.model, (evap = evap, precip = precip, wfo = wfo);
         schedule = AveragedTimeInterval(monthly_interval),
         filename = joinpath(output_dir, "$(filename_prefix)_monthly_EP.jld2"),
-        overwrite_existing = true,
+        overwrite_files = true,
     )
     return sim
 end
