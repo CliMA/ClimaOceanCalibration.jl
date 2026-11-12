@@ -168,17 +168,17 @@ function run_gm_calibration_omip(κ_skew, κ_symmetric, config_dict, obl_closure
                                                     schedule = TimeInterval(180days),
                                                     filename = "$(FILE_DIR)/ocean_surface_fields",
                                                     indices = (:, :, grid.Nz),
-                                                    overwrite_existing = true)
+                                                    overwrite_files = true)
 
         sea_ice.output_writers[:surface] = JLD2Writer(ocean.model, sea_ice_outputs;
                                                     schedule = TimeInterval(180days),
                                                     filename = "$(FILE_DIR)/sea_ice_surface_fields",
-                                                    overwrite_existing = true)
+                                                    overwrite_files = true)
 
         ocean.output_writers[:sample_average] = JLD2Writer(ocean.model, ocean_outputs;
                                                                    schedule = AveragedTimeInterval(simulation_period, window=sampling_window),
                                                                    filename = "$(FILE_DIR)/ocean_complete_fields_$(sampling_length)year_average_calibrationsample",
-                                                                   overwrite_existing = true)
+                                                                   overwrite_files = true)
 
         wall_time = Ref(time_ns())
 
