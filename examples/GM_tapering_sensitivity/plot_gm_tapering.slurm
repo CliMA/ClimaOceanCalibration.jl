@@ -13,10 +13,11 @@ LAST_YEAR=${LAST_YEAR:-20}
 RUNS_DIRECTORY=${RUNS_DIRECTORY:-$HOME/gm_tapering_sensitivity}
 FIGURE_DIRECTORY=${FIGURE_DIRECTORY:-$RUNS_DIRECTORY/figures}
 PROJECT=${PROJECT:-.}
+MAX_SLOPES=${MAX_SLOPES:-0.001 0.01 0.1}
 
 source $HOME/env_nvhpc_26.5.sh
 export JULIA_NUM_THREADS=32
 
 julia +1.12 --project=$PROJECT examples/GM_tapering_sensitivity/plot_gm_tapering.jl \
     --runs-directory $RUNS_DIRECTORY --figure-directory $FIGURE_DIRECTORY \
-    --first-year $FIRST_YEAR --last-year $LAST_YEAR
+    --first-year $FIRST_YEAR --last-year $LAST_YEAR --max-slopes $MAX_SLOPES
