@@ -227,10 +227,31 @@ save_figure("overturning",
 ##### Mixed-layer depth
 #####
 
-save_figure("mld_extrema_maps", ClimaOcean.mixed_layer_depth(outputs...))
-save_figure("mld_zonal_extrema", ClimaOcean.zonal_mean_mixed_layer_depth(outputs...))
-
 mld_extrema(o) = Ext.mixed_layer_depth_extrema_maps(o)
+observed_mld_extrema = Ext.boyer_montegut_extrema()
+observed_monthly_mld = Ext.boyer_montegut_mixed_layer_depth()
+observation_title = "de Boyer Montégut et al. (2004)"
+map_columns = length(outputs) + 1
+
+"""One row of maps: the observation in the first column, then every run."""
+function observed_and_runs_row!(figure, row, observed, run_data, title; colormap = Ext.mixed_layer_colormap, colorrange)
+    plot = nothing
+    isnothing(observed) ||
+        (plot = Ext.global_map!(Ext.panel(figure, row, 1), observed; title = observation_title * ": " * title, colormap, colorrange))
+    for (c, o) in enumerate(outputs)
+        plot = Ext.global_map!(Ext.panel(figure, row, c + 1), run_data(o); title = string(o.label, ": ", title), colormap, colorrange)
+    end
+    Ext.row_colorbar!(figure, row, map_columns, plot, "m")
+end
+
+save_figure("mld_extrema_maps",
+    Ext.omip_figure(map_columns, 2) do figure
+        observed(extremum) = isnothing(observed_mld_extrema) ? nothing : getproperty(observed_mld_extrema, extremum)
+        observed_and_runs_row!(figure, 1, observed(:minimum), o -> mld_extrema(o).minimum, "summer minimum MLD"; colorrange = (0, 80))
+        observed_and_runs_row!(figure, 2, observed(:maximum), o -> mld_extrema(o).maximum, "winter maximum MLD"; colorrange = (0, 600))
+    end)
+
+save_figure("mld_zonal_extrema", ClimaOcean.zonal_mean_mixed_layer_depth(outputs...))
 
 save_figure("mld_extrema_differences",
     Ext.maps_figure(perturbed, [
@@ -242,31 +263,23 @@ save_figure("mld_extrema_differences",
 monthly_mld_maps(o) = Ext.cached(() -> [Ext.regrid_to_map(o, abs.(m)) for m in Ext.monthly_means(o, "surface", "mlotst")],
                                  o, :monthly_mld_maps)
 
-observed_monthly_mld = Ext.boyer_montegut_mixed_layer_depth()
-
 month_names = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
 
 month_directory = mkpath(joinpath(figure_directory, "mld_months"))
 
 for m in 1:12
-    figure = Ext.omip_figure(3, 2) do figure
+    figure = Ext.omip_figure(map_columns, 2) do figure
+        observed = isnothing(observed_monthly_mld) ? nothing : observed_monthly_mld[m]
+        observed_and_runs_row!(figure, 1, observed, o -> monthly_mld_maps(o)[m], month_names[m] * " MLD"; colorrange = (0, 400))
+
         plot = nothing
         for (c, o) in enumerate(outputs)
-            plot = Ext.global_map!(Ext.panel(figure, 1, c), monthly_mld_maps(o)[m]; title = string(o.label, ": ", month_names[m], " MLD"),
-                                   colormap = Ext.mixed_layer_colormap, colorrange = (0, 400))
-        end
-        Ext.row_colorbar!(figure, 1, 3, plot, "m")
-
-        isnothing(observed_monthly_mld) ||
-            Ext.global_map!(Ext.panel(figure, 2, 1), observed_monthly_mld[m]; title = "de Boyer Montégut et al. (2004): " * month_names[m],
-                            colormap = Ext.mixed_layer_colormap, colorrange = (0, 400))
-
-        for (c, o) in enumerate(perturbed)
+            o === reference && continue
             plot = Ext.global_map!(Ext.panel(figure, 2, c + 1), monthly_mld_maps(o)[m] .- monthly_mld_maps(reference)[m];
                                    title = string(o.label, " − control"), colormap = :balance, colorrange = (-150, 150))
         end
-        Ext.row_colorbar!(figure, 2, 3, plot, "m")
+        Ext.row_colorbar!(figure, 2, map_columns, plot, "m")
     end
     save(joinpath(month_directory, @sprintf("mld_%02d.png", m)), figure; px_per_unit = 1)
 end
