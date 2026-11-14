@@ -22,6 +22,10 @@ settings = ArgParseSettings()
     "--forcing-directory"
         arg_type = String
         default = expanduser("~/JRA55_data")
+    "--pickup"
+        help = "checkpoint file to restart from"
+        arg_type = String
+        default = ""
 end
 arguments = parse_args(settings)
 
@@ -40,4 +44,5 @@ configuration = OneDegree(; name, eddy_closure)
 simulation = omip_simulation(configuration; arch = GPU(), forcing_directory, output_directory,
                              stop_time = years * 365days)
 
-run!(simulation)
+pickup = isempty(arguments["pickup"]) ? false : arguments["pickup"]
+run!(simulation; pickup)

@@ -19,4 +19,4 @@ unset JULIA_CUDA_MEMORY_POOL
 export JULIA_NUM_THREADS=16
 
 julia +1.12 --project=$PROJECT examples/GM_tapering_sensitivity/run_gm_tapering.jl \
-    --max-slope $MAX_SLOPE --years $YEARS --output-directory $OUTPUT_DIRECTORY
+    --max-slope $MAX_SLOPE --years $YEARS --output-directory $OUTPUT_DIRECTORY ${PICKUP:+--pickup $PICKUP}
