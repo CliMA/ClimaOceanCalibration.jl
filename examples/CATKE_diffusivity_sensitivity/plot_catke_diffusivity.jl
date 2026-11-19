@@ -280,6 +280,26 @@ function seasonal_cycle_figure(regions, columns)
 end
 
 save_figure("mld_seasonal_cycle_bands", seasonal_cycle_figure(bands, 5))
+
+# The patches on a map from 20ᵒE eastward, numbered in the order of the panels of their seasonal cycles
+save_figure("mld_patches_map",
+    Ext.omip_figure(1, 1; column_width = 1200, row_height = 640) do figure
+        axis = Axis(figure[1, 1]; aspect = DataAspect(), limits = (20, 380, -80, 85),
+                    xticks = (60:60:360, ["60ᵒE", "120ᵒE", "180ᵒ", "120ᵒW", "60ᵒW", "0ᵒ"]),
+                    yticks = (-60:30:60, ["60ᵒS", "30ᵒS", "0ᵒ", "30ᵒN", "60ᵒN"]))
+        for shift in (0, 360)
+            translate!(poly!(axis, GeoMakie.land(); color = Ext.land_color, strokewidth = 0), shift, 0, 0)
+        end
+        key = GridLayout(figure[2, 1])
+        for (n, (name, (south, north), (west, east))) in enumerate(patches)
+            west = 20 + mod(west - 20, 360)
+            width = mod(east - west, 360)
+            poly!(axis, Rect(west, south, width, north - south); color = (:teal, 0.2), strokecolor = :teal, strokewidth = 2)
+            text!(axis, west + width / 2, (south + north) / 2; text = string(n), align = (:center, :center), font = :bold)
+            Label(key[cld(n, 4), mod1(n, 4)], "$n  $name"; halign = :left)
+        end
+    end)
+
 save_figure("mld_seasonal_cycle_patches", seasonal_cycle_figure(patches, 4))
 
 zonal_mean_map(map) = [Ext.finite_mean(view(map, :, j)) for j in eachindex(latitudes)]
