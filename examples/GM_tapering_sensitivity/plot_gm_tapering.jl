@@ -1,5 +1,6 @@
 # Figures comparing the one-degree OMIP runs of run_gm_tapering.jl: buoyancy and isopycnal slopes, the
-# Gent-McWilliams tapering and overturning, and the mixed-layer depth through the seasonal cycle.
+# Gent-McWilliams tapering and overturning, and the mixed-layer depth of the saved 15-day-mean buoyancy through the
+# seasonal cycle.
 
 using ArgParse
 using ClimaOcean
@@ -11,6 +12,7 @@ using Oceananigans.Units
 using Oceananigans.Operators: Δxᶠᶜᶜ, Δyᶜᶠᶜ, Δzᶜᶜᶠ
 using Statistics
 using Printf
+using Dates: month
 
 settings = ArgParseSettings()
 @add_arg_table! settings begin
@@ -227,10 +229,103 @@ save_figure("overturning",
 ##### Mixed-layer depth
 #####
 
-mld_extrema(o) = Ext.mixed_layer_depth_extrema_maps(o)
+# Regions on the 1ᵒ map grid: (title, latitude range, longitude range or nothing)
+regions = [("tropics, 20ᵒS–20ᵒN", (-20, 20), nothing),
+           ("northern extratropics, 30ᵒN–60ᵒN", (30, 60), nothing),
+           ("southern extratropics, 60ᵒS–30ᵒS", (-60, -30), nothing),
+           ("Southern Ocean, 65ᵒS–50ᵒS", (-65, -50), nothing),
+           ("subpolar North Atlantic, 50ᵒN–65ᵒN, 60ᵒW–10ᵒW", (50, 65), (300, 350))]
+
+function regional_mean(map, (_, (φ₁, φ₂), λ_range))
+    total = weight = 0.0
+    for j in eachindex(latitudes), i in eachindex(longitudes)
+        φ₁ ≤ latitudes[j] ≤ φ₂ || continue
+        isnothing(λ_range) || λ_range[1] ≤ longitudes[i] ≤ λ_range[2] || continue
+        isfinite(map[i, j]) || continue
+        total += map[i, j] * cosd(latitudes[j])
+        weight += cosd(latitudes[j])
+    end
+    return total / weight
+end
+
+zonal_mean_map(map) = [Ext.finite_mean(view(map, :, j)) for j in eachindex(latitudes)]
+
 observed_mld_extrema = Ext.boyer_montegut_extrema()
 observed_monthly_mld = Ext.boyer_montegut_mixed_layer_depth()
 observation_title = "de Boyer Montégut et al. (2004)"
+
+ocean_cells = isfinite.(Ext.regrid_to_map(reference, ones(size(Ext.surface_mask(reference)))))
+observed_cells = isnothing(observed_monthly_mld) ? ocean_cells : ocean_cells .& reduce(.&, isfinite.(m) for m in observed_monthly_mld)
+
+"""`map` where the climatology has data in every month, so that the runs and the observations cover the same ocean."""
+compared(map) = ifelse.(observed_cells, map, NaN)
+
+const Δb★ = 2.87e-4
+const reference_depth = 10.0
+
+"""
+The depth at which the buoyancy `b` at cell centers `z` (bottom to top) has dropped by Δb★ from its value at 10 m,
+interpolated between the two levels on either side of the threshold as de Boyer Montégut et al. (2004) do, searching
+down to level `k_bottom`.
+"""
+function mixed_layer_depth(b, z, k_bottom)
+    zʳ = - reference_depth
+    k⁺ = findfirst(≥(zʳ), z)
+    k⁻ = k⁺ - 1
+    k⁻ < k_bottom && return - z[k_bottom]
+    bʳ = b[k⁻] + (zʳ - z[k⁻]) / (z[k⁺] - z[k⁻]) * (b[k⁺] - b[k⁻])
+
+    z₀, Δb₀ = zʳ, zero(bʳ)
+    for k in k⁻:-1:k_bottom
+        Δb = bʳ - b[k]
+        Δb ≥ Δb★ && return - (z₀ + (z[k] - z₀) * (Δb★ - Δb₀) / (Δb - Δb₀))
+        z₀, Δb₀ = z[k], Δb
+    end
+    return - z[k_bottom]
+end
+
+"""
+The mixed-layer depth of every 15-day buoyancy record of `o` on the 1ᵒ map grid: its monthly climatology over the
+averaging window, and its zonal and regional means through the whole run.
+"""
+recomputed_mld(o) = Ext.cached(o, :recomputed_mld) do
+    fts = Ext.timeseries(o, "fields", "bo")
+    window = Ext.window_records(o, fts.times)
+    months = month.(Ext.record_dates(o, fts.times))
+    mask = Ext.ocean_mask(o)
+    z = Ext.depths(o)
+    Nx, Ny, Nz = size(mask)
+    k_bottom = [something(findfirst(view(mask, i, j, :)), Nz + 1) for i in 1:Nx, j in 1:Ny]
+
+    Nt = length(fts.times)
+    zonal = fill(NaN, Nt, length(latitudes))
+    regional = fill(NaN, Nt, length(regions))
+    sums = [zeros(length(longitudes), length(latitudes)) for _ in 1:12]
+    counts = zeros(Int, 12)
+    depth = fill(NaN, Nx, Ny)
+
+    for n in 1:Nt
+        b = Ext.record_array(fts, n)
+        Threads.@threads for j in 1:Ny
+            for i in 1:Nx
+                k_bottom[i, j] > Nz || (depth[i, j] = mixed_layer_depth(view(b, i, j, :), z, k_bottom[i, j]))
+            end
+        end
+        depth_map = Ext.regrid_to_map(o, depth)
+        zonal[n, :] .= zonal_mean_map(depth_map)
+        regional[n, :] .= [regional_mean(compared(depth_map), region) for region in regions]
+        if n in window
+            sums[months[n]] .+= depth_map
+            counts[months[n]] += 1
+        end
+    end
+
+    (; years = fts.times ./ 365days, zonal, regional, monthly = sums ./ counts)
+end
+
+monthly_mld_maps(o) = recomputed_mld(o).monthly
+extremum_map(maps, f) = f(cat(maps...; dims = 3); dims = 3)[:, :, 1]
+mld_extrema(o) = (; minimum = extremum_map(monthly_mld_maps(o), minimum), maximum = extremum_map(monthly_mld_maps(o), maximum))
 map_columns = length(outputs) + 1
 
 """One row of maps: the observation in the first column, then every run."""
@@ -251,7 +346,20 @@ save_figure("mld_extrema_maps",
         observed_and_runs_row!(figure, 2, observed(:maximum), o -> mld_extrema(o).maximum, "winter maximum MLD"; colorrange = (0, 600))
     end)
 
-save_figure("mld_zonal_extrema", ClimaOcean.zonal_mean_mixed_layer_depth(outputs...))
+save_figure("mld_zonal_extrema",
+    Ext.omip_figure(2, 1; column_width = 640, row_height = 380) do figure
+        axes = map(enumerate((("summer minimum", :minimum), ("winter maximum", :maximum)))) do (c, (title, extremum))
+            axis = Axis(figure[1, c]; title = "zonal-mean $title MLD", xlabel = "Latitude", ylabel = "MLD (m)")
+            isnothing(observed_mld_extrema) ||
+                lines!(axis, latitudes, zonal_mean_map(compared(getproperty(observed_mld_extrema, extremum)));
+                       Ext.observation_line..., label = observation_title)
+            for (n, o) in enumerate(outputs)
+                Ext.run_lines!(axis, latitudes, zonal_mean_map(compared(getproperty(mld_extrema(o), extremum))), n, o.label)
+            end
+            axis
+        end
+        Legend(figure[2, 1:2], axes[1]; orientation = :horizontal, framevisible = false)
+    end)
 
 save_figure("mld_extrema_differences",
     Ext.maps_figure(perturbed, [
@@ -259,9 +367,6 @@ save_figure("mld_extrema_differences",
                     :balance, (-300, 300), "m"),
         Ext.map_row("summer minimum MLD − control", o -> mld_extrema(o).minimum .- mld_extrema(reference).minimum,
                     :balance, (-20, 20), "m")]))
-
-monthly_mld_maps(o) = Ext.cached(() -> [Ext.regrid_to_map(o, abs.(m)) for m in Ext.monthly_means(o, "surface", "mlotst")],
-                                 o, :monthly_mld_maps)
 
 month_names = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
@@ -285,50 +390,15 @@ for m in 1:12
 end
 @info "Saved the monthly MLD maps"
 
-# Regions on the 1ᵒ map grid: (title, latitude range, longitude range or nothing)
-regions = [("tropics, 20ᵒS–20ᵒN", (-20, 20), nothing),
-           ("northern extratropics, 30ᵒN–60ᵒN", (30, 60), nothing),
-           ("southern extratropics, 60ᵒS–30ᵒS", (-60, -30), nothing),
-           ("Southern Ocean, 65ᵒS–50ᵒS", (-65, -50), nothing),
-           ("subpolar North Atlantic, 50ᵒN–65ᵒN, 60ᵒW–10ᵒW", (50, 65), (300, 350))]
-
-function regional_mean(map, (_, (φ₁, φ₂), λ_range))
-    total = weight = 0.0
-    for j in eachindex(latitudes), i in eachindex(longitudes)
-        φ₁ ≤ latitudes[j] ≤ φ₂ || continue
-        isnothing(λ_range) || λ_range[1] ≤ longitudes[i] ≤ λ_range[2] || continue
-        isfinite(map[i, j]) || continue
-        total += map[i, j] * cosd(latitudes[j])
-        weight += cosd(latitudes[j])
-    end
-    return total / weight
-end
-
-
-"""Zonal and regional means of every surface MLD record of the whole run."""
-mld_series(o) = Ext.cached(o, :mld_series) do
-    fts = Ext.timeseries(o, "surface", "mlotst")
-    Nt = length(fts.times)
-    zonal = fill(NaN, Nt, length(latitudes))
-    regional = fill(NaN, Nt, length(regions))
-    for n in 1:Nt
-        map = Ext.regrid_to_map(o, abs.(Ext.record_array(fts, n)))
-        zonal[n, :] .= [let row = filter(isfinite, view(map, :, j)); isempty(row) ? NaN : mean(row) end
-                        for j in eachindex(latitudes)]
-        regional[n, :] .= [regional_mean(map, region) for region in regions]
-    end
-    (; years = fts.times ./ 365days, zonal, regional)
-end
-
 save_figure("mld_hovmoller",
     Ext.omip_figure(length(outputs), 1; column_width = 640, row_height = 420) do figure
-        control = mld_series(reference)
+        control = recomputed_mld(reference)
         axis = Axis(figure[1, 1]; title = reference.label * ": zonal-mean MLD", xlabel = "Year", ylabel = "Latitude")
         plot = heatmap!(axis, control.years, latitudes, log10.(control.zonal); colormap = Ext.mixed_layer_colormap,
                         colorrange = (1, 3))
         Colorbar(figure[2, 1], plot; label = "log₁₀ MLD (m)", vertical = false, flipaxis = false, width = Relative(0.7))
         for (c, o) in enumerate(perturbed)
-            series = mld_series(o)
+            series = recomputed_mld(o)
             Nt = min(length(series.years), length(control.years))
             ratio = log2.(series.zonal[1:Nt, :] ./ control.zonal[1:Nt, :])
             axis = Axis(figure[1, c + 1]; title = o.label * ": log₂(MLD / control MLD)", xlabel = "Year", ylabel = "Latitude")
@@ -338,7 +408,7 @@ save_figure("mld_hovmoller",
     end)
 
 observed_regional_climatology = isnothing(observed_monthly_mld) ? nothing :
-    [[regional_mean(observed_monthly_mld[m], region) for m in 1:12] for region in regions]
+    [[regional_mean(compared(observed_monthly_mld[m]), region) for m in 1:12] for region in regions]
 
 save_figure("mld_regional_seasonal_cycle",
     Ext.omip_figure(length(regions), 1; column_width = 420, row_height = 380) do figure
@@ -347,7 +417,7 @@ save_figure("mld_regional_seasonal_cycle",
             isnothing(observed_regional_climatology) ||
                 lines!(axis, 1:12, observed_regional_climatology[r]; Ext.observation_line..., label = "de Boyer Montégut et al. (2004)")
             for (n, o) in enumerate(outputs)
-                Ext.run_lines!(axis, 1:12, [regional_mean(monthly_mld_maps(o)[m], region) for m in 1:12], n, o.label)
+                Ext.run_lines!(axis, 1:12, [regional_mean(compared(monthly_mld_maps(o)[m]), region) for m in 1:12], n, o.label)
             end
             axis
         end
@@ -359,7 +429,7 @@ save_figure("mld_regional_series",
         axes = map(enumerate(regions)) do (r, region)
             axis = Ext.time_axis(figure[1, r]; title = region[1], ylabel = "MLD (m)")
             for (n, o) in enumerate(outputs)
-                series = mld_series(o)
+                series = recomputed_mld(o)
                 Ext.run_lines!(axis, series.years, series.regional[:, r], n, o.label)
             end
             vspan!(axis, first_year, last_year; color = (:gray, 0.15))
@@ -387,7 +457,7 @@ open(joinpath(figure_directory, "summary.csv"), "w") do io
     println(io, join(replace.(columns, ", " => " "), ","))
 
     for (o, s) in zip(outputs, max_slopes)
-        climatologies = [[regional_mean(monthly_mld_maps(o)[m], region) for m in 1:12] for region in regions]
+        climatologies = [[regional_mean(compared(monthly_mld_maps(o)[m]), region) for m in 1:12] for region in regions]
         mld = [f(c) for c in climatologies for f in (mean, maximum, minimum)]
         z = Ext.depths(o)
         slope = 1e3 .* zonal_isopycnal_slope(o)
