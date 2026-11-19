@@ -70,8 +70,8 @@ atlas_title = "World Ocean Atlas"
 ##### Rows of panels sharing one colorbar; `nothing` leaves a column empty
 #####
 
-panel_row(panels, levels, colormap, label; xlabel = "Latitude", depth_limit = 1000, overlay_levels = levels) =
-    (; panels, levels, colormap, label, xlabel, depth_limit, overlay_levels)
+panel_row(panels, levels, colormap, label; xlabel = "Latitude", xticks = nothing, depth_limit = 1000, overlay_levels = levels) =
+    (; panels, levels, colormap, label, xlabel, xticks, depth_limit, overlay_levels)
 
 section(title, x, z, data; overlay = nothing, lines = ()) = (; title, x, z, data, overlay, lines)
 
@@ -85,8 +85,11 @@ function sections_figure(rows; column_width = 560, row_height = 330)
                 isnothing(p) && continue
                 plot = Ext.section_panel!(Ext.panel(figure, r, c), p.x, p.z, p.data; p.title, row.levels, row.colormap,
                                           p.overlay, row.overlay_levels, row.xlabel, row.depth_limit)
+                axis = current_axis()
+                xlims!(axis, extrema(p.x)...)
+                isnothing(row.xticks) || (axis.xticks = row.xticks)
                 for (x, depth, color) in p.lines
-                    lines!(current_axis(), x, - depth; color, linewidth = 2.5)
+                    lines!(axis, x, - depth; color, linewidth = 2.5)
                 end
             end
             Ext.row_colorbar!(figure, r, columns, plot, row.label)
@@ -146,6 +149,30 @@ save_figure("catke_diffusivities",
                                 section("$(o.label): log₂(e / control e)", latitudes, Ext.depths(o),
                                         log_ratio(zonal_turbulent_kinetic_energy(o), zonal_turbulent_kinetic_energy(reference)))
                                 for o in outputs], range(-2, 2, length = 17), :balance, "log₂ ratio"; depth_limit = 500)]))
+
+# Means of the zonal means over bands of latitude and ranges of depth [m], weighted by the cosine of latitude
+latitude_bands = (("global", φ -> true), ("20ᵒS–20ᵒN", φ -> abs(φ) ≤ 20), ("poleward of 30ᵒ", φ -> abs(φ) ≥ 30))
+depth_ranges = ((0, 30), (30, 100), (100, 300), (300, 1000))
+
+function band_mean(zonal, z, in_band, (shallow, deep))
+    rows = findall(in_band, latitudes)
+    levels = findall(d -> shallow ≤ - d < deep, z)
+    values = zonal[rows, levels]
+    weights = cosd.(latitudes[rows]) .* isfinite.(values)
+    return sum(ifelse.(isfinite.(values), values, 0) .* weights) / sum(weights)
+end
+
+open(joinpath(figure_directory, "catke_diffusivities.csv"), "w") do io
+    quantities = (("κc (m² s⁻¹)", o -> zonal_diffusivity(o, "difvho"), interface_depths),
+                  ("κu (m² s⁻¹)", o -> zonal_diffusivity(o, "difvmo"), interface_depths),
+                  ("e (m² s⁻²)", zonal_turbulent_kinetic_energy, Ext.depths))
+    println(io, join(["quantity", "latitudes", "depths (m)", (o.label for o in outputs)...], ","))
+    for (quantity, zonal, depths) in quantities, (band, in_band) in latitude_bands, depth_range in depth_ranges
+        values = [band_mean(zonal(o), depths(o), in_band, depth_range) for o in outputs]
+        println(io, join([quantity, band, "$(depth_range[1])–$(depth_range[2])", (@sprintf("%.4g", v) for v in values)...], ","))
+    end
+end
+@info "Saved catke_diffusivities.csv"
 
 #####
 ##### Mixed-layer depth, compared where the climatology has data in every month
@@ -373,7 +400,7 @@ save_figure("mean_profile_drift",
     Ext.omip_figure(2, 1; column_width = 480, row_height = 520) do figure
         panels = (("horizontal-mean temperature drift", "to_h", "ᵒC"), ("horizontal-mean salinity drift", "so_h", "g kg⁻¹"))
         axes = map(enumerate(panels)) do (c, (title, name, unit))
-            axis = Axis(figure[1, c]; title, xlabel = "years $(first_year)–$(last_year) − first 5 days ($unit)", ylabel = "Depth (m)")
+            axis = Axis(figure[1, c]; title, xlabel = @sprintf("years %g–%g − first 5 days (%s)", first_year, last_year, unit), ylabel = "Depth (m)")
             for o in outputs
                 Ext.run_lines!(axis, Ext.mean_profile(o, name) .- Ext.profile_series(o, name)[1, :], Ext.depths(o), run_number(o), o.label)
             end
@@ -385,35 +412,51 @@ save_figure("mean_profile_drift",
     end)
 
 #####
-##### Profiles averaged over boxes of the model grid
+##### Profiles averaged over boxes
 #####
 
-"""The mean of the three-dimensional `data` of `o` over the wet cells of each `(longitude range, latitude range)` box."""
-function box_profiles(o, data, boxes)
-    λ, φ, mask = Ext.center_longitudes(o), Ext.center_latitudes(o), Ext.ocean_mask(o)
+"""
+The mean of `data` over the `wet` cells of each `(longitude range, latitude range)` box, as `(box, level)`. The cells
+are centered at the longitudes `λ` and latitudes `φ`.
+"""
+function box_profiles(λ, φ, wet, data, boxes)
     profiles = fill(NaN, length(boxes), size(data, 3))
     for (n, (longitude_range, (south, north))) in enumerate(boxes)
         cells = findall(c -> south ≤ φ[c] ≤ north && in_longitudes(λ[c], longitude_range), CartesianIndices(λ))
         for k in axes(data, 3)
-            values = [data[c, k] for c in cells if mask[c, k] && isfinite(data[c, k])]
+            values = [data[c, k] for c in cells if wet[c, k] && isfinite(data[c, k])]
             isempty(values) || (profiles[n, k] = mean(values))
         end
     end
     return profiles
 end
 
+box_profiles(o::OMIPOutput, data, boxes) =
+    box_profiles(Ext.center_longitudes(o), Ext.center_latitudes(o), Ext.ocean_mask(o), data, boxes)
+
 """The mean of a map on the 1ᵒ grid over each box."""
 box_means(map, boxes) = [regional_mean(map, ("", latitude_range, longitude_range)) for (longitude_range, latitude_range) in boxes]
 
-world_ocean_atlas_monthly = let grid = Ext.model_grid(reference), mask = Ext.ocean_mask(reference)
+# The monthly atlas reaches 1500 m: Conservative Temperature on the 1ᵒ map grid and the levels of the model above that depth
+world_ocean_atlas_monthly = let faces = filter(≥(-1500), znodes(Ext.model_grid(reference), Face()))
+    grid = LatitudeLongitudeGrid(CPU(); size = (360, 180, length(faces) - 1), longitude = (0, 360), latitude = (-90, 90), z = faces)
     map(all_dates(WOAMonthly(), :temperature)) do date
         T = CenterField(grid)
         S = CenterField(grid)
-        set!(T, Metadatum(:temperature; dataset = WOAMonthly(), date))
-        set!(S, Metadatum(:salinity; dataset = WOAMonthly(), date))
+        set!(T, Metadatum(:temperature; dataset = WOAMonthly(), date); inpainting = nothing)
+        set!(S, Metadatum(:salinity; dataset = WOAMonthly(), date); inpainting = nothing)
         convert_to_teos10!(T, S)
-        Ext.masked(Array(interior(T)), mask)
+        Array(interior(T))
     end
+end
+
+"""The monthly atlas temperature over each box on the levels of the model, `NaN` below the atlas."""
+function atlas_monthly_profiles(month, boxes)
+    T = world_ocean_atlas_monthly[month]
+    λ = repeat(longitudes, 1, length(latitudes))
+    φ = repeat(latitudes', length(longitudes), 1)
+    profiles = box_profiles(λ, φ, isfinite.(T), T, boxes)
+    return hcat(fill(NaN, length(boxes), length(Ext.depths(reference)) - size(T, 3)), profiles)
 end
 
 world_ocean_atlas_buoyancy = let grid = Ext.model_grid(reference), atlas = Ext.world_ocean_atlas(reference)
@@ -438,8 +481,13 @@ section_boxes = [((λ - 0.5, λ + 0.5), equator) for λ in section_longitudes]
 profile_longitudes = 140:10:270
 profile_boxes = [((λ - 2, λ + 2), equator) for λ in profile_longitudes]
 
-equatorial_section(o, group, name) = Ext.cached(() -> box_profiles(o, Ext.time_mean(o, group, name), section_boxes),
-                                                o, Symbol(:equatorial_section_, name))
+equatorial_section(o, name) = Ext.cached(() -> box_profiles(o, Ext.time_mean(o, "fields", name), section_boxes),
+                                         o, Symbol(:equatorial_section_, name))
+
+# The grid is aligned with longitude and latitude in the tropics, where `uo` is the eastward velocity
+undercurrent_boxes = [((λ - 0.5, λ + 0.5), (-1, 1)) for λ in section_longitudes]
+equatorial_undercurrent(o) = Ext.cached(() -> 100 .* box_profiles(o, Ext.time_mean(o, "fields", "uo"), undercurrent_boxes),
+                                        o, :equatorial_undercurrent)
 
 """The depth at which each profile of `sections[longitude, level]` first drops below `value`, from the surface down."""
 function isotherm_depth(sections, z, value)
@@ -457,25 +505,25 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
     atlas_section = box_profiles(reference, atlas.T, section_boxes)
     observed_mld = box_means(annual_mean(observed_everywhere), section_boxes)
     run_mld(o) = box_means(annual_mean(monthly_mld(o)), section_boxes)
-    temperature(o) = equatorial_section(o, "fields", "to")
-    undercurrent(o) = Ext.equatorial_sections(o)
-    mld_line(depth) = (section_longitudes, depth, :white)
+    temperature(o) = equatorial_section(o, "to")
+    observed_line(depth) = (section_longitudes, depth, :black)
+    run_line(depth) = (section_longitudes, depth, :white)
     kw = (; xlabel = "Longitude (ᵒE)", depth_limit = 400)
+    mld_label = "ᵒC; 20 ᵒC dashed; mixed-layer depth: observed black, run white"
 
     save_figure("equatorial_pacific_sections",
         sections_figure([panel_row([section("$atlas_title: T, 2ᵒS–2ᵒN", section_longitudes, z, atlas_section;
-                                            overlay = atlas_section, lines = (mld_line(observed_mld),)),
-                                    (section("$(o.label): T, 2ᵒS–2ᵒN", section_longitudes, z, temperature(o);
-                                             overlay = temperature(o), lines = (mld_line(run_mld(o)),)) for o in outputs)...],
-                                   8:1:30, :thermal, "ᵒC, 20 ᵒC dashed, mixed-layer depth solid"; overlay_levels = [20], kw...),
+                                            overlay = atlas_section, lines = (observed_line(observed_mld),)),
+                                    (section("$(o.label): T, 2ᵒS–2ᵒN", section_longitudes, z, temperature(o); overlay = temperature(o),
+                                             lines = (observed_line(observed_mld), run_line(run_mld(o)))) for o in outputs)...],
+                                   8:1:30, :thermal, mld_label; overlay_levels = [20], kw...),
                          panel_row([nothing, (section("$(o.label): T − WOA", section_longitudes, z, temperature(o) .- atlas_section)
                                               for o in outputs)...], range(-4, 4, length = 17), :balance, "ᵒC"; kw...),
                          panel_row([nothing, (o === reference ? nothing :
                                               section("$(o.label) − control: T", section_longitudes, z, temperature(o) .- temperature(reference))
                                               for o in outputs)...], range(-2, 2, length = 17), :balance, "ᵒC"; kw...),
-                         panel_row([nothing, (section("$(o.label): eastward velocity on the equator", undercurrent(o).longitudes,
-                                                      undercurrent(o).depths, 100 .* undercurrent(o).along_equator) for o in outputs)...],
-                                   -100:10:100, :balance, "cm s⁻¹"; kw...)]))
+                         panel_row([nothing, (section("$(o.label): eastward velocity, 1ᵒS–1ᵒN", section_longitudes, z, equatorial_undercurrent(o))
+                                              for o in outputs)...], -100:10:100, :balance, "cm s⁻¹"; kw...)]))
 
     save_figure("equatorial_pacific_lines",
         Ext.omip_figure(4, 1; column_width = 420, row_height = 380) do figure
@@ -483,7 +531,7 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
             surface = Axis(figure[1, 1]; title = "sea surface temperature", ylabel = "ᵒC", kw...)
             mixed_layer = Axis(figure[1, 2]; title = "mixed-layer depth", ylabel = "m", yreversed = true, kw...)
             thermocline = Axis(figure[1, 3]; title = "depth of the 20 ᵒC isotherm", ylabel = "m", yreversed = true, kw...)
-            current = Axis(figure[1, 4]; title = "fastest eastward velocity on the equator", ylabel = "cm s⁻¹", kw...)
+            current = Axis(figure[1, 4]; title = "fastest eastward velocity, 1ᵒS–1ᵒN", ylabel = "cm s⁻¹", kw...)
 
             lines!(surface, section_longitudes, atlas_section[:, end]; Ext.observation_line..., label = "observed")
             lines!(mixed_layer, section_longitudes, observed_mld; Ext.observation_line...)
@@ -493,8 +541,8 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
                 Ext.run_lines!(surface, section_longitudes, temperature(o)[:, end], n, o.label)
                 Ext.run_lines!(mixed_layer, section_longitudes, run_mld(o), n, o.label)
                 Ext.run_lines!(thermocline, section_longitudes, isotherm_depth(temperature(o), z, 20), n, o.label)
-                Ext.run_lines!(current, undercurrent(o).longitudes,
-                               [maximum(filter(isfinite, 100 .* row); init = NaN) for row in eachrow(undercurrent(o).along_equator)], n, o.label)
+                Ext.run_lines!(current, section_longitudes,
+                               [maximum(filter(isfinite, row); init = -Inf) for row in eachrow(equatorial_undercurrent(o))], n, o.label)
             end
             Legend(figure[2, 1:4], surface; orientation = :horizontal, framevisible = false)
         end)
@@ -507,11 +555,14 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
 
     save_figure("equatorial_pacific_profiles",
         Ext.omip_figure(length(columns), length(variables); column_width = 380, row_height = 440) do figure
-            for (r, (xlabel, name, atlas_data)) in enumerate(variables), (c, (title, o, mld)) in enumerate(columns)
+            upper = findall(≥(-300), z)
+            axes = [Axis(figure[r, c]; title, xlabel, ylabel = "Depth (m)")
+                    for (r, (xlabel, _, _)) in enumerate(variables), (c, (title, _, _)) in enumerate(columns)]
+            for (r, (_, name, atlas_data)) in enumerate(variables), (c, (_, o, mld)) in enumerate(columns)
                 profiles = box_profiles(reference, isnothing(o) ? atlas_data : Ext.time_mean(o, "fields", name), profile_boxes)
-                axis = Axis(figure[r, c]; title, xlabel, ylabel = "Depth (m)")
+                axis = axes[r, c]
                 for n in eachindex(profile_longitudes)
-                    lines!(axis, profiles[n, :], z; color = colors[n], linewidth = 2)
+                    lines!(axis, profiles[n, upper], z[upper]; color = colors[n], linewidth = 2)
                     k = searchsortedfirst(z, - mld[n])
                     1 < k ≤ length(z) || continue
                     weight = (- mld[n] - z[k-1]) / (z[k] - z[k-1])
@@ -520,6 +571,7 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
                 end
                 ylims!(axis, -300, 0)
             end
+            foreach(r -> linkxaxes!(axes[r, :]...), eachindex(variables))
             Colorbar(figure[length(variables) + 1, 1:length(columns)]; colormap = colors, limits = (135, 275),
                      ticks = (140:20:260, ["140ᵒE", "160ᵒE", "180ᵒ", "160ᵒW", "140ᵒW", "120ᵒW", "100ᵒW"]),
                      label = "longitude of the profile; markers show the mixed-layer depth",
@@ -529,13 +581,14 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
     section_month_directory = mkpath(joinpath(figure_directory, "equatorial_pacific_months"))
     monthly_temperature = Dict(o => [box_profiles(o, T, section_boxes) for T in Ext.monthly_means(o, "fields", "to")] for o in outputs)
     for m in 1:12
-        atlas_month = box_profiles(reference, world_ocean_atlas_monthly[m], section_boxes)
+        atlas_month = atlas_monthly_profiles(m, section_boxes)
+        observed_month = observed_line(box_means(observed_everywhere[m], section_boxes))
         figure = sections_figure([panel_row([section("$atlas_title: $(month_names[m]) T, 2ᵒS–2ᵒN", section_longitudes, z, atlas_month;
-                                                     overlay = atlas_month, lines = (mld_line(box_means(observed_everywhere[m], section_boxes)),)),
+                                                     overlay = atlas_month, lines = (observed_month,)),
                                              (section("$(o.label): $(month_names[m]) T", section_longitudes, z, monthly_temperature[o][m];
                                                       overlay = monthly_temperature[o][m],
-                                                      lines = (mld_line(box_means(monthly_mld(o)[m], section_boxes)),)) for o in outputs)...],
-                                            8:1:30, :thermal, "ᵒC, 20 ᵒC dashed, mixed-layer depth solid"; overlay_levels = [20], kw...)])
+                                                      lines = (observed_month, run_line(box_means(monthly_mld(o)[m], section_boxes))))
+                                              for o in outputs)...], 8:1:30, :thermal, mld_label; overlay_levels = [20], kw...)])
         save(joinpath(section_month_directory, @sprintf("section_%02d.png", m)), figure; px_per_unit = 1)
     end
     @info "Saved the monthly equatorial Pacific sections"
@@ -559,16 +612,16 @@ save_figure("seasonal_cycle_sites",
     let z = Ext.depths(reference)
         rows = map(sites) do (title, λ, φ, depth_limit)
             box = [((λ - 2, λ + 2), (φ - 2, φ + 2))]
-            climatology(o, monthly) = reduce(vcat, box_profiles(o, T, box) for T in monthly)
+            climatology(o) = reduce(vcat, box_profiles(o, T, box) for T in Ext.monthly_means(o, "fields", "to"))
             site_mld(maps) = [only(box_means(maps[m], box)) for m in 1:12]
-            observed_line = (1:12, site_mld(observed_everywhere), Ext.observation_color)
-            atlas = climatology(reference, world_ocean_atlas_monthly)
+            observed_line = (1:12, site_mld(observed_everywhere), :black)
+            atlas = reduce(vcat, atlas_monthly_profiles(m, box) for m in 1:12)
             shallow = filter(isfinite, atlas[:, z .≥ - depth_limit])
             panels = [section("$atlas_title: $title", 1:12, z, atlas; lines = (observed_line,)),
-                      (section("$(o.label): $title", 1:12, z, climatology(o, Ext.monthly_means(o, "fields", "to"));
+                      (section("$(o.label): $title", 1:12, z, climatology(o);
                                lines = (observed_line, (1:12, site_mld(monthly_mld(o)), :white))) for o in outputs)...]
             panel_row(panels, range(floor(minimum(shallow)), ceil(maximum(shallow)), length = 15), :thermal,
-                      "ᵒC; mixed-layer depth: observed gray, run white"; xlabel = "Month", depth_limit)
+                      "ᵒC; mixed-layer depth: observed black, run white"; xlabel = "Month", xticks = Ext.month_ticks, depth_limit)
         end
         sections_figure(rows; column_width = 420, row_height = 300)
     end)
