@@ -1,4 +1,4 @@
-# Figures comparing the one-degree OMIP runs of run_gm_tapering.jl: buoyancy and isopycnal slopes, the
+# Figures comparing one-degree OMIP runs, by default those of run_gm_tapering.jl: buoyancy and isopycnal slopes, the
 # Gent-McWilliams tapering and overturning, and the mixed-layer depth through the seasonal cycle.
 
 using ArgParse
@@ -27,6 +27,19 @@ settings = ArgParseSettings()
     "--reference-slope"
         arg_type = Float64
         default = 1e-2
+    "--run-names"
+        help = "output prefixes of the runs, when they are not taper_<max slope>"
+        arg_type = String
+        nargs = '+'
+        default = String[]
+    "--run-labels"
+        arg_type = String
+        nargs = '+'
+        default = String[]
+    "--reference-run"
+        help = "output prefix of the control"
+        arg_type = String
+        default = ""
     "--first-year"
         arg_type = Float64
         default = 15.0
@@ -47,10 +60,14 @@ const Ext = Base.get_extension(ClimaOcean, :ClimaOceanMakieExt)
 run_name(max_slope) = "taper_" * string(max_slope)
 run_label(max_slope) = @sprintf("Sₘₐₓ = %g (%g×)", max_slope, max_slope / reference_slope)
 
+run_names = isempty(arguments["run-names"]) ? run_name.(max_slopes) : arguments["run-names"]
+run_labels = isempty(arguments["run-labels"]) ? run_label.(max_slopes) : arguments["run-labels"]
+reference_run = isempty(arguments["reference-run"]) ? run_name(reference_slope) : arguments["reference-run"]
+
 averaging_window = (first_year * 365days + 1, last_year * 365days + 1)
-outputs = [OMIPOutput(joinpath(runs_directory, run_name(s)); prefix = run_name(s), label = run_label(s), averaging_window)
-           for s in max_slopes]
-reference = outputs[findfirst(==(reference_slope), max_slopes)]
+outputs = [OMIPOutput(joinpath(runs_directory, name); prefix = name, label, averaging_window)
+           for (name, label) in zip(run_names, run_labels)]
+reference = outputs[findfirst(==(reference_run), run_names)]
 perturbed = filter(o -> o !== reference, outputs)
 max_slope_of = Dict(o.label => s for (o, s) in zip(outputs, max_slopes))
 window_label = @sprintf("years %g–%g", first_year, last_year)
