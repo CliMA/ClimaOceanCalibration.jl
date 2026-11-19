@@ -80,8 +80,7 @@ interpolated between the two levels on either side of the threshold as de Boyer 
     weight = clamp((zʳ - z⁻) / max(z⁺ - z⁻, eps(typeof(zʳ))), 0, 1)
     bʳ = @inbounds b[i, j, k⁻] + weight * (b[i, j, k⁺] - b[i, j, k⁻])
 
-    H = static_column_depthᶜᶜᵃ(i, j, grid)
-    h = H
+    h = static_column_depthᶜᶜᵃ(i, j, grid)
     z₀ = zʳ
     Δb₀ = zero(bʳ)
     mixed = true
@@ -97,7 +96,7 @@ interpolated between the two levels on either side of the threshold as de Boyer 
         Δb₀ = ifelse(mixed, Δb, Δb₀)
     end
 
-    return clamp(h, zero(h), H)
+    return h
 end
 
 configuration = OneDegree(; name, vertical_mixing = scale_diffusivities(OneDegree().ocean.vertical_mixing, diffusivity_scale))
