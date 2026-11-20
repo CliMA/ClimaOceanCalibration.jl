@@ -1,6 +1,6 @@
 # Figures comparing the one-degree OMIP runs of run_gm_tapering.jl: buoyancy and isopycnal slopes, the
-# Gent-McWilliams tapering and overturning, and the mixed-layer depth of the saved 15-day-mean buoyancy through the
-# seasonal cycle.
+# Gent-McWilliams tapering and overturning, and the mixed-layer depth of the saved 15-day-mean temperature and
+# salinity through the seasonal cycle.
 
 using ArgParse
 using ClimaOcean
@@ -10,6 +10,8 @@ using GeoMakie
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.Operators: Δxᶠᶜᶜ, Δyᶜᶠᶜ, Δzᶜᶜᶠ
+using SeawaterPolynomials
+using SeawaterPolynomials.TEOS10: TEOS10EquationOfState
 using Statistics
 using Printf
 using Dates: month
@@ -260,6 +262,13 @@ observed_cells = isnothing(observed_monthly_mld) ? ocean_cells : ocean_cells .& 
 """`map` where the climatology has data in every month, so that the runs and the observations cover the same ocean."""
 compared(map) = ifelse.(observed_cells, map, NaN)
 
+const equation_of_state = TEOS10EquationOfState(reference_density = Ext.reference_density)
+const g = Oceananigans.defaults.gravitational_acceleration
+
+"""The buoyancy that water of Conservative Temperature `Θ` and Absolute Salinity `S` has at the surface."""
+potential_buoyancy(Θ, S) =
+    - g * SeawaterPolynomials.ρ′(Float64(Θ), Float64(S), 0.0, equation_of_state) / equation_of_state.reference_density
+
 const Δb★ = 2.87e-4
 const reference_depth = 10.0
 
@@ -285,19 +294,22 @@ function mixed_layer_depth(b, z, k_bottom)
 end
 
 """
-The mixed-layer depth of every 15-day buoyancy record of `o` on the 1ᵒ map grid: its monthly climatology over the
-averaging window, and its zonal and regional means through the whole run.
+The mixed-layer depth of every 15-day record of `o` on the 1ᵒ map grid, from the potential buoyancy of its
+temperature and salinity: its monthly climatology over the averaging window, and its zonal and regional means
+through the whole run.
 """
 recomputed_mld(o) = Ext.cached(o, :recomputed_mld) do
-    fts = Ext.timeseries(o, "fields", "bo")
-    window = Ext.window_records(o, fts.times)
-    months = month.(Ext.record_dates(o, fts.times))
+    temperature = Ext.timeseries(o, "fields", "to")
+    salinity = Ext.timeseries(o, "fields", "so")
+    times = temperature.times
+    window = Ext.window_records(o, times)
+    months = month.(Ext.record_dates(o, times))
     mask = Ext.ocean_mask(o)
     z = Ext.depths(o)
     Nx, Ny, Nz = size(mask)
     k_bottom = [something(findfirst(view(mask, i, j, :)), Nz + 1) for i in 1:Nx, j in 1:Ny]
 
-    Nt = length(fts.times)
+    Nt = length(times)
     zonal = fill(NaN, Nt, length(latitudes))
     regional = fill(NaN, Nt, length(regions))
     sums = [zeros(length(longitudes), length(latitudes)) for _ in 1:12]
@@ -305,10 +317,16 @@ recomputed_mld(o) = Ext.cached(o, :recomputed_mld) do
     depth = fill(NaN, Nx, Ny)
 
     for n in 1:Nt
-        b = Ext.record_array(fts, n)
+        T = Ext.record_array(temperature, n)
+        S = Ext.record_array(salinity, n)
         Threads.@threads for j in 1:Ny
+            b = zeros(Nz)
             for i in 1:Nx
-                k_bottom[i, j] > Nz || (depth[i, j] = mixed_layer_depth(view(b, i, j, :), z, k_bottom[i, j]))
+                k_bottom[i, j] > Nz && continue
+                for k in k_bottom[i, j]:Nz
+                    b[k] = potential_buoyancy(T[i, j, k], S[i, j, k])
+                end
+                depth[i, j] = mixed_layer_depth(b, z, k_bottom[i, j])
             end
         end
         depth_map = Ext.regrid_to_map(o, depth)
@@ -320,7 +338,7 @@ recomputed_mld(o) = Ext.cached(o, :recomputed_mld) do
         end
     end
 
-    (; years = fts.times ./ 365days, zonal, regional, monthly = sums ./ counts)
+    (; years = times ./ 365days, zonal, regional, monthly = sums ./ counts)
 end
 
 monthly_mld_maps(o) = recomputed_mld(o).monthly
