@@ -11,10 +11,11 @@ using NumericalEarth: Metadatum, WOAMonthly
 using NumericalEarth.DataWrangling: all_dates
 using Oceananigans
 using Oceananigans.Units
-using Oceananigans.Models: buoyancy_operation
+using SeawaterPolynomials
 using SeawaterPolynomials.TEOS10: TEOS10EquationOfState
 using Statistics
 using Printf
+using Dates: month
 
 settings = ArgParseSettings()
 @add_arg_table! settings begin
@@ -178,9 +179,127 @@ end
 ##### Mixed-layer depth, compared where the climatology has data in every month
 #####
 
-monthly_mld(o) = Ext.cached(o, :monthly_mld) do
-    [Ext.regrid_to_map(o, m) for m in Ext.monthly_means(o, "mixed_layer", "mlotst_bracketing")]
+# Regions on the 1ᵒ map grid: (title, latitude range, longitude range from west to east or nothing)
+bands = [("tropics, 20ᵒS–20ᵒN", (-20, 20), nothing),
+         ("northern extratropics, 30ᵒN–60ᵒN", (30, 60), nothing),
+         ("southern extratropics, 60ᵒS–30ᵒS", (-60, -30), nothing),
+         ("Southern Ocean, 65ᵒS–50ᵒS", (-65, -50), nothing),
+         ("subpolar North Atlantic, 50ᵒN–65ᵒN, 60ᵒW–10ᵒW", (50, 65), (300, 350))]
+
+patches = [("Labrador Sea", (52, 65), (298, 315)),
+           ("Nordic Seas", (65, 78), (345, 15)),
+           ("North Atlantic subtropical gyre", (20, 40), (285, 340)),
+           ("tropical Atlantic", (-10, 10), (320, 360)),
+           ("Kuroshio extension", (30, 42), (140, 180)),
+           ("subpolar North Pacific", (42, 58), (160, 220)),
+           ("North Pacific subtropical gyre", (15, 30), (150, 230)),
+           ("South Pacific subtropical gyre", (-35, -15), (180, 260)),
+           ("western Pacific warm pool", (-10, 10), (140, 170)),
+           ("central equatorial Pacific", (-5, 5), (190, 240)),
+           ("eastern Pacific cold tongue", (-5, 5), (240, 275)),
+           ("Arabian Sea", (8, 22), (55, 72)),
+           ("tropical Indian Ocean", (-15, 5), (50, 95)),
+           ("Southern Ocean, Atlantic sector", (-60, -45), (300, 20)),
+           ("Southern Ocean, Indian sector", (-60, -45), (20, 150)),
+           ("Southern Ocean, Pacific sector", (-60, -45), (150, 290))]
+
+in_longitudes(λ, ::Nothing) = true
+in_longitudes(λ, (west, east)) = mod(λ - west, 360) ≤ mod(east - west, 360)
+
+function regional_mean(map, (_, (south, north), longitude_range))
+    total = weight = 0.0
+    for j in eachindex(latitudes), i in eachindex(longitudes)
+        south ≤ latitudes[j] ≤ north || continue
+        in_longitudes(longitudes[i], longitude_range) || continue
+        isfinite(map[i, j]) || continue
+        total += map[i, j] * cosd(latitudes[j])
+        weight += cosd(latitudes[j])
+    end
+    return total / weight
 end
+
+zonal_mean_map(map) = [Ext.finite_mean(view(map, :, j)) for j in eachindex(latitudes)]
+
+const equation_of_state = TEOS10EquationOfState(reference_density = Ext.reference_density)
+const g = Oceananigans.defaults.gravitational_acceleration
+
+"""The buoyancy that water of Conservative Temperature `Θ` and Absolute Salinity `S` has at the surface."""
+potential_buoyancy(Θ, S) =
+    - g * SeawaterPolynomials.ρ′(Float64(Θ), Float64(S), 0.0, equation_of_state) / equation_of_state.reference_density
+
+const Δb★ = 2.87e-4
+const reference_depth = 10.0
+
+"""
+The depth at which the buoyancy `b` at cell centers `z` (bottom to top) has dropped by Δb★ from its value at 10 m,
+interpolated between the two levels on either side of the threshold as de Boyer Montégut et al. (2004) do, searching
+down to level `k_bottom`.
+"""
+function mixed_layer_depth(b, z, k_bottom)
+    zʳ = - reference_depth
+    k⁺ = findfirst(≥(zʳ), z)
+    k⁻ = k⁺ - 1
+    k⁻ < k_bottom && return - z[k_bottom]
+    bʳ = b[k⁻] + (zʳ - z[k⁻]) / (z[k⁺] - z[k⁻]) * (b[k⁺] - b[k⁻])
+
+    z₀, Δb₀ = zʳ, zero(bʳ)
+    for k in k⁻:-1:k_bottom
+        Δb = bʳ - b[k]
+        Δb ≥ Δb★ && return - (z₀ + (z[k] - z₀) * (Δb★ - Δb₀) / (Δb - Δb₀))
+        z₀, Δb₀ = z[k], Δb
+    end
+    return - z[k_bottom]
+end
+
+"""
+The mixed-layer depth of every 15-day record of `o` on the 1ᵒ map grid, from the potential buoyancy of its
+temperature and salinity: its monthly climatology over the averaging window, and its zonal and band means through
+the whole run.
+"""
+recomputed_mld(o) = Ext.cached(o, :recomputed_mld) do
+    temperature = Ext.timeseries(o, "fields", "to")
+    salinity = Ext.timeseries(o, "fields", "so")
+    times = temperature.times
+    window = Ext.window_records(o, times)
+    months = month.(Ext.record_dates(o, times))
+    mask = Ext.ocean_mask(o)
+    z = Ext.depths(o)
+    Nx, Ny, Nz = size(mask)
+    k_bottom = [something(findfirst(view(mask, i, j, :)), Nz + 1) for i in 1:Nx, j in 1:Ny]
+
+    Nt = length(times)
+    zonal = fill(NaN, Nt, length(latitudes))
+    regional = fill(NaN, Nt, length(bands))
+    sums = [zeros(length(longitudes), length(latitudes)) for _ in 1:12]
+    counts = zeros(Int, 12)
+    depth = fill(NaN, Nx, Ny)
+
+    for n in 1:Nt
+        T = Ext.record_array(temperature, n)
+        S = Ext.record_array(salinity, n)
+        Threads.@threads for j in 1:Ny
+            b = zeros(Nz)
+            for i in 1:Nx
+                k_bottom[i, j] > Nz && continue
+                for k in k_bottom[i, j]:Nz
+                    b[k] = potential_buoyancy(T[i, j, k], S[i, j, k])
+                end
+                depth[i, j] = mixed_layer_depth(b, z, k_bottom[i, j])
+            end
+        end
+        depth_map = Ext.regrid_to_map(o, depth)
+        zonal[n, :] .= zonal_mean_map(depth_map)
+        regional[n, :] .= [regional_mean(depth_map, band) for band in bands]
+        if n in window
+            sums[months[n]] .+= depth_map
+            counts[months[n]] += 1
+        end
+    end
+
+    (; years = times ./ 365days, zonal, regional, monthly = sums ./ counts)
+end
+
+monthly_mld(o) = recomputed_mld(o).monthly
 
 observed_everywhere = let observed = Ext.boyer_montegut_mixed_layer_depth()
     compared = reduce(.&, isfinite.(m) for m in observed) .& isfinite.(monthly_mld(reference)[1])
@@ -221,45 +340,6 @@ for m in 1:12
     save(joinpath(month_directory, @sprintf("mld_%02d.png", m)), figure; px_per_unit = 1)
 end
 @info "Saved the monthly MLD maps"
-
-# Regions on the 1ᵒ map grid: (title, latitude range, longitude range from west to east or nothing)
-bands = [("tropics, 20ᵒS–20ᵒN", (-20, 20), nothing),
-         ("northern extratropics, 30ᵒN–60ᵒN", (30, 60), nothing),
-         ("southern extratropics, 60ᵒS–30ᵒS", (-60, -30), nothing),
-         ("Southern Ocean, 65ᵒS–50ᵒS", (-65, -50), nothing),
-         ("subpolar North Atlantic, 50ᵒN–65ᵒN, 60ᵒW–10ᵒW", (50, 65), (300, 350))]
-
-patches = [("Labrador Sea", (52, 65), (298, 315)),
-           ("Nordic Seas", (65, 78), (345, 15)),
-           ("North Atlantic subtropical gyre", (20, 40), (285, 340)),
-           ("tropical Atlantic", (-10, 10), (320, 360)),
-           ("Kuroshio extension", (30, 42), (140, 180)),
-           ("subpolar North Pacific", (42, 58), (160, 220)),
-           ("North Pacific subtropical gyre", (15, 30), (150, 230)),
-           ("South Pacific subtropical gyre", (-35, -15), (180, 260)),
-           ("western Pacific warm pool", (-10, 10), (140, 170)),
-           ("central equatorial Pacific", (-5, 5), (190, 240)),
-           ("eastern Pacific cold tongue", (-5, 5), (240, 275)),
-           ("Arabian Sea", (8, 22), (55, 72)),
-           ("tropical Indian Ocean", (-15, 5), (50, 95)),
-           ("Southern Ocean, Atlantic sector", (-60, -45), (300, 20)),
-           ("Southern Ocean, Indian sector", (-60, -45), (20, 150)),
-           ("Southern Ocean, Pacific sector", (-60, -45), (150, 290))]
-
-in_longitudes(λ, ::Nothing) = true
-in_longitudes(λ, (west, east)) = mod(λ - west, 360) ≤ mod(east - west, 360)
-
-function regional_mean(map, (_, (south, north), longitude_range))
-    total = weight = 0.0
-    for j in eachindex(latitudes), i in eachindex(longitudes)
-        south ≤ latitudes[j] ≤ north || continue
-        in_longitudes(longitudes[i], longitude_range) || continue
-        isfinite(map[i, j]) || continue
-        total += map[i, j] * cosd(latitudes[j])
-        weight += cosd(latitudes[j])
-    end
-    return total / weight
-end
 
 regional_climatology(maps, region) = [regional_mean(maps[m], region) for m in 1:12]
 
@@ -302,7 +382,6 @@ save_figure("mld_patches_map",
 
 save_figure("mld_seasonal_cycle_patches", seasonal_cycle_figure(patches, 4))
 
-zonal_mean_map(map) = [Ext.finite_mean(view(map, :, j)) for j in eachindex(latitudes)]
 latitude_month(maps) = permutedims(hcat((zonal_mean_map(m) for m in maps)...))
 
 save_figure("mld_latitude_month",
@@ -338,28 +417,14 @@ save_figure("mld_zonal_extrema",
         Legend(figure[2, 1:2], axes[1]; orientation = :horizontal, framevisible = false)
     end)
 
-"""Zonal and band means of every 5-day mixed-layer depth record of the whole run."""
-mld_series(o) = Ext.cached(o, :mld_series) do
-    fts = Ext.timeseries(o, "mixed_layer", "mlotst_bracketing")
-    Nt = length(fts.times)
-    zonal = fill(NaN, Nt, length(latitudes))
-    regional = fill(NaN, Nt, length(bands))
-    for n in 1:Nt
-        map = Ext.regrid_to_map(o, Ext.record_array(fts, n))
-        zonal[n, :] .= zonal_mean_map(map)
-        regional[n, :] .= [regional_mean(map, band) for band in bands]
-    end
-    (; years = fts.times ./ 365days, zonal, regional)
-end
-
 save_figure("mld_hovmoller",
     Ext.omip_figure(length(outputs), 1; column_width = 640, row_height = 420) do figure
-        control = mld_series(reference)
+        control = recomputed_mld(reference)
         axis = Axis(figure[1, 1]; title = "control: zonal-mean MLD", xlabel = "Year", ylabel = "Latitude")
         plot = heatmap!(axis, control.years, latitudes, log10.(control.zonal); colormap = Ext.mixed_layer_colormap, colorrange = (1, 3))
         Colorbar(figure[2, 1], plot; label = "log₁₀ MLD (m)", vertical = false, flipaxis = false, width = Relative(0.7))
         for (c, o) in enumerate(perturbed)
-            series = mld_series(o)
+            series = recomputed_mld(o)
             Nt = min(length(series.years), length(control.years))
             axis = Axis(figure[1, c + 1]; title = "log₂($(o.label) MLD / control MLD)", xlabel = "Year", ylabel = "Latitude")
             plot = heatmap!(axis, series.years[1:Nt], latitudes, log2.(series.zonal[1:Nt, :] ./ control.zonal[1:Nt, :]);
@@ -373,7 +438,7 @@ save_figure("mld_regional_series",
         axes = map(enumerate(bands)) do (r, band)
             axis = Ext.time_axis(figure[1, r]; title = band[1], ylabel = "MLD (m)")
             for o in outputs
-                series = mld_series(o)
+                series = recomputed_mld(o)
                 Ext.run_lines!(axis, series.years, series.regional[:, r], run_number(o), o.label)
             end
             vspan!(axis, first_year, last_year; color = (:gray, 0.15))
@@ -479,16 +544,6 @@ function atlas_monthly_profiles(month, boxes)
     return hcat(fill(NaN, length(boxes), length(Ext.depths(reference)) - size(T, 3)), profiles)
 end
 
-world_ocean_atlas_buoyancy = let grid = Ext.model_grid(reference), atlas = Ext.world_ocean_atlas(reference)
-    T = CenterField(grid)
-    S = CenterField(grid)
-    set!(T, ifelse.(isfinite.(atlas.T), atlas.T, 0))
-    set!(S, ifelse.(isfinite.(atlas.S), atlas.S, 35))
-    buoyancy = SeawaterBuoyancy(equation_of_state = TEOS10EquationOfState(reference_density = Ext.reference_density))
-    b = Field(buoyancy_operation(buoyancy, grid, (; T, S)))
-    Ext.masked(Array(interior(compute!(b))), Ext.ocean_mask(reference))
-end
-
 annual_mean(maps) = sum(maps) ./ length(maps)
 
 #####
@@ -547,11 +602,10 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
 
     save_figure("equatorial_pacific_lines",
         Ext.omip_figure(4, 1; column_width = 420, row_height = 380) do figure
-            kw = (; xlabel = "Longitude (ᵒE)")
-            surface = Axis(figure[1, 1]; title = "sea surface temperature", ylabel = "ᵒC", kw...)
-            mixed_layer = Axis(figure[1, 2]; title = "mixed-layer depth", ylabel = "m", yreversed = true, kw...)
-            thermocline = Axis(figure[1, 3]; title = "depth of the 20 ᵒC isotherm", ylabel = "m", yreversed = true, kw...)
-            current = Axis(figure[1, 4]; title = "fastest eastward velocity, 1ᵒS–1ᵒN", ylabel = "cm s⁻¹", kw...)
+            surface = Axis(figure[1, 1]; title = "sea surface temperature", ylabel = "ᵒC", xlabel = "Longitude (ᵒE)")
+            mixed_layer = Axis(figure[1, 2]; title = "mixed-layer depth", ylabel = "m", yreversed = true, xlabel = "Longitude (ᵒE)")
+            thermocline = Axis(figure[1, 3]; title = "depth of the 20 ᵒC isotherm", ylabel = "m", yreversed = true, xlabel = "Longitude (ᵒE)")
+            current = Axis(figure[1, 4]; title = "fastest eastward velocity, 1ᵒS–1ᵒN", ylabel = "cm s⁻¹", xlabel = "Longitude (ᵒE)")
 
             lines!(surface, section_longitudes, atlas_section[:, end]; Ext.observation_line..., label = "observed")
             lines!(mixed_layer, section_longitudes, observed_mld; Ext.observation_line...)
@@ -568,7 +622,11 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
         end)
 
     # Profiles every 10ᵒ of longitude, with a marker at the mixed-layer depth of each
-    variables = (("temperature (ᵒC)", "to", atlas.T), ("salinity (g kg⁻¹)", "so", atlas.S), ("buoyancy (m s⁻²)", "bo", world_ocean_atlas_buoyancy))
+    run_mean(o, name) = Ext.time_mean(o, "fields", name)
+    variables = (("temperature (ᵒC)", atlas.T, o -> run_mean(o, "to")),
+                 ("salinity (g kg⁻¹)", atlas.S, o -> run_mean(o, "so")),
+                 ("potential buoyancy (m s⁻²)", potential_buoyancy.(atlas.T, atlas.S),
+                  o -> potential_buoyancy.(run_mean(o, "to"), run_mean(o, "so"))))
     profile_mld(maps) = box_means(annual_mean(maps), profile_boxes)
     columns = [(atlas_title, nothing, profile_mld(observed_everywhere)), ((o.label, o, profile_mld(monthly_mld(o))) for o in outputs)...]
     colors = cgrad(:viridis, length(profile_longitudes); categorical = true)
@@ -578,8 +636,8 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
             upper = findall(≥(-300), z)
             axes = [Axis(figure[r, c]; title, xlabel, ylabel = "Depth (m)")
                     for (r, (xlabel, _, _)) in enumerate(variables), (c, (title, _, _)) in enumerate(columns)]
-            for (r, (_, name, atlas_data)) in enumerate(variables), (c, (_, o, mld)) in enumerate(columns)
-                profiles = box_profiles(reference, isnothing(o) ? atlas_data : Ext.time_mean(o, "fields", name), profile_boxes)
+            for (r, (_, atlas_data, run_data)) in enumerate(variables), (c, (_, o, mld)) in enumerate(columns)
+                profiles = box_profiles(reference, isnothing(o) ? atlas_data : run_data(o), profile_boxes)
                 axis = axes[r, c]
                 for n in eachindex(profile_longitudes)
                     lines!(axis, profiles[n, upper], z[upper]; color = colors[n], linewidth = 2)

@@ -7,8 +7,8 @@ using ConstructionBase: setproperties
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.Grids: znode, static_column_depthᶜᶜᵃ, inactive_cell
-using Oceananigans.Models: buoyancy_operation
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+using SeawaterPolynomials: ρ′
 using JLD2: ZstdFilter
 using CUDA
 
@@ -61,9 +61,16 @@ end
 const c = Center()
 const f = Face()
 
+"""The buoyancy that the water of each cell has at the surface, which is the same at every depth for one water mass."""
+@inline function potential_buoyancyᶜᶜᶜ(i, j, k, grid, formulation, T, S)
+    equation_of_state = formulation.equation_of_state
+    ρ′₀ = @inbounds ρ′(T[i, j, k], S[i, j, k], zero(grid), equation_of_state)
+    return - formulation.gravitational_acceleration * ρ′₀ / equation_of_state.reference_density
+end
+
 """
-The depth below the free surface at which the buoyancy `b` has dropped by `Δb★` from its value at the depth `hʳ`,
-interpolated between the two levels on either side of the threshold as de Boyer Montégut et al. (2004) do.
+The depth below the free surface at which the potential buoyancy `b` has dropped by `Δb★` from its value at the
+depth `hʳ`, interpolated between the two levels on either side of the threshold as de Boyer Montégut et al. (2004) do.
 """
 @inline function mixed_layer_depthᶜᶜᵃ(i, j, _, grid, b, Δb★, hʳ)
     Nz = size(grid, 3)
@@ -110,8 +117,10 @@ ocean = simulation.model.ocean.model
 grid = ocean.grid
 catke_fields = ocean.closure_fields[findfirst(closure -> closure isa CATKEVerticalDiffusivity, ocean.closure)]
 
-mixed_layer_depth = KernelFunctionOperation{Center, Center, Nothing}(mixed_layer_depthᶜᶜᵃ, grid, buoyancy_operation(ocean),
-                                                                     2.87e-4, 10.0)
+potential_buoyancy = KernelFunctionOperation{Center, Center, Center}(potential_buoyancyᶜᶜᶜ, grid, ocean.buoyancy.formulation,
+                                                                     ocean.tracers.T, ocean.tracers.S)
+
+mixed_layer_depth = KernelFunctionOperation{Center, Center, Nothing}(mixed_layer_depthᶜᶜᵃ, grid, potential_buoyancy, 2.87e-4, 10.0)
 
 writer_kw = (; including = Symbol[], dir = output_directory, overwrite_files = true,
                jld2_kw = Dict(:compress => ZstdFilter()))
@@ -121,7 +130,7 @@ simulation.output_writers[:diffusivities] = JLD2Writer(ocean, (; difvmo = catke_
                                                        file_splitting = TimeInterval(360days),
                                                        filename = name * "_diffusivities")
 
-simulation.output_writers[:mixed_layer] = JLD2Writer(ocean, (; mlotst_bracketing = mixed_layer_depth);
+simulation.output_writers[:mixed_layer] = JLD2Writer(ocean, (; mlotst_potential = mixed_layer_depth);
                                                      writer_kw..., schedule = AveragedTimeInterval(5days),
                                                      file_splitting = TimeInterval(360days),
                                                      filename = name * "_mixed_layer")
