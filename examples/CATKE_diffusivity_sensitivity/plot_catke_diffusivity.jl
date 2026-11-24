@@ -29,6 +29,19 @@ settings = ArgParseSettings()
         arg_type = Float64
         nargs = '+'
         default = [0.5, 1.0, 2.0]
+    "--run-names"
+        help = "output prefixes of the runs, when they are not catke_<diffusivity scale>"
+        arg_type = String
+        nargs = '+'
+        default = String[]
+    "--run-labels"
+        arg_type = String
+        nargs = '+'
+        default = String[]
+    "--reference-run"
+        help = "output prefix of the control"
+        arg_type = String
+        default = "catke_1.0"
     "--first-year"
         arg_type = Float64
         default = 15.0
@@ -48,10 +61,13 @@ const Ext = Base.get_extension(ClimaOcean, :ClimaOceanMakieExt)
 run_name(scale) = "catke_" * string(scale)
 run_label(scale) = scale == 1 ? "control" : @sprintf("κ × %g", scale)
 
+run_names = isempty(arguments["run-names"]) ? run_name.(diffusivity_scales) : arguments["run-names"]
+run_labels = isempty(arguments["run-labels"]) ? run_label.(diffusivity_scales) : arguments["run-labels"]
+
 averaging_window = (first_year * 365days + 1, last_year * 365days + 1)
-outputs = [OMIPOutput(joinpath(runs_directory, run_name(s)); prefix = run_name(s), label = run_label(s), averaging_window)
-           for s in diffusivity_scales]
-reference = outputs[findfirst(==(1), diffusivity_scales)]
+outputs = [OMIPOutput(joinpath(runs_directory, name); prefix = name, label, averaging_window)
+           for (name, label) in zip(run_names, run_labels)]
+reference = outputs[findfirst(==(arguments["reference-run"]), run_names)]
 perturbed = filter(o -> o !== reference, outputs)
 run_number(o) = findfirst(==(o), outputs)
 
@@ -143,14 +159,6 @@ diffusivity_rows(name, symbol) =
                         log_ratio(zonal_diffusivity(o, name), zonal_diffusivity(reference, name))) for o in outputs],
                range(-2, 2, length = 17), :balance, "log₂ ratio"; depth_limit = 500)]
 
-save_figure("catke_diffusivities",
-    sections_figure([diffusivity_rows("difvho", "κc")...,
-                     diffusivity_rows("difvmo", "κu")...,
-                     panel_row([o === reference ? nothing :
-                                section("$(o.label): log₂(e / control e)", latitudes, Ext.depths(o),
-                                        log_ratio(zonal_turbulent_kinetic_energy(o), zonal_turbulent_kinetic_energy(reference)))
-                                for o in outputs], range(-2, 2, length = 17), :balance, "log₂ ratio"; depth_limit = 500)]))
-
 # Means of the zonal means over bands of latitude and ranges of depth [m], weighted by the cosine of latitude
 latitude_bands = (("global", φ -> true), ("20ᵒS–20ᵒN", φ -> abs(φ) ≤ 20), ("poleward of 30ᵒ", φ -> abs(φ) ≥ 30))
 depth_ranges = ((0, 30), (30, 100), (100, 300), (300, 1000))
@@ -163,17 +171,27 @@ function band_mean(zonal, z, in_band, (shallow, deep))
     return sum(ifelse.(isfinite.(values), values, 0) .* weights) / sum(weights)
 end
 
-open(joinpath(figure_directory, "catke_diffusivities.csv"), "w") do io
-    quantities = (("κc (m² s⁻¹)", o -> zonal_diffusivity(o, "difvho"), interface_depths),
-                  ("κu (m² s⁻¹)", o -> zonal_diffusivity(o, "difvmo"), interface_depths),
-                  ("e (m² s⁻²)", zonal_turbulent_kinetic_energy, Ext.depths))
-    println(io, join(["quantity", "latitudes", "depths (m)", (o.label for o in outputs)...], ","))
-    for (quantity, zonal, depths) in quantities, (band, in_band) in latitude_bands, depth_range in depth_ranges
-        values = [band_mean(zonal(o), depths(o), in_band, depth_range) for o in outputs]
-        println(io, join([quantity, band, "$(depth_range[1])–$(depth_range[2])", (@sprintf("%.4g", v) for v in values)...], ","))
+if all(name -> any(contains("_diffusivities"), readdir(joinpath(runs_directory, name))), run_names)
+    save_figure("catke_diffusivities",
+        sections_figure([diffusivity_rows("difvho", "κc")...,
+                         diffusivity_rows("difvmo", "κu")...,
+                         panel_row([o === reference ? nothing :
+                                    section("$(o.label): log₂(e / control e)", latitudes, Ext.depths(o),
+                                            log_ratio(zonal_turbulent_kinetic_energy(o), zonal_turbulent_kinetic_energy(reference)))
+                                    for o in outputs], range(-2, 2, length = 17), :balance, "log₂ ratio"; depth_limit = 500)]))
+
+    open(joinpath(figure_directory, "catke_diffusivities.csv"), "w") do io
+        quantities = (("κc (m² s⁻¹)", o -> zonal_diffusivity(o, "difvho"), interface_depths),
+                      ("κu (m² s⁻¹)", o -> zonal_diffusivity(o, "difvmo"), interface_depths),
+                      ("e (m² s⁻²)", zonal_turbulent_kinetic_energy, Ext.depths))
+        println(io, join(["quantity", "latitudes", "depths (m)", (o.label for o in outputs)...], ","))
+        for (quantity, zonal, depths) in quantities, (band, in_band) in latitude_bands, depth_range in depth_ranges
+            values = [band_mean(zonal(o), depths(o), in_band, depth_range) for o in outputs]
+            println(io, join([quantity, band, "$(depth_range[1])–$(depth_range[2])", (@sprintf("%.4g", v) for v in values)...], ","))
+        end
     end
+    @info "Saved catke_diffusivities.csv"
 end
-@info "Saved catke_diffusivities.csv"
 
 #####
 ##### Mixed-layer depth, compared where the climatology has data in every month
@@ -485,9 +503,11 @@ save_figure("mean_profile_drift",
     Ext.omip_figure(2, 1; column_width = 480, row_height = 520) do figure
         panels = (("horizontal-mean temperature drift", "to_h", "ᵒC"), ("horizontal-mean salinity drift", "so_h", "g kg⁻¹"))
         axes = map(enumerate(panels)) do (c, (title, name, unit))
-            axis = Axis(figure[1, c]; title, xlabel = @sprintf("years %g–%g − first 5 days (%s)", first_year, last_year, unit), ylabel = "Depth (m)")
+            axis = Axis(figure[1, c]; title, xlabel = @sprintf("years %g–%g − first 5 days of the control (%s)", first_year, last_year, unit),
+                        ylabel = "Depth (m)")
+            initial = Ext.profile_series(reference, name)[1, :]
             for o in outputs
-                Ext.run_lines!(axis, Ext.mean_profile(o, name) .- Ext.profile_series(o, name)[1, :], Ext.depths(o), run_number(o), o.label)
+                Ext.run_lines!(axis, Ext.mean_profile(o, name) .- initial, Ext.depths(o), run_number(o), o.label)
             end
             vlines!(axis, 0; color = (:black, 0.4), linewidth = 1)
             ylims!(axis, -1500, 0)
