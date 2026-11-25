@@ -35,7 +35,7 @@
 #   SURFACE_DEPTH keep grid cells above this depth [m] (6.0 → single top cell)
 #
 # Run (HPC): ./launch_fluxes.sh   or directly:
-#   julia +1.12.3 --project=<ClimaOceanCalibration.jl> -t 4 prescribed_woa_fluxes.jl
+#   julia +1.13.3 --project=<ClimaOceanCalibration.jl> -t 4 prescribed_woa_fluxes.jl
 
 # DataDeps consent for ORCA/WOA/JRA55 auto-downloads (no-op when already present)
 ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"

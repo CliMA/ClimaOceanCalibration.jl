@@ -8,8 +8,7 @@ using Oceananigans.BoundaryConditions: DiscreteBoundaryFunction, getbc
 using Oceananigans.Fields: CenterField, interior
 using Oceananigans.Utils: launch!
 using NumericalEarth.Oceans: MultipleFluxes
-using SeawaterPolynomials.TEOS10: Θ_from_T
-using ClimaOcean: SAARAtlas, absolute_salinity
+using GibbsSeaWater: gsw_ct_from_t, gsw_sa_from_sp
 using Oceananigans.TurbulenceClosures: IsopycnalSkewSymmetricDiffusivity,
                                        ConvectiveAdjustmentVerticalDiffusivity
 using Oceananigans.Utils: NormalDivision
@@ -534,8 +533,7 @@ end
 ##### sea_water_practical_salinity (PSS-78). Oceananigans' default
 ##### `TEOS10EquationOfState` expects Conservative Temperature (Θ) and
 ##### Absolute Salinity (S_A). The functions below convert WOA fields to the
-##### TEOS-10 conventions in place, using SeawaterPolynomials (CPU only —
-##### the SAAR atlas read is host-resident and the loop body is scalar).
+##### TEOS-10 conventions in place with GibbsSeaWater, on the host.
 #####
 
 # Approximate hydrostatic pressure in dbar from depth z [m] (cell-center, negative for ocean).
@@ -553,7 +551,6 @@ function woa_to_teos10!(T_field, S_field)
     cpu_arch = cpu_architecture(architecture(grid))
     cpu_grid = on_architecture(cpu_arch, grid)
     Nx, Ny, Nz = size(grid)
-    atlas = SAARAtlas()
     T_h = Array(interior(T_field))
     S_h = Array(interior(S_field))
     for k in 1:Nz, j in 1:Ny, i in 1:Nx
@@ -572,8 +569,8 @@ function woa_to_teos10!(T_field, S_field)
         φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
         z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
         p = approx_pressure_dbar(z)
-        SA = absolute_salinity(atlas, SP, p, λ, φ)
-        Θ  = Θ_from_T(SA, t, p)
+        SA = gsw_sa_from_sp(SP, p, λ, φ)
+        Θ  = gsw_ct_from_t(SA, t, p)
         T_h[i, j, k] = Θ
         S_h[i, j, k] = SA
     end
@@ -595,7 +592,6 @@ function woa_salinity_fts_to_teos10!(fts)
     cpu_grid = on_architecture(cpu_arch, grid)
     Nx, Ny, Nz = size(grid)
     Nt = length(fts.times)
-    atlas = SAARAtlas()
     for t_idx in 1:Nt
         S_int = interior(fts[t_idx])
         S_h   = Array(S_int)
@@ -606,7 +602,7 @@ function woa_salinity_fts_to_teos10!(fts)
             φ = φnode(i, j, k, cpu_grid, Center(), Center(), Center())
             z = znode(i, j, k, cpu_grid, Center(), Center(), Center())
             p = approx_pressure_dbar(z)
-            S_h[i, j, k] = absolute_salinity(atlas, SP, p, λ, φ)
+            S_h[i, j, k] = gsw_sa_from_sp(SP, p, λ, φ)
         end
         copyto!(S_int, S_h)
     end
