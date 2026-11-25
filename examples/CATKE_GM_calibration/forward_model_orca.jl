@@ -69,14 +69,21 @@ function build_nori_parameters(nori_scalings::AbstractDict)
     return (; (k => v for (k, v) in params)...)
 end
 
+# CATKE coefficients that one scaling multiplies together, which keeps their ratios
+const coefficient_groups = Dict("Cᵘⁿ" => (:Cᵘⁿu, :Cᵘⁿc, :Cᵘⁿe, :CᵘⁿD),
+                                "Cˡᵒʰⁱ" => (:Cˡᵒu, :Cˡᵒc, :Cˡᵒe, :CˡᵒD, :Cʰⁱu, :Cʰⁱc, :Cʰⁱe, :CʰⁱD),
+                                "Cᶜ" => (:Cᶜu, :Cᶜc, :Cᶜe, :CᶜD))
+
 """
     scale_coefficients(coefficients, scalings)
 
-`coefficients` with each property `name` that has a `"<name>_scaling"` entry in `scalings` multiplied by it.
+`coefficients` with each property `name` multiplied by the `"<name>_scaling"` entry of `scalings` and by the
+`"<group>_scaling"` entry of every group of `coefficient_groups` that holds `name`.
 """
 function scale_coefficients(coefficients, scalings)
-    names = filter(name -> haskey(scalings, string(name, "_scaling")), propertynames(coefficients))
-    scaled = (; (name => scalings[string(name, "_scaling")] * getproperty(coefficients, name) for name in names)...)
+    scaling(name) = get(scalings, "$(name)_scaling", 1) *
+                    prod(get(scalings, "$(group)_scaling", 1) for (group, names) in coefficient_groups if name in names; init = 1)
+    scaled = (; (name => scaling(name) * getproperty(coefficients, name) for name in propertynames(coefficients))...)
     return setproperties(coefficients, scaled)
 end
 
