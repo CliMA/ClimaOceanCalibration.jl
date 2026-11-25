@@ -81,7 +81,7 @@ Run `OneDegree()` with the closures of `calibrated_catke(scalings)` and `calibra
 dynamics from the ECCO state of `start_date`, for `spinup_years` and then `calibration_years` of 365 days. Monthly
 means of temperature and salinity above 2000 m (`monthly_tracers.jld2`) and of the mixed-layer depth
 (`monthly_mixed_layer_depth.jld2`) go to `directory`, with a checkpoint every year from which a second call
-continues.
+continues. Throws if the run stops before its end.
 """
 function run_decadal_member(scalings; directory,
                             start_date = DateTime(1995, 1, 1),
@@ -140,6 +140,8 @@ function run_decadal_member(scalings; directory,
                                                             cleanup = true)
 
     run!(simulation; pickup = true)
+
+    time(simulation) < stop_time && error("The member in $directory stopped at $(prettytime(simulation)).")
 
     return simulation
 end

@@ -43,8 +43,7 @@ function ClimaCalibrate.forward_model(interface::CATKEGMDecadalInterface, iterat
 
     parameters = TOML.parsefile(ClimaCalibrate.parameter_path(interface.output_directory, iteration, member))
     scalings = Dict(name => parameter["value"] for (name, parameter) in parameters)
-    simulation = run_decadal_member(scalings; directory, interface.spinup_years, interface.calibration_years)
-    time(simulation) < simulation.stop_time && error("Member $member of iteration $iteration stopped at $(prettytime(simulation)).")
+    run_decadal_member(scalings; directory, interface.spinup_years, interface.calibration_years)
 
     partial = joinpath(directory, "observations_partial.jld2")
     targets = load(interface.targets_file, "targets")
