@@ -13,10 +13,23 @@ using NumericalEarth.Diagnostics: MixedLayerDepthField
 using NumericalEarth.SeaIces: default_snow_thermodynamics
 using Oceananigans
 using Oceananigans.Architectures: on_architecture
+using Oceananigans.OutputReaders: InMemoryFTS, MAX_FTS_TUPLE_SIZE, time_indices
 using Oceananigans.Grids: λnode, φnode, znode
 using Oceananigans.Units
 
+import Oceananigans.BoundaryConditions: fill_halo_regions!
+
 include(joinpath(@__DIR__, "..", "CATKE_GM_calibration", "forward_model_orca.jl"))
+
+# Fills the halos of the forcing records in memory one group after another. On a GPU, the concurrent tasks of
+# Oceananigans 0.117 fill them before the records are written (CliMA/Oceananigans.jl#6505).
+function fill_halo_regions!(series::InMemoryFTS)
+    for indices in Iterators.partition(time_indices(series), MAX_FTS_TUPLE_SIZE)
+        fill_halo_regions!(Tuple(series[n] for n in indices))
+    end
+
+    return nothing
+end
 
 """
     ThermodynamicSeaIce(settings)
