@@ -116,7 +116,7 @@ function run_decadal_member(scalings; directory,
     end_date = start_date + Year(spinup_years + calibration_years)
 
     simulation = omip_simulation(configuration; arch, forcing_directory, stop_time, dates = (start_date, end_date),
-                                 diagnostics = false)
+                                 prefetch = true, diagnostics = false)
 
     ocean = simulation.model.ocean.model
     grid = ocean.grid

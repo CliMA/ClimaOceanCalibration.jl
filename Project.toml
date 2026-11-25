@@ -51,8 +51,8 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 WorldOceanAtlasTools = "04f20302-f1b9-11e8-29d9-7d841cb0a64a"
 
 [sources]
-ClimaOcean = {rev = "main", url = "https://github.com/CliMA/ClimaOcean.jl.git"}
-NumericalEarth = {rev = "main", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
+ClimaOcean = {rev = "xk/omip-forcing-prefetch", url = "https://github.com/CliMA/ClimaOcean.jl.git"}
+NumericalEarth = {rev = "xk/prefetch-first-window", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
 
 [compat]
 CFTime = "0.2"
