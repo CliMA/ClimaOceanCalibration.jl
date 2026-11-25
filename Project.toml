@@ -51,7 +51,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 WorldOceanAtlasTools = "04f20302-f1b9-11e8-29d9-7d841cb0a64a"
 
 [sources]
-ClimaOcean = {rev = "ss/omip-simulations", url = "https://github.com/CliMA/ClimaOcean.jl.git"}
+ClimaOcean = {rev = "main", url = "https://github.com/CliMA/ClimaOcean.jl.git"}
 NumericalEarth = {rev = "main", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
 
 [compat]
