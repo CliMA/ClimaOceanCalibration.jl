@@ -8,7 +8,7 @@
 # Run under the root project (PackageCompiler is a root dep), on an a3mega H100
 # node (the trace runs a real GPU forward model):
 #
-#   julia +1.12.3 --project=. examples/CATKE_GM_calibration/build_sysimage.jl
+#   julia +1.13.3 --project=. examples/CATKE_GM_calibration/build_sysimage.jl
 #
 # The output path is taken from CALIBRATION_SYSIMAGE when set (the launch
 # scripts point it at a Manifest-hash-keyed file so a sysimage is never reused
@@ -33,7 +33,7 @@ mkpath(dirname(sysimage))
 @info "Building sysimage" project sysimage
 
 create_sysimage(
-    ["ClimaOceanCalibration", "Oceananigans", "ClimaCalibrate",
+    ["ClimaOceanCalibration", "ClimaOcean", "Oceananigans", "ClimaCalibrate",
      "EnsembleKalmanProcesses", "CUDA", "JLD2"];
     sysimage_path             = sysimage,
     project                   = project,

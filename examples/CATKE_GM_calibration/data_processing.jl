@@ -15,8 +15,7 @@ using JLD2
 using LinearAlgebra
 using Statistics
 using NaNStatistics
-using ClimaOceanCalibration
-using ClimaOceanCalibration.OMIPSimulations: build_grid
+using ClimaOcean: OneDegree, omip_grid
 
 const DEFAULT_LAT_RANGE = (-20.0, 20.0)
 const DEFAULT_Z_MIN     = -200.0
@@ -114,22 +113,18 @@ function process_member_data(member_dir::AbstractString,
 end
 
 """
-    load_woa_on_orca(woa_file, Nz, depth) -> (T_field, S_field)
+    load_woa_on_orca(woa_file) -> (T_field, S_field)
 
 Load the precomputed WOA-on-ORCA-grid file produced by
-`precompute_woa_orca.jl` and wrap the arrays in `CenterField`s on a freshly
-built ORCA grid (CPU). The grid is rebuilt from the same `(Nz, depth)`
-parameters that were stored in the file so the field locations line up
-with what the model produced.
+`precompute_woa_orca.jl` and wrap the arrays in `CenterField`s on the
+`OneDegree()` grid (CPU) of the forward model.
 """
 function load_woa_on_orca(woa_file::AbstractString)
     data = jldopen(woa_file, "r") do file
-        # Δz_top added later; older caches default to nothing (uniform-scale grid).
-        Δz_top = haskey(file, "Δz_top") ? file["Δz_top"] : nothing
-        return (T = file["T"], S = file["S"], Nz = file["Nz"], depth = file["depth"], Δz_top = Δz_top)
+        return (T = file["T"], S = file["S"])
     end
 
-    grid = build_grid(Val(:orca), CPU(), data.Nz, data.depth; Δz_top = data.Δz_top)
+    grid = omip_grid(OneDegree(), CPU())
     T = CenterField(grid)
     S = CenterField(grid)
     interior(T) .= data.T

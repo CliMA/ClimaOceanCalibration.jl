@@ -9,7 +9,7 @@
 # and treats every file uniformly: <var>_omip2_<LABEL>.nc.
 #
 # Usage:
-#   julia +1.12.3 --project=<repo> plot_flux_comparison.jl [data_dir ...]
+#   julia +1.13.3 --project=<repo> plot_flux_comparison.jl [data_dir ...]
 #
 #   Default data dirs: <repo>/omip_data/omip2_fluxes plus any dirs passed as
 #   arguments (e.g. the climatology/ dir of a finished run). Figures go to

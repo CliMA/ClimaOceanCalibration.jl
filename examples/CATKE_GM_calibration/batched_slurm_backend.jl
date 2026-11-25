@@ -150,7 +150,7 @@ function BatchedSlurmGCPBackend(config::SlurmConfig; gpus_per_node = GPUS_PER_NO
 end
 
 # ----------------------------------------------------------------------
-# Cluster environment (a3mega, NVHPC 25.7, HPC-X 2.22.1, Julia 1.12.3)
+# Cluster environment (a3mega, NVHPC 25.7, HPC-X 2.22.1, Julia 1.13.3)
 # ----------------------------------------------------------------------
 function ClimaCalibrate.Backend.module_load_string(::BatchedSlurmGCPBackend)
     return """
@@ -172,7 +172,7 @@ echo "  NVHPC Version: 25.7"
 echo "  CUDA Version: 12.9"
 echo "  CUDA_HOME: \$CUDA_HOME"
 echo "  MPI_HOME: \$MPI_HOME"
-echo "  Julia: \$(julia +1.12.3 --version)"
+echo "  Julia: \$(julia +1.13.3 --version)"
 """
 end
 
@@ -325,7 +325,7 @@ function batched_job_body(
     mkdir -p "\$(dirname "$member_ckpt")"
     echo "in_progress" > "$member_ckpt"
     echo "[Member $member] Starting on GPU $gpu_id at \$(date)"
-    script -q -c "julia +1.12.3 --threads=$(THREADS_PER_MEMBER) $sysimage_flag $exeflags --project=$experiment_dir -e \\\"
+    script -q -c "julia +1.13.3 --threads=$(THREADS_PER_MEMBER) $sysimage_flag $exeflags --project=$experiment_dir -e \\\"
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
