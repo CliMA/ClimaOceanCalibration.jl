@@ -20,8 +20,6 @@ using ConservativeRegridding
 using JLD2
 using LinearAlgebra
 using Statistics
-using ClimaOceanCalibration
-using ClimaOceanCalibration.OMIPSimulations: build_grid
 
 const SEASONAL_LAT_RANGE = (-20.0, 20.0)
 const SEASONAL_Z_MIN     = -200.0

@@ -4,8 +4,7 @@
 # the ORCA grid. Uses ClimaCalibrate v0.3.0 AbstractModelInterface + HPCBackend
 # instance APIs.
 #
-# Forward model: 10-year orca OMIP run with the omip_simulation(:orca; ...)
-# physics from examples/OMIP_GCP/orca_corrected_snow_kskew1000_ksymm1000_bih50days_10yr.jl.
+# Forward model: ClimaOcean's `OneDegree()` OMIP configuration (see forward_model_orca.jl).
 #
 # Observation target: WOA annual T,S on the ORCA grid, tropical band
 # (-20°..20°), upper 200 m, [T..., S...] concatenated.
@@ -33,14 +32,6 @@ function parse_commandline()
             help = "Also calibrate the three GM scaling parameters (κ_skew, κ_symmetric, max_slope)"
             arg_type = Bool
             default = false
-        "--SKIN_TEMPERATURE"
-            help = "Compute the atmosphere-ocean interface temperature as a flux-balance skin temperature (SkinTemperature) instead of the bulk top-cell temperature"
-            arg_type = Bool
-            default = false
-        "--DZ_TOP"
-            help = "Surface-cell thickness in metres for the forward-model vertical grid. Pass `false` (the default) to use the omip_simulation default grid."
-            arg_type = String
-            default = "false"
     end
     return parse_args(s)
 end
@@ -48,13 +39,6 @@ end
 const args             = parse_commandline()
 const use_gm           = args["GM"]
 const calibrate_gm     = args["calibrate_gm"]
-const skin_temperature = args["SKIN_TEMPERATURE"]
-
-# DZ_TOP=false (or nothing/default) ⇒ use the omip_simulation default grid (Δz_top = nothing);
-# otherwise parse the surface-cell thickness in metres.
-const Δz_top = let v = lowercase(strip(args["DZ_TOP"]))
-    (v in ("false", "nothing", "default")) ? nothing : parse(Float64, v)
-end
 
 # ============================================
 # Configuration
@@ -68,12 +52,10 @@ const sampling_length   = 3                  # years averaged at the end (the ca
 const latitude_range    = (-20.0, 20.0)      # tropical band compared against WOA (degrees latitude)
 const z_min             = -200.0             # upper-ocean depth cutoff in metres; only cells with z ≥ z_min are in the loss
 const filename_prefix = "orca_catke_gm_calibration"  # prefix for forward model output files
-const staging_dir = nothing                 # Disable per-member JRA55 staging by default.
-const with_ice_dynamics = false             # disable sea-ice dynamics in the OMIP forward model
 
-# Calibrated parameter names. These keys must match those produced by
-# CATKE_SCALING_SPEC / GM_SCALING_SPEC in forward_model_orca.jl. Comment
-# out a name to drop it from the calibration (then it stays fixed at 1).
+# Calibrated parameter names: "<coefficient>_scaling" for a coefficient of the
+# CATKEMixingLength or CATKEEquation of OneDegree(). Comment out a name to drop
+# it from the calibration (then it stays fixed at 1).
 # All 18 CATKEMixingLength + 7 CATKEEquation non-zero coefficients are
 # included by default. Cᵉu, Cᵉe, CᵉD are omitted because they default to 0
 # (scaling is degenerate).
@@ -119,15 +101,13 @@ const gm_param_names = calibrate_gm ? (
     "max_slope_scaling",    # FluxTapering slope limiter max slope
 ) : ()
 
-# The WOA target must live on the SAME vertical grid as the forward model, since
-# the comparison does no vertical regridding. Δz_top = nothing ⇒ default grid;
-# Δz_top = h ⇒ the woa_orca_grid_dztop<h>.jld2 cache built by precompute_woa_orca.jl.
-const woa_file = abspath(joinpath(@__DIR__, "calibration_data",
-    Δz_top === nothing ? "woa_orca_grid.jld2" : "woa_orca_grid_dztop$(Δz_top).jld2"))
+# The WOA target must live on the same grid as the forward model, since the
+# comparison does no regridding: the cache built by precompute_woa_orca.jl.
+const woa_file = abspath(joinpath(@__DIR__, "calibration_data", "woa_one_degree.jld2"))
 isfile(woa_file) || error("""
     WOA-on-ORCA cache not found at:
         $woa_file
-    Run precompute_woa_orca.jl first (with ΔZ_TOP = $(Δz_top === nothing ? "nothing" : Δz_top)).
+    Run precompute_woa_orca.jl first.
 """)
 
 # Output directory (defined BEFORE model_interface.jl is included, since the
@@ -135,8 +115,7 @@ isfile(woa_file) || error("""
 output_dir = joinpath(pwd(), "calibration_runs",
     "catke_$(length(catke_param_names))_gm_$(length(gm_param_names))_prior_$(prior_std)_Tstd_$(T_std)_Sstd_$(S_std)" *
     "_simlength_$(simulation_length)yr_samplength_$(sampling_length)yr_lat$(latitude_range[2])_zmin$(z_min)_gm$(use_gm)" *
-    "_dz$(Δz_top === nothing ? "default" : Δz_top)" *
-    (skin_temperature ? "_skintemp" : ""))
+    "_one_degree")
 
 mkpath(output_dir)
 
@@ -195,21 +174,18 @@ n_batches = ceil(Int, ensemble_size / 8)
 # Guard against resuming into a directory whose stored config is incompatible
 # with the current one. ClimaCalibrate.calibrate reconstructs the EKP from the
 # on-disk iteration files when resuming, so a mismatch in output_dim (e.g. a
-# different Δz_top → different number of WOA cells) silently survives until
+# different WOA target → different number of WOA cells) silently survives until
 # update_ensemble! tries to broadcast the new G against the stale observation
 # and dies with a DimensionMismatch. Catch it here, before any jobs are submitted.
 metadata_path = joinpath(output_dir, "calibration_metadata.jld2")
 if isfile(metadata_path)
     prev = jldopen(metadata_path, "r") do file
         (output_dim = haskey(file, "output_dim") ? file["output_dim"] : nothing,
-         Δz_top     = haskey(file, "Δz_top")     ? file["Δz_top"]     : nothing,
          woa_file   = haskey(file, "woa_file")   ? file["woa_file"]   : nothing)
     end
     mismatches = String[]
     prev.output_dim === nothing || prev.output_dim == output_dim ||
         push!(mismatches, "output_dim: stored $(prev.output_dim) ≠ current $output_dim")
-    prev.Δz_top === nothing && Δz_top === nothing || isequal(prev.Δz_top, Δz_top) ||
-        push!(mismatches, "Δz_top: stored $(prev.Δz_top) ≠ current $Δz_top")
     prev.woa_file === nothing || prev.woa_file == woa_file ||
         push!(mismatches, "woa_file: stored $(prev.woa_file) ≠ current $woa_file")
     isempty(mismatches) || error("""
@@ -234,14 +210,10 @@ jldopen(metadata_path, "w") do file
     file["simulation_length"]  = simulation_length
     file["sampling_length"]    = sampling_length
     file["filename_prefix"]    = filename_prefix
-    file["staging_dir"]        = staging_dir
     file["woa_file"]           = woa_file
     file["catke_param_names"]  = collect(catke_param_names)
     file["gm_param_names"]     = collect(gm_param_names)
     file["use_gm"]             = use_gm
-    file["with_ice_dynamics"]  = with_ice_dynamics
-    file["Δz_top"]             = Δz_top
-    file["skin_temperature"]   = skin_temperature
 end
 
 # v0.3.0 backend + interface
@@ -254,9 +226,6 @@ interface = CATKEGMInterface()
 
 @info "Calibration configuration:"
 @info "  use_gm:            $use_gm"
-@info "  with_ice_dynamics: $with_ice_dynamics"
-@info "  skin_temperature:  $skin_temperature"
-@info "  Δz_top:            $(Δz_top === nothing ? "default" : Δz_top)"
 @info "  CATKE params: $(catke_param_names)"
 @info "  GM params:    $(gm_param_names)"
 @info "  Ensemble size: $ensemble_size  ($n_batches a3mega nodes per iteration)"
