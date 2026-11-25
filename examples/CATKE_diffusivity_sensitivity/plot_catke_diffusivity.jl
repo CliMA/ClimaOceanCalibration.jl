@@ -171,7 +171,9 @@ function band_mean(zonal, z, in_band, (shallow, deep))
     return sum(ifelse.(isfinite.(values), values, 0) .* weights) / sum(weights)
 end
 
-if all(name -> any(contains("_diffusivities"), readdir(joinpath(runs_directory, name))), run_names)
+every_run_saved(group) = all(name -> any(contains("_" * group), readdir(joinpath(runs_directory, name))), run_names)
+
+if every_run_saved("diffusivities")
     save_figure("catke_diffusivities",
         sections_figure([diffusivity_rows("difvho", "κc")...,
                          diffusivity_rows("difvmo", "κu")...,
@@ -319,6 +321,30 @@ end
 
 monthly_mld(o) = recomputed_mld(o).monthly
 
+saved_mixed_layer_depth(o) = any(contains("_mixed_layer"), readdir(o.directory)) &&
+                             Ext.has_timeseries(o, "mixed_layer", "mlotst_potential")
+
+"""
+The zonal and band means of the mixed-layer depth through the whole run: the depth saved at every time step, from
+potential buoyancy, if every run has it, and otherwise the depth of the 15-day records.
+"""
+mld_series(o) = all(saved_mixed_layer_depth, outputs) ? saved_mld_series(o) : recomputed_mld(o)
+
+saved_mld_series(o) = Ext.cached(o, :saved_mld_series) do
+    depth = Ext.timeseries(o, "mixed_layer", "mlotst_potential")
+    times = depth.times
+    zonal = fill(NaN, length(times), length(latitudes))
+    regional = fill(NaN, length(times), length(bands))
+
+    for n in eachindex(times)
+        depth_map = Ext.regrid_to_map(o, Ext.record_array(depth, n))
+        zonal[n, :] .= zonal_mean_map(depth_map)
+        regional[n, :] .= [regional_mean(depth_map, band) for band in bands]
+    end
+
+    (; years = times ./ 365days, zonal, regional)
+end
+
 observed_everywhere = let observed = Ext.boyer_montegut_mixed_layer_depth()
     compared = reduce(.&, isfinite.(m) for m in observed) .& isfinite.(monthly_mld(reference)[1])
     [ifelse.(compared, m, NaN) for m in observed]
@@ -437,15 +463,18 @@ save_figure("mld_zonal_extrema",
 
 save_figure("mld_hovmoller",
     Ext.omip_figure(length(outputs), 1; column_width = 640, row_height = 420) do figure
-        control = recomputed_mld(reference)
+        control = mld_series(reference)
         axis = Axis(figure[1, 1]; title = "control: zonal-mean MLD", xlabel = "Year", ylabel = "Latitude")
         plot = heatmap!(axis, control.years, latitudes, log10.(control.zonal); colormap = Ext.mixed_layer_colormap, colorrange = (1, 3))
         Colorbar(figure[2, 1], plot; label = "log₁₀ MLD (m)", vertical = false, flipaxis = false, width = Relative(0.7))
         for (c, o) in enumerate(perturbed)
-            series = recomputed_mld(o)
-            Nt = min(length(series.years), length(control.years))
+            series = mld_series(o)
+            # The records of the two runs at the same times
+            matching = [findfirst(year -> abs(year - control_year) < 1e-3, series.years) for control_year in control.years]
+            shared = findall(!isnothing, matching)
             axis = Axis(figure[1, c + 1]; title = "log₂($(o.label) MLD / control MLD)", xlabel = "Year", ylabel = "Latitude")
-            plot = heatmap!(axis, series.years[1:Nt], latitudes, log2.(series.zonal[1:Nt, :] ./ control.zonal[1:Nt, :]);
+            plot = heatmap!(axis, control.years[shared], latitudes,
+                            log2.(series.zonal[Int.(matching[shared]), :] ./ control.zonal[shared, :]);
                             colormap = :balance, colorrange = (-1, 1))
             Colorbar(figure[2, c + 1], plot; label = "log₂ ratio", vertical = false, flipaxis = false, width = Relative(0.7))
         end
@@ -456,7 +485,7 @@ save_figure("mld_regional_series",
         axes = map(enumerate(bands)) do (r, band)
             axis = Ext.time_axis(figure[1, r]; title = band[1], ylabel = "MLD (m)")
             for o in outputs
-                series = recomputed_mld(o)
+                series = mld_series(o)
                 Ext.run_lines!(axis, series.years, series.regional[:, r], run_number(o), o.label)
             end
             vspan!(axis, first_year, last_year; color = (:gray, 0.15))
@@ -479,19 +508,42 @@ end
 ##### Temperature against the World Ocean Atlas, and the surface
 #####
 
-zonal_temperature_bias(o) = Ext.zonal_sections(o).temperature .- Ext.zonal_sections(o).atlas_temperature
+# The profile on the levels `z` (bottom to top), interpolated to the levels `zʳ`; `NaN` below the deepest value
+function interpolated_profile(profile, z, zʳ)
+    return map(zʳ) do depth
+        k⁺ = searchsortedfirst(z, depth)
+        k⁺ > length(z) && return profile[end]
+        k⁺ == 1 && return z[1] == depth ? profile[1] : NaN
+        weight = (depth - z[k⁺ - 1]) / (z[k⁺] - z[k⁺ - 1])
+        (1 - weight) * profile[k⁺ - 1] + weight * profile[k⁺]
+    end
+end
+
+"""
+`profiles` of `o`, as `(position, level)`, on the levels of the reference run. Runs at different resolutions have
+different levels.
+"""
+function at_reference_depths(o, profiles)
+    z, zʳ = Ext.depths(o), Ext.depths(reference)
+    z == zʳ && return profiles
+    return permutedims(hcat((interpolated_profile(profile, z, zʳ) for profile in eachrow(profiles))...))
+end
+
+zonal_time_mean(o, name) = Ext.cached(() -> Ext.zonal_mean(o, Ext.time_mean(o, "fields", name)), o, Symbol(:zonal_, name))
+zonal_atlas_temperature(o) = Ext.cached(() -> Ext.zonal_mean(o, Ext.world_ocean_atlas(o).T), o, :zonal_atlas_temperature)
+zonal_temperature_bias(o) = zonal_time_mean(o, "to") .- zonal_atlas_temperature(o)
 zonal_section(title, o, data) = section(title, latitudes, Ext.depths(o), data)
 
 save_figure("zonal_temperature",
     sections_figure([panel_row([zonal_section("$(o.label): zonal-mean T − WOA", o, zonal_temperature_bias(o)) for o in outputs],
                                range(-3, 3, length = 13), :balance, "ᵒC"),
                      panel_row([o === reference ? nothing :
-                                zonal_section("$(o.label) − control: zonal-mean T", o,
-                                              Ext.zonal_sections(o).temperature .- Ext.zonal_sections(reference).temperature)
+                                zonal_section("$(o.label) − control: zonal-mean T", reference,
+                                              at_reference_depths(o, zonal_time_mean(o, "to")) .- zonal_time_mean(reference, "to"))
                                 for o in outputs], range(-1.5, 1.5, length = 13), :balance, "ᵒC"),
                      panel_row([o === reference ? nothing :
-                                zonal_section("$(o.label) − control: zonal-mean S", o,
-                                              Ext.zonal_sections(o).salinity .- Ext.zonal_sections(reference).salinity)
+                                zonal_section("$(o.label) − control: zonal-mean S", reference,
+                                              at_reference_depths(o, zonal_time_mean(o, "so")) .- zonal_time_mean(reference, "so"))
                                 for o in outputs], range(-0.3, 0.3, length = 13), :balance, "g kg⁻¹")]))
 
 save_figure("sea_surface",
@@ -499,7 +551,7 @@ save_figure("sea_surface",
                  map_row(difference_panels("SST", Ext.sea_surface_temperature_bias_map), :balance, (-1, 1), "ᵒC"),
                  map_row(difference_panels("net heat flux into the ocean", Ext.net_heat_flux_map), :balance, (-30, 30), "W m⁻²")]))
 
-save_figure("mean_profile_drift",
+every_run_saved("averages") && save_figure("mean_profile_drift",
     Ext.omip_figure(2, 1; column_width = 480, row_height = 520) do figure
         panels = (("horizontal-mean temperature drift", "to_h", "ᵒC"), ("horizontal-mean salinity drift", "so_h", "g kg⁻¹"))
         axes = map(enumerate(panels)) do (c, (title, name, unit))
@@ -536,8 +588,8 @@ function box_profiles(λ, φ, wet, data, boxes)
     return profiles
 end
 
-box_profiles(o::OMIPOutput, data, boxes) =
-    box_profiles(Ext.center_longitudes(o), Ext.center_latitudes(o), Ext.ocean_mask(o), data, boxes)
+box_profiles(o::OMIPOutput, data, boxes) = at_reference_depths(o,
+    box_profiles(Ext.center_longitudes(o), Ext.center_latitudes(o), Ext.ocean_mask(o), data, boxes))
 
 """The mean of a map on the 1ᵒ grid over each box."""
 box_means(map, boxes) = [regional_mean(map, ("", latitude_range, longitude_range)) for (longitude_range, latitude_range) in boxes]
@@ -657,7 +709,8 @@ let z = Ext.depths(reference), atlas = Ext.world_ocean_atlas(reference)
             axes = [Axis(figure[r, c]; title, xlabel, ylabel = "Depth (m)")
                     for (r, (xlabel, _, _)) in enumerate(variables), (c, (title, _, _)) in enumerate(columns)]
             for (r, (_, atlas_data, run_data)) in enumerate(variables), (c, (_, o, mld)) in enumerate(columns)
-                profiles = box_profiles(reference, isnothing(o) ? atlas_data : run_data(o), profile_boxes)
+                profiles = isnothing(o) ? box_profiles(reference, atlas_data, profile_boxes) :
+                                          box_profiles(o, run_data(o), profile_boxes)
                 axis = axes[r, c]
                 for n in eachindex(profile_longitudes)
                     lines!(axis, profiles[n, upper], z[upper]; color = colors[n], linewidth = 2)
