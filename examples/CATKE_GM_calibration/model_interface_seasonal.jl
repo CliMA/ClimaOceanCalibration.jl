@@ -53,29 +53,10 @@ end
 @_load_or_default sampling_length
 @_load_or_default simulation_length
 @_load_or_default filename_prefix
-if !isdefined(@__MODULE__, :staging_dir)
-    staging_dir = jldopen(metadata_file, "r") do file
-        haskey(file, "staging_dir") ? file["staging_dir"] : nothing
-    end
-    @info "Loaded staging_dir=$staging_dir from metadata"
-end
 @_load_or_default woa_file
 @_load_or_default catke_param_names
 @_load_or_default gm_param_names
 @_load_or_default use_gm
-@_load_or_default with_ice_dynamics
-if !isdefined(@__MODULE__, :Δz_top)
-    Δz_top = jldopen(metadata_file, "r") do file
-        haskey(file, "Δz_top") ? file["Δz_top"] : nothing
-    end
-    @info "Loaded Δz_top=$Δz_top from metadata"
-end
-if !isdefined(@__MODULE__, :skin_temperature)
-    skin_temperature = jldopen(metadata_file, "r") do file
-        haskey(file, "skin_temperature") ? file["skin_temperature"] : false
-    end
-    @info "Loaded skin_temperature=$skin_temperature from metadata"
-end
 
 struct CATKEGMSeasonalInterface <: ClimaCalibrate.AbstractModelInterface
     model_interface_path::String
@@ -121,11 +102,7 @@ function ClimaCalibrate.forward_model(::CATKEGMSeasonalInterface, iteration, mem
         "member"            => member,
         "simulation_length" => simulation_length,
         "sampling_length"   => sampling_length,
-        "staging_dir"       => staging_dir,
         "use_gm"            => use_gm,
-        "with_ice_dynamics" => with_ice_dynamics,
-        "Δz_top"            => Δz_top,
-        "skin_temperature"  => skin_temperature,
         # Seasonal-cycle specific (model still initializes from WOA Annual).
         "output_mode"       => "seasonal",
     )
@@ -213,10 +190,8 @@ function ClimaCalibrate.analyze_iteration(::CATKEGMSeasonalInterface, ekp, g_ens
 
     # The annual-style figures (plot_member_vs_woa) compare against the WOA
     # ANNUAL mean on the ORCA grid, not the monthly-zonal seasonal target in
-    # `woa_file`. Resolve that cache the same way calibrate_catke_gm.jl does
-    # (keyed on Δz_top); skip the annual plots if it hasn't been precomputed.
-    annual_woa_file = abspath(joinpath(@__DIR__, "calibration_data",
-        Δz_top === nothing ? "woa_orca_grid.jld2" : "woa_orca_grid_dztop$(Δz_top).jld2"))
+    # `woa_file`; skip the annual plots if it hasn't been precomputed.
+    annual_woa_file = abspath(joinpath(@__DIR__, "calibration_data", "woa_one_degree.jld2"))
     has_annual_woa = isfile(annual_woa_file)
     has_annual_woa || @warn "Annual WOA-on-ORCA cache not found; skipping annual-style \
         per-member figures (run precompute_woa_orca.jl to enable them)" annual_woa_file

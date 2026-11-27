@@ -11,10 +11,8 @@
 #   * ClimaCalibrate.Calibration.run_iteration(backend::BatchedSlurmGCPBackend, ...)
 
 import ClimaCalibrate
-isdefined(ClimaCalibrate, :Backend) || error(
-    "batched_slurm_backend.jl requires ClimaCalibrate v0.3.x; " *
-    "the active project appears to resolve an older ClimaCalibrate."
-)
+v"0.3" ≤ pkgversion(ClimaCalibrate) < v"0.4" ||
+    error("batched_slurm_backend.jl requires ClimaCalibrate 0.3, found $(pkgversion(ClimaCalibrate))")
 import ClimaCalibrate: Backend, Calibration
 import ClimaCalibrate.Backend:
     HPCBackend, SlurmBackend, SlurmConfig, JobInfo,
@@ -68,6 +66,9 @@ function job_is_alive(job_id::AbstractString)
     isempty(states) && return false
     return any(s -> first(split(s, ' ')) in LIVE_SACCT_STATES, states)
 end
+
+job_was_preempted(job_id) =
+    any(in(("PREEMPTED", "NODE_FAIL")), split(read(`sacct -j $job_id -X -n -P --duplicates -o State`, String)))
 
 ledger_path(output_dir, iter) =
     joinpath(path_to_iteration(output_dir, iter), "job_ledger.toml")
@@ -150,7 +151,7 @@ function BatchedSlurmGCPBackend(config::SlurmConfig; gpus_per_node = GPUS_PER_NO
 end
 
 # ----------------------------------------------------------------------
-# Cluster environment (a3mega, NVHPC 25.7, HPC-X 2.22.1, Julia 1.12.3)
+# Cluster environment (a3mega, NVHPC 25.7, HPC-X 2.22.1, Julia 1.13.3)
 # ----------------------------------------------------------------------
 function ClimaCalibrate.Backend.module_load_string(::BatchedSlurmGCPBackend)
     return """
@@ -172,7 +173,7 @@ echo "  NVHPC Version: 25.7"
 echo "  CUDA Version: 12.9"
 echo "  CUDA_HOME: \$CUDA_HOME"
 echo "  MPI_HOME: \$MPI_HOME"
-echo "  Julia: \$(julia +1.12.3 --version)"
+echo "  Julia: \$(julia +1.13.3 --version)"
 """
 end
 
@@ -192,6 +193,7 @@ function ClimaCalibrate.Backend.make_job_script(
 $(generate_directives(hpc_config))
 #SBATCH --job-name=$job_name
 #SBATCH --output=$output
+#SBATCH --requeue
 
 $(ClimaCalibrate.Backend.module_load_string(backend))
 $(generate_env_vars(hpc_config))
@@ -325,7 +327,7 @@ function batched_job_body(
     mkdir -p "\$(dirname "$member_ckpt")"
     echo "in_progress" > "$member_ckpt"
     echo "[Member $member] Starting on GPU $gpu_id at \$(date)"
-    script -q -c "julia +1.12.3 --threads=$(THREADS_PER_MEMBER) $sysimage_flag $exeflags --project=$experiment_dir -e \\\"
+    script -q -c "julia +1.13.3 --threads=$(THREADS_PER_MEMBER) $sysimage_flag $exeflags --project=$experiment_dir -e \\\"
         import ClimaCalibrate as CAL
         iteration = $iter
         member = $member
@@ -458,7 +460,13 @@ function ClimaCalibrate.Calibration.run_iteration(
             @info "Skipping completed member $member"
             continue
         elseif status === :failed
-            @info "Skipping previously-failed member $member (will not retry)"
+            entry = get(ledger, member, nothing)
+            if entry !== nothing && job_was_preempted(entry.job_id)
+                @info "Member $member failed in the preempted job $(entry.job_id); resubmitting"
+                push!(needs_submit, member)
+            else
+                @info "Skipping previously-failed member $member (will not retry)"
+            end
             continue
         end
 

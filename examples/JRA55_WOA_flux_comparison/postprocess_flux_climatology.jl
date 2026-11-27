@@ -6,7 +6,7 @@
 # treat our run exactly like another model.
 #
 # Usage:
-#   julia +1.12.3 --project=<repo> postprocess_flux_climatology.jl <run>_monthly_fluxes.jld2 [out_dir]
+#   julia +1.13.3 --project=<repo> postprocess_flux_climatology.jl <run>_monthly_fluxes.jld2 [out_dir]
 #
 # For each derived variable it writes  <out_dir>/<var>_omip2_<LABEL>.nc  with
 #   clim   (12, Nx→x, Ny→y … stored as (month, y, x)) native ORCA climatology

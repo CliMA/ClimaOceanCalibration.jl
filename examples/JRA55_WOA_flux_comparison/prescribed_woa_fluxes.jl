@@ -35,7 +35,7 @@
 #   SURFACE_DEPTH keep grid cells above this depth [m] (6.0 → single top cell)
 #
 # Run (HPC): ./launch_fluxes.sh   or directly:
-#   julia +1.12.3 --project=<ClimaOceanCalibration.jl> -t 4 prescribed_woa_fluxes.jl
+#   julia +1.13.3 --project=<ClimaOceanCalibration.jl> -t 4 prescribed_woa_fluxes.jl
 
 # DataDeps consent for ORCA/WOA/JRA55 auto-downloads (no-op when already present)
 ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"
@@ -196,7 +196,7 @@ jra55_kw = (; dir = forcing_dir,
 atmosphere = JRA55PrescribedAtmosphere(arch; jra55_kw...)
 radiation  = JRA55PrescribedRadiation(arch; jra55_kw...,
                                       ocean_surface = SurfaceRadiationProperties(0.06, 1.00))
-land       = JRA55PrescribedLand(arch; jra55_kw...)
+land       = JRA55PrescribedLand(grid; jra55_kw...)
 
 # ============================================
 # Coupled model (no sea ice) + simulation

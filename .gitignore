@@ -57,3 +57,6 @@ calibration_runs
 *.jpg
 *.jpeg
 *.svg
+
+# SLURM job scripts
+*.slurm

@@ -47,7 +47,7 @@ export OUTPUT_DIR="${OUTPUT_DIR:-${RUN_NAME}_run}"
 LOG_DIR="${LOG_DIR:-${CLIMA_CALIB_PROJECT}/logs}"
 mkdir -p "$LOG_DIR"
 
-JULIA_CMD=(julia +1.12.3 --project="$CLIMA_CALIB_PROJECT" --check-bounds=no -t "$THREADS"
+JULIA_CMD=(julia +1.13.3 --project="$CLIMA_CALIB_PROJECT" --check-bounds=no -t "$THREADS"
            "$SCRIPT_DIR/prescribed_woa_fluxes.jl")
 
 if [[ "${SCRIPT_ONLY:-false}" == "true" ]]; then
@@ -76,10 +76,10 @@ export DATADEPS_ALWAYS_ACCEPT=true
 [ -f "$HOME/API_keys.sh" ] && source "$HOME/API_keys.sh"
 
 if [[ "${INSTANTIATE:-true}" == "true" ]]; then
-    julia +1.12.3 --project="$CLIMA_CALIB_PROJECT" --startup-file=no -e 'using Pkg; Pkg.instantiate()'
+    julia +1.13.3 --project="$CLIMA_CALIB_PROJECT" --startup-file=no -e 'using Pkg; Pkg.instantiate()'
 fi
 
-julia +1.12.3 --project="$CLIMA_CALIB_PROJECT" --check-bounds=no -t "${THREADS}" \
+julia +1.13.3 --project="$CLIMA_CALIB_PROJECT" --check-bounds=no -t "${THREADS}" \
     "$SCRIPT_DIR/prescribed_woa_fluxes.jl"
 EOF
 

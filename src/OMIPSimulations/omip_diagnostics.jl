@@ -175,7 +175,7 @@ function add_omip_diagnostics!(simulation;
                                                      dir = output_dir,
                                                      filename = filename_prefix * "_surface",
                                                      file_splitting = TimeInterval(file_splitting_interval),
-                                                     overwrite_existing = true,
+                                                     overwrite_files = true,
                                                      jld2_kw = Dict(:compress => ZstdFilter()))
 
     # 3-D fields (including buoyancy)
@@ -209,7 +209,7 @@ function add_omip_diagnostics!(simulation;
                                                     dir = output_dir,
                                                     filename = filename_prefix * "_fields",
                                                     file_splitting = TimeInterval(file_splitting_interval),
-                                                    overwrite_existing = true,
+                                                    overwrite_files = true,
                                                     jld2_kw = Dict(:compress => ZstdFilter()))
 
     # Global means and horizontal-mean depth profiles for T, S, b.
@@ -236,7 +236,7 @@ function add_omip_diagnostics!(simulation;
                                                       dir = output_dir,
                                                       filename = filename_prefix * "_averages",
                                                       file_splitting = TimeInterval(file_splitting_interval),
-                                                      overwrite_existing = true)
+                                                      overwrite_files = true)
 
     # Monthly-averaged 3-D T, S, b for seasonal-cycle diagnostics (zonal-mean
     # videos vs WOA monthly). One climatological month = 365days/12; this is
@@ -252,7 +252,7 @@ function add_omip_diagnostics!(simulation;
                                                             dir = output_dir,
                                                             filename = filename_prefix * "_monthly_fields",
                                                             file_splitting = TimeInterval(file_splitting_interval),
-                                                            overwrite_existing = true,
+                                                            overwrite_files = true,
                                                             jld2_kw = Dict(:compress => ZstdFilter()))
 
     # Monthly-averaged surface freshwater fluxes: evaporation, precipitation,
@@ -268,7 +268,7 @@ function add_omip_diagnostics!(simulation;
                                                              dir = output_dir,
                                                              filename = filename_prefix * "_monthly_surface",
                                                              file_splitting = TimeInterval(file_splitting_interval),
-                                                             overwrite_existing = true,
+                                                             overwrite_files = true,
                                                              jld2_kw = Dict(:compress => ZstdFilter()))
 
     # Checkpointer (drives `run!(sim; pickup=true)`)
